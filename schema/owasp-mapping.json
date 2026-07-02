@@ -1,0 +1,58 @@
+{
+  "API1:2023": {
+    "name": "Broken Object Level Authorization",
+    "mitigatedBy": ["authorization", "graphql.operations.authz"]
+  },
+  "API2:2023": {
+    "name": "Broken Authentication",
+    "mitigatedBy": ["authentication", "rateLimit", "authentication.passwordPolicy", "authentication.accountLockout"]
+  },
+  "API3:2023": {
+    "name": "Broken Object Property Level Authorization",
+    "mitigatedBy": ["response.schema", "authorization", "request.schema", "request.denyUnknownFields", "response.forbidArrayRoot"]
+  },
+  "API4:2023": {
+    "name": "Unrestricted Resource Consumption",
+    "mitigatedBy": ["rateLimit", "request.maxBodySize", "timeout", "graphql.staticLimits"]
+  },
+  "API5:2023": {
+    "name": "Broken Function Level Authorization",
+    "mitigatedBy": ["authorization", "ipPolicy", "graphql.operations.authz"]
+  },
+  "API6:2023": {
+    "name": "Unrestricted Access to Sensitive Business Flows",
+    "mitigatedBy": ["rateLimit", "authentication", "ipPolicy", "request.idempotencyKey", "request.serializeBy"]
+  },
+  "API7:2023": {
+    "name": "Server Side Request Forgery",
+    "mitigatedBy": ["request.schema.domainAllowlist", "firewall"]
+  },
+  "API8:2023": {
+    "name": "Security Misconfiguration",
+    "mitigatedBy": ["cors", "request.contentType", "response.contentType", "response.headers", "cacheable", "mtls"]
+  },
+  "API9:2023": {
+    "name": "Improper Inventory Management",
+    "mitigatedBy": ["coverage-report", "drift-detection", "deprecated", "sunsetDate"]
+  },
+  "API10:2023": {
+    "name": "Unsafe Consumption of APIs",
+    "mitigatedBy": ["mtls", "request.schema.domainAllowlist", "request.signature", "request.allowedHosts"]
+  },
+  "SSEC-INJECTION": {
+    "name": "Injection (LazySecurity-native)",
+    "mitigatedBy": ["request.schema.injectionGuard"]
+  },
+  "SSEC-PROMPT": {
+    "name": "LLM Prompt Injection (LazySecurity-native)",
+    "mitigatedBy": ["request.schema.injectionGuard"]
+  },
+  "SSEC-AUDIT": {
+    "name": "Audit Logging (LazySecurity-native)",
+    "mitigatedBy": ["logging"]
+  },
+  "SSEC-STORAGE": {
+    "name": "At-Rest Storage Posture (LazySecurity-native, advisory-only)",
+    "mitigatedBy": ["request.dataAtRest"]
+  }
+}

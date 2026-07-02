@@ -1,0 +1,81 @@
+openapi: 3.1.0
+info:
+  title: Orders API — x-security annotated example
+  version: 1.0.0
+  description: >
+    A small API annotated with x-security policy blocks. Every block in this
+    file validates against schema/x-security.schema.json.
+paths:
+  /auth/login:
+    post:
+      summary: Credential login
+      x-security:
+        authentication:
+          type: none
+        rateLimit:
+          requests: 5
+          window: 1m
+          identifier: ip
+          burst: 2
+        request:
+          contentType: [application/json]
+          maxBodySize: 10KB
+          schema:
+            email:
+              type: email
+              maxLength: 254
+              mitigates: ["API2:2023"]
+            password:
+              type: free-text
+              minLength: 8
+              maxLength: 128
+        cacheable: false
+        timeout:
+          read: 5000
+      responses:
+        "200":
+          description: Session token
+  /orders/{id}:
+    get:
+      summary: Fetch one order — owner only
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: https://auth.example.com/.well-known/jwks.json
+          allowedAlgorithms: [RS256]
+        authorization:
+          type: rule-based
+          rules:
+            - field: resource.ownerId
+              operator: equals
+              value: { ref: jwt.sub }
+          resourceLookup:
+            endpoint: /orders/{id}
+            identifierFrom: request.params.id
+            expose: [ownerId]
+          mitigates: ["API1:2023"]
+        cacheable: false
+      responses:
+        "200":
+          description: The order
+  /orders:
+    get:
+      summary: List the caller's orders
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: https://auth.example.com/.well-known/jwks.json
+          allowedAlgorithms: [RS256]
+        rateLimit:
+          requests: 60
+          window: 1m
+          identifier: user-id
+        cacheable: false
+      responses:
+        "200":
+          description: Orders for the authenticated principal
