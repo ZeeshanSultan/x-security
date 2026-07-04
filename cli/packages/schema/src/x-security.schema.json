@@ -1,0 +1,1032 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://usewaf.com/schemas/x-security/v0.8.json",
+  "title": "x-security",
+  "description": "Vendor-neutral OpenAPI extension declaring per-endpoint API security policy. Writ compiles this into Kong, Coraza, BunkerWeb, OpenAppSec, Cloudflare, AWS API Gateway, and host-firewall configurations. v0.8 (deferred-residuals) adds: graphql.operations[] per-operation authz + cost (capKey graphql.operations.authz, API1/API5, OVERRIDE-ONLY everywhere — requires an operator-supplied GraphQL-aware processor; the coarse block limits get the distinct capKey graphql.staticLimits, API4); request.serializeBy + request.concurrencyLimit live-concurrency serialization (API6, PARTIAL at best — edge serialization only, NOT in-handler transaction atomicity); and request.dataAtRest ADVISORY-ONLY at-rest posture declaration (Writ-native SSEC-STORAGE, NOT gateway-enforced — compiles to nothing, drives an out-of-band scan finding). The unreachable residuals token-entropy and session-rotation get ZERO new fields (detect-and-flag / documented gateway non-goal). v0.7 (edge-enforceable-residuals) adds: injectionGuard sinks 'deserialization' (SSEC-INJECTION) and 'ai-prompt' (Writ-native SSEC-PROMPT); top-level audit logging policy (logging, Writ-native SSEC-AUDIT); response.forbidArrayRoot JSON-hijacking defense (API3); request.idempotencyKey replay/double-submit defense (API6); and capability wiring for the already-declared authentication.passwordPolicy / authentication.accountLockout enforcement (API2). v0.6 added: per-arg injection hardening (W19 request.schema.<f>.injectionGuard, attributed to the Writ-native SSEC-INJECTION category). v0.5 added: identity-flexibility (S-10 RuleRef namespaces: principal/session/header), outbound trust (S-11 outboundCalls), auth depth (S-12 mfa/lockout/passwordPolicy/tokenSources), error scrubbing (S-13), composite-ID semantics (S-14 identifier combinator), open-redirect (S-15 redirectAllowedDomains), session fixation (S-16 sessionRotateOnAuth), nonce replay (S-17 nonceCacheTtl), TLS floor (S-18 tls).",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "profile": {
+      "type": "string",
+      "description": "Optional security profile preset name (R1.17). Per-field overrides allowed.",
+      "enum": [
+        "auth-endpoint",
+        "standard-crud",
+        "file-upload",
+        "webhook-receiver",
+        "public-read-only",
+        "admin-panel",
+        "server-rendered-page",
+        "graphql-resolver",
+        "grpc-method",
+        "internal-rpc",
+        "static-asset",
+        "unknown"
+      ]
+    },
+    "authentication": { "$ref": "#/$defs/Authentication" },
+    "authorization": { "$ref": "#/$defs/Authorization" },
+    "csrf": { "$ref": "#/$defs/Csrf" },
+    "rateLimit": {
+      "oneOf": [
+        { "$ref": "#/$defs/RateLimit" },
+        { "type": "array", "items": { "$ref": "#/$defs/RateLimit" } }
+      ]
+    },
+    "timeout": { "$ref": "#/$defs/Timeout" },
+    "cacheable": { "$ref": "#/$defs/Cacheable" },
+    "cors": { "$ref": "#/$defs/Cors" },
+    "mtls": { "$ref": "#/$defs/Mtls" },
+    "ipPolicy": { "$ref": "#/$defs/IpPolicy" },
+    "request": { "$ref": "#/$defs/RequestPolicy" },
+    "response": { "$ref": "#/$defs/ResponsePolicy" },
+    "logging": { "$ref": "#/$defs/Logging" },
+    "graphql": { "$ref": "#/$defs/GraphqlPolicy" },
+    "websocket": { "$ref": "#/$defs/WebsocketPolicy" },
+    "botProtection": { "$ref": "#/$defs/BotProtection" },
+    "deprecated": { "type": "boolean", "description": "R1.19" },
+    "sunsetDate": { "type": "string", "format": "date" },
+    "replacementEndpoint": { "type": "string" },
+    "targetOverrides": { "$ref": "#/$defs/TargetOverrides" },
+    "mitigates": { "$ref": "#/$defs/OwaspMitigates" },
+    "outboundCalls": {
+      "description": "v0.5 S-11: outbound calls this endpoint may make. Used to enforce signed requests, response schema, and TLS floor.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/OutboundCall" }
+    },
+    "tls": { "$ref": "#/$defs/Tls" }
+  },
+  "$defs": {
+    "VarRef": {
+      "description": "Variable reference: ${ENV_VAR} or $vault.path/to/secret",
+      "type": "string",
+      "pattern": "^(\\$\\{[A-Z_][A-Z0-9_]*\\}|\\$vault\\.[A-Za-z0-9_./-]+)$"
+    },
+    "StringOrVarRef": {
+      "type": "string"
+    },
+    "Duration": {
+      "description": "Duration string e.g. \"1s\", \"5m\", \"1h\", \"1d\"",
+      "type": "string",
+      "pattern": "^\\d+(ms|s|m|h|d)$"
+    },
+    "ByteSize": {
+      "description": "Size with unit, e.g. \"500KB\", \"1MB\", \"50MB\"",
+      "type": "string",
+      "pattern": "^\\d+(B|KB|MB|GB)$"
+    },
+    "Cidr": {
+      "type": "string",
+      "pattern": "^(([0-9]{1,3}\\.){3}[0-9]{1,3}(/\\d{1,2})?|([0-9a-fA-F:]+)(/\\d{1,3})?)$"
+    },
+    "OwaspId": {
+      "type": "string",
+      "pattern": "^API([1-9]|10):2023$"
+    },
+    "SsecId": {
+      "description": "Writ-native security category id for classes OWASP-API-2023 does not enumerate (Injection, LLM prompt-injection, audit logging, at-rest storage posture). Kept as a parallel pattern so the pure OWASP cells (^API([1-9]|10):2023$) cannot be overloaded or corrupted. v0.7 adds PROMPT (LLM prompt-injection) and AUDIT (audit logging) alongside INJECTION. v0.8 (deferred-residuals) adds STORAGE — an ADVISORY-ONLY at-rest posture class (encrypted/hashed/tokenized declaration). STORAGE is structurally unreachable by the gateway (it never sees the DB write); it NEVER compiles to enforcement and its capability is hard-pinned override-only/unsupported on every target. It exists only to document declared posture and drive an out-of-band scan finding.",
+      "type": "string",
+      "pattern": "^SSEC-(INJECTION|PROMPT|AUDIT|STORAGE)$"
+    },
+    "OwaspMitigates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/OwaspId" },
+      "uniqueItems": true
+    },
+    "SemanticType": {
+      "type": "string",
+      "enum": [
+        "string", "integer", "float", "boolean",
+        "email", "phone", "url", "date", "datetime",
+        "uuid", "ip-address", "name", "free-text", "binary"
+      ]
+    },
+
+    "RuleRef": {
+      "description": "Reference to a value resolved at request time. v0.5 S-10 widens namespaces from {jwt,request,resource} to {jwt,principal,session,header,request,resource}. Semantics: jwt.* = claim from a validated JWT (e.g. jwt.sub); principal.* = identity attribute from ANY auth scheme — generator translates per-target (custom-token, opaque-bearer, etc.); session.* = server-side session store / cookie-backed session; header.* = arbitrary request header verbatim (e.g. header.X-User-Id); request.* = request URI / query / body / path params; resource.* = field projected via resourceLookup.expose[].",
+      "type": "object",
+      "required": ["ref"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {
+          "type": "string",
+          "pattern": "^(jwt|principal|session|header|request|resource)\\.[A-Za-z0-9_.-]+$"
+        }
+      }
+    },
+
+    "JwtAllowedAlgorithm": {
+      "type": "string",
+      "enum": [
+        "RS256", "RS384", "RS512",
+        "ES256", "ES384", "ES512",
+        "EdDSA",
+        "PS256", "PS384", "PS512"
+      ]
+    },
+    "JwtBannedAlgorithm": {
+      "type": "string",
+      "enum": [
+        "RS256", "RS384", "RS512",
+        "ES256", "ES384", "ES512",
+        "EdDSA",
+        "PS256", "PS384", "PS512",
+        "HS256", "HS384", "HS512",
+        "none"
+      ]
+    },
+    "Authentication": {
+      "description": "R1.4 (v0.4 adds custom-token + bannedAlgorithms)",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["bearer-jwt", "api-key", "oauth2", "mtls", "basic", "none", "custom-token"]
+        },
+        "scopes": { "type": "array", "items": { "type": "string" } },
+        "issuer": { "$ref": "#/$defs/StringOrVarRef" },
+        "audience": { "$ref": "#/$defs/StringOrVarRef" },
+        "jwksUri": { "$ref": "#/$defs/StringOrVarRef" },
+        "headerName": { "type": "string", "default": "Authorization" },
+        "tokenFormat": {
+          "description": "v0.4 S-1: custom-token wire format. Required when type === 'custom-token'.",
+          "type": "string",
+          "enum": ["opaque", "base64", "jwt"]
+        },
+        "validationEndpoint": {
+          "description": "v0.4 S-1: introspection endpoint for opaque custom tokens.",
+          "type": "string",
+          "format": "uri"
+        },
+        "allowedAlgorithms": {
+          "description": "v0.3: JWT signing algorithm allowlist. Asymmetric only — HS* and 'none' are intentionally excluded.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/JwtAllowedAlgorithm" }
+        },
+        "bannedAlgorithms": {
+          "description": "v0.4 S-2: JWT signing algorithm denylist. Accepts the full algorithm space including symmetric HS* and 'none' so deployments can explicitly forbid them. Must not overlap with allowedAlgorithms.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/JwtBannedAlgorithm" }
+        },
+        "mfaRequired": {
+          "description": "v0.5 S-12: this endpoint must only be reachable when the authenticated principal has completed MFA. Generators translate per-target (claim check, IDP step-up, etc.).",
+          "type": "boolean"
+        },
+        "tokenSources": {
+          "description": "v0.5 S-12: which request locations the token may arrive in. Default is 'header'. Listing more than one widens trust surface — explicit is safer.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["header", "cookie", "query"] }
+        },
+        "accountLockout": {
+          "description": "v0.5 S-12: per-identifier credential-stuffing / brute-force lockout policy. identifier is a RuleRef-style key (e.g. 'header:X-Username' or 'request.body.email') used to group attempts.",
+          "type": "object",
+          "required": ["attempts", "window", "identifier"],
+          "additionalProperties": false,
+          "properties": {
+            "attempts": { "type": "integer", "minimum": 1 },
+            "window": { "$ref": "#/$defs/Duration" },
+            "identifier": { "type": "string", "description": "e.g. 'header:X-Username' or 'request.body.email'" }
+          }
+        },
+        "passwordPolicy": {
+          "description": "v0.5 S-12: password-strength policy for endpoints that accept a password in the request body (login, register, change-password). Generators may translate to a WAF body inspection or pass through to the app for enforcement.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minLength": { "type": "integer", "minimum": 8 },
+            "requireUppercase": { "type": "boolean" },
+            "requireDigit": { "type": "boolean" },
+            "requireSymbol": { "type": "boolean" },
+            "blocklist": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "sessionRotateOnAuth": {
+          "description": "v0.5 S-16: rotate the session identifier upon successful authentication. Defense against session-fixation.",
+          "type": "boolean",
+          "default": false
+        },
+        "mitigates": { "$ref": "#/$defs/OwaspMitigates" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "oauth2" } }, "required": ["type"] },
+          "then": { "required": ["scopes"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "bearer-jwt" } }, "required": ["type"] },
+          "then": { "required": ["jwksUri", "allowedAlgorithms"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "custom-token" } }, "required": ["type"] },
+          "then": { "required": ["headerName", "tokenFormat"] }
+        },
+        {
+          "description": "v0.4 S-2: allowedAlgorithms and bannedAlgorithms must be disjoint. JSON Schema cannot express set-intersection directly; we enumerate per-algorithm forbidden pairs.",
+          "allOf": [
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "RS256" } }, "bannedAlgorithms": { "contains": { "const": "RS256" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "RS384" } }, "bannedAlgorithms": { "contains": { "const": "RS384" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "RS512" } }, "bannedAlgorithms": { "contains": { "const": "RS512" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "ES256" } }, "bannedAlgorithms": { "contains": { "const": "ES256" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "ES384" } }, "bannedAlgorithms": { "contains": { "const": "ES384" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "ES512" } }, "bannedAlgorithms": { "contains": { "const": "ES512" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "EdDSA" } }, "bannedAlgorithms": { "contains": { "const": "EdDSA" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "PS256" } }, "bannedAlgorithms": { "contains": { "const": "PS256" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "PS384" } }, "bannedAlgorithms": { "contains": { "const": "PS384" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } },
+            { "not": { "properties": { "allowedAlgorithms": { "contains": { "const": "PS512" } }, "bannedAlgorithms": { "contains": { "const": "PS512" } } }, "required": ["allowedAlgorithms", "bannedAlgorithms"] } }
+          ]
+        }
+      ]
+    },
+
+    "Authorization": {
+      "description": "R1.5",
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string", "enum": ["rbac", "rule-based", "abac"] },
+        "roles": { "type": "array", "items": { "type": "string" } },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["field", "operator", "value"],
+            "additionalProperties": false,
+            "properties": {
+              "field": { "type": "string" },
+              "operator": {
+                "type": "string",
+                "enum": ["equals", "not-equals", "in", "not-in", "matches", "contains"]
+              },
+              "value": {
+                "oneOf": [
+                  { "type": ["string", "number", "boolean", "array"] },
+                  { "$ref": "#/$defs/RuleRef" }
+                ]
+              }
+            }
+          }
+        },
+        "resourceLookup": {
+          "description": "v0.3: resolve a resource by id before evaluating rules. Lets rules compare jwt.sub against resource.ownerId for BOLA defense.",
+          "type": "object",
+          "required": ["endpoint", "identifierFrom", "expose"],
+          "additionalProperties": false,
+          "properties": {
+            "endpoint": { "type": "string", "description": "Path template, e.g. /users/{id}" },
+            "identifierFrom": { "type": "string", "description": "e.g. request.params.id" },
+            "expose": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "attributes": { "type": "object" },
+        "mitigates": { "$ref": "#/$defs/OwaspMitigates" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "rbac" } }, "required": ["type"] },
+          "then": { "required": ["roles"] }
+        },
+        {
+          "if": { "properties": { "type": { "const": "rule-based" } }, "required": ["type"] },
+          "then": { "required": ["rules"] }
+        }
+      ]
+    },
+
+    "Csrf": {
+      "description": "v0.3: CSRF defense. Pick one method; required fields depend on the method.",
+      "type": "object",
+      "required": ["method"],
+      "additionalProperties": false,
+      "properties": {
+        "method": { "type": "string", "enum": ["origin-check", "double-submit", "custom-header"] },
+        "allowedOrigins": { "type": "array", "items": { "type": "string" } },
+        "tokenHeader": { "type": "string" },
+        "tokenCookie": { "type": "string" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "method": { "const": "origin-check" } }, "required": ["method"] },
+          "then": { "required": ["allowedOrigins"] }
+        },
+        {
+          "if": { "properties": { "method": { "const": "double-submit" } }, "required": ["method"] },
+          "then": { "required": ["tokenHeader", "tokenCookie"] }
+        },
+        {
+          "if": { "properties": { "method": { "const": "custom-header" } }, "required": ["method"] },
+          "then": { "required": ["tokenHeader"] }
+        }
+      ]
+    },
+
+    "RateLimit": {
+      "description": "R1.6",
+      "type": "object",
+      "required": ["requests", "window"],
+      "additionalProperties": false,
+      "properties": {
+        "requests": { "type": "integer", "minimum": 1 },
+        "window": { "$ref": "#/$defs/Duration" },
+        "identifier": {
+          "description": "Rate-limit key. Single string component, or (v0.4 S-6) an array of >=2 unique components, or (v0.5 S-14) an object { components, combinator } that disambiguates how multiple components combine. The bare-array form is preserved for back-compat and is semantically equivalent to { components: [...], combinator: 'concat' }.",
+          "default": "ip",
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^(ip|fingerprint|api-key|user-id|header:[A-Za-z0-9_-]+)$"
+            },
+            {
+              "type": "object",
+              "required": ["components"],
+              "additionalProperties": false,
+              "properties": {
+                "components": {
+                  "type": "array",
+                  "minItems": 2,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "pattern": "^(ip|fingerprint|api-key|user-id|header:[A-Za-z0-9_-]+)$"
+                  }
+                },
+                "combinator": {
+                  "type": "string",
+                  "enum": ["concat", "distinct", "min-of"],
+                  "default": "concat",
+                  "description": "concat: join components into one bucket key (default — matches v0.4 array behavior). distinct: each component gets its own counter, request rejected if ANY exceeds the budget. min-of: bucket key is the lexicographically minimum component value (used for shared-tenant fairness)."
+                }
+              }
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^(ip|fingerprint|api-key|user-id|header:[A-Za-z0-9_-]+)$"
+              }
+            }
+          ]
+        },
+        "burst": { "type": "integer", "minimum": 0 },
+        "when": {
+          "type": "string",
+          "description": "R1.18 conditional: authenticated|unauthenticated|<expression>",
+          "enum": ["authenticated", "unauthenticated"]
+        },
+        "mitigates": { "$ref": "#/$defs/OwaspMitigates" }
+      }
+    },
+
+    "Timeout": {
+      "description": "R1.7 — milliseconds",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "connect": { "type": "integer", "minimum": 1 },
+        "read": { "type": "integer", "minimum": 1 },
+        "write": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "Cacheable": {
+      "description": "R1.8",
+      "oneOf": [
+        { "type": "boolean" },
+        {
+          "type": "object",
+          "required": ["enabled"],
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "ttl": { "type": "integer", "minimum": 0 },
+            "varyBy": { "type": "array", "items": { "type": "string" } },
+            "unkeyedHeadersStrip": {
+              "description": "v0.3: request headers stripped before cache-key compute. Prevents header-based cache poisoning.",
+              "type": "array",
+              "items": { "type": "string" },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+
+    "Cors": {
+      "description": "R1.9",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowedOrigins": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "allowedMethods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+          }
+        },
+        "allowedHeaders": { "type": "array", "items": { "type": "string" } },
+        "exposeHeaders": { "type": "array", "items": { "type": "string" } },
+        "maxAge": { "type": "integer", "minimum": 0 },
+        "credentials": { "type": "boolean", "default": false }
+      },
+      "not": {
+        "description": "Wildcard origin + credentials is insecure (R1.9 ac)",
+        "type": "object",
+        "properties": {
+          "allowedOrigins": { "type": "array", "contains": { "const": "*" } },
+          "credentials": { "const": true }
+        },
+        "required": ["allowedOrigins", "credentials"]
+      }
+    },
+
+    "Mtls": {
+      "description": "R1.12",
+      "type": "object",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "clientCertRef": { "$ref": "#/$defs/VarRef" },
+        "pinnedCertificates": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^([A-Fa-f0-9]{2}:){31}[A-Fa-f0-9]{2}$" }
+        }
+      }
+    },
+
+    "IpPolicy": {
+      "description": "R1.13 — allow and deny are mutually exclusive",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allow": {
+          "oneOf": [
+            { "type": "array", "items": { "$ref": "#/$defs/Cidr" } },
+            { "$ref": "#/$defs/VarRef" }
+          ]
+        },
+        "deny": {
+          "oneOf": [
+            { "type": "array", "items": { "$ref": "#/$defs/Cidr" } },
+            { "$ref": "#/$defs/VarRef" }
+          ]
+        }
+      },
+      "not": {
+        "required": ["allow", "deny"]
+      }
+    },
+
+    "ParamSchema": {
+      "description": "R1.3 (extended in v0.3 for binary upload hardening)",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "$ref": "#/$defs/SemanticType" },
+        "minLength": { "type": "integer", "minimum": 0 },
+        "maxLength": { "type": "integer", "minimum": 0 },
+        "fixedLength": { "type": "integer", "minimum": 0 },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "pattern": { "type": "string" },
+        "domainAllowlist": { "type": "array", "items": { "type": "string" } },
+        "redirectAllowedDomains": {
+          "description": "v0.5 S-15: open-redirect defense. When this param flows into a redirect target (e.g. Location header, next/redirect URL), only these domain patterns are allowed. Supports literal hosts and glob patterns ('*.example.com'). Only meaningful when type === 'url'.",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "blockPrivateRanges": {
+          "description": "v0.4 S-4: SSRF defense for ParamSchema with type === 'url'. When true, reject URLs whose host resolves to RFC1918 (10/8, 172.16/12, 192.168/16), link-local (169.254/16, fe80::/10), loopback (127/8, ::1), unique local (fc00::/7), or non-HTTP(S) schemes (file://, gopher://, dict://, ftp://). Use for SSRF defense on user-supplied URLs.",
+          "type": "boolean"
+        },
+        "allowedMimeTypes": { "type": "array", "items": { "type": "string" } },
+        "maxSize": { "$ref": "#/$defs/ByteSize" },
+        "magicByteCheck": {
+          "description": "v0.3: verify declared MIME matches detected magic bytes (file signature).",
+          "type": "boolean"
+        },
+        "extensionAllowlist": {
+          "description": "v0.3: lowercase, dot-prefixed file extension allowlist, e.g. ['.png','.jpg'].",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^\\.[A-Za-z0-9]+$" }
+        },
+        "denyDoubleExtension": {
+          "description": "v0.3: reject filenames with multiple extensions, e.g. invoice.pdf.exe.",
+          "type": "boolean"
+        },
+        "injectionGuard": {
+          "description": "v0.6 W19 (v0.7 adds 'deserialization' + 'ai-prompt'): opt-in per-arg injection hardening. Declares which injection sink(s) this body/query field flows into so the ModSecurity-family targets (coraza, bunkerweb) emit a native operator on ARGS:<field>|ARGS:json.<field> (covers both query/form args and the JSON body): 'sql' → @detectSQLi, 'nosql' → $where/$ne/$gt/$regex operator-token denylist, 'os-command' → shell-metacharacter @rx denylist ([;&|`$(){}<>] / newline), 'xpath' → XPath-metacharacter denylist, 'ldap' → LDAP-special-char denylist, 'code-eval' → eval/exec-marker denylist, 'xss' → @detectXSS (native cross-site-scripting operator), 'deserialization' → unsafe-deserialization preamble denylist (node-serialize _$$ND_FUNC$$_, Java rO0 base64, PHP O:<n>:, python pickle \\x80 opcode framing), 'ai-prompt' → LLM prompt-injection heuristic denylist (jailbreak / system-prompt-leak / role-override markers). Per-arg and explicit — replaces the implicit string-type heuristic. 'sql'/'nosql'/'os-command'/'xpath'/'ldap'/'code-eval'/'xss'/'deserialization' are attributed to SSEC-INJECTION; 'ai-prompt' is attributed to the distinct Writ-native SSEC-PROMPT class (one synthetic id per threat class). Never an OWASP-API cell. Edge-enforceable on coraza/bunkerweb only; kong/envoy resolve unsupported.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["sql", "nosql", "os-command", "xpath", "ldap", "code-eval", "xss", "deserialization", "ai-prompt"]
+          }
+        },
+        "pii": {
+          "description": "Mark this parameter / response field as PII or otherwise sensitive. Drives the data-exposure (id:428) filter in addition to the built-in sensitive-name heuristic — use for fields whose name doesn't look obviously sensitive (e.g. nationalId, dob).",
+          "type": "boolean"
+        },
+        "mitigates": { "$ref": "#/$defs/OwaspMitigates" }
+      }
+    },
+
+    "RequestSignature": {
+      "description": "v0.3: HMAC/Ed25519 signature verification for webhooks.",
+      "type": "object",
+      "required": ["algorithm", "headerName", "secretRef", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "algorithm": { "type": "string", "enum": ["hmac-sha256", "hmac-sha1", "ed25519"] },
+        "headerName": { "type": "string" },
+        "secretRef": { "$ref": "#/$defs/VarRef" },
+        "body": { "type": "string", "enum": ["raw", "canonical"] },
+        "timestampHeader": { "type": "string" },
+        "timestampToleranceSeconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+        "nonceHeader": {
+          "description": "v0.5 S-17: header carrying the per-request nonce that the signature commits to. Required when nonceCacheTtl is set.",
+          "type": "string"
+        },
+        "nonceCacheTtl": {
+          "$ref": "#/$defs/Duration",
+          "description": "v0.5 S-17: replay-protection TTL. Reject any signed request whose nonce was already seen within this TTL. Requires nonceHeader."
+        }
+      },
+      "allOf": [
+        {
+          "description": "v0.5 S-17: nonceCacheTtl requires nonceHeader (cross-field constraint, since the nonce must be located somewhere to dedupe).",
+          "if": { "required": ["nonceCacheTtl"] },
+          "then": { "required": ["nonceHeader"] }
+        }
+      ]
+    },
+
+    "IdempotencyKey": {
+      "description": "v0.7 (API6): replay / double-submit defense for a sensitive business flow. Reuses the nonce-replay dedupe primitive (cf. RequestSignature.nonceHeader/nonceCacheTtl) but keyed on a client-supplied header instead of a signed nonce: a second request carrying the same header value within ttl is rejected (or returns the cached response). HONEST PARTIAL everywhere: stops replay but does NOT provide in-handler race atomicity — two concurrent first-submits can both pass the edge check. Enforced on collection-capable coraza profiles and kong; unsupported on envoy.",
+      "type": "object",
+      "required": ["header", "ttl"],
+      "additionalProperties": false,
+      "properties": {
+        "header": {
+          "description": "Header carrying the client idempotency key, e.g. 'Idempotency-Key'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "ttl": {
+          "$ref": "#/$defs/Duration",
+          "description": "Dedupe window — a repeated key within this TTL is treated as a replay."
+        }
+      }
+    },
+
+    "SerializeBy": {
+      "description": "v0.8 (deferred-residuals, API6): live-concurrency serialization for a sensitive business flow (double-submit / double-spend funnel). Declares the resource key that concurrent same-key requests must be serialized on. PARTIAL AT BEST, explicitly NOT full — identical posture to IdempotencyKey: the gateway can SERIALIZE same-key requests at the edge (stop concurrent double-submit) but CANNOT make the app's handler transaction atomic — two requests that both pass the edge serialize gate still race inside the handler if the app re-reads stale state. Per-target reality: coraza/bunkerweb stateful collections implement a CRUDE concurrency cap / short-window dedupe on a SecCollection key (PARTIAL — rate-limit-shaped, not a true mutex, best-effort across worker processes); envoy routes to an operator-supplied ext_proc/external limiter (OVERRIDE-ONLY); kong/aws-apigw/cloudflare/firewall/openappsec have no native per-key lock (UNSUPPORTED — no Redis-plugin is emitted). The capability comment MUST state 'edge serialization only — does NOT provide in-handler transaction atomicity'.",
+      "type": "object",
+      "required": ["key"],
+      "additionalProperties": false,
+      "properties": {
+        "key": {
+          "description": "RuleRef-style resource key concurrent same-key requests serialize on, e.g. 'request.body.account_id' or 'jwt.sub'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "description": "Serialize globally or per distinct identifier value. Default per-identifier.",
+          "type": "string",
+          "enum": ["global", "per-identifier"]
+        }
+      }
+    },
+
+    "DataAtRest": {
+      "description": "v0.8 (deferred-residuals, SSEC-STORAGE): ADVISORY-DECLARATION ONLY. Names body fields (e.g. password, pan, cvv, apiKey) and the asserted at-rest protection posture the app is SUPPOSED to apply. This field is NOT gateway-enforced and compiles to NOTHING enforcing — the gateway structurally never sees the DB write, so it cannot encrypt/hash/tokenize at rest. Its capability is HARD-PINNED to override-only/unsupported on EVERY target (never full, never partial). It exists ONLY to (1) document declared posture as a comment/annotation in the compiled output, and (2) drive an out-of-band Writ SCAN/agent finding under SSEC-STORAGE when the declared posture is absent or contradicted by detected plaintext storage. A finding, not a control.",
+      "type": "object",
+      "required": ["fields", "protection"],
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "description": "Body field names whose at-rest protection is being declared, e.g. ['password','pan','cvv'].",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "protection": {
+          "description": "Declared (NOT gateway-enforced) at-rest protection posture for the named fields.",
+          "type": "string",
+          "enum": ["encrypted", "hashed", "tokenized"]
+        }
+      }
+    },
+
+    "Logging": {
+      "description": "v0.7 (SSEC-AUDIT): declarative audit/access logging policy. The gateway IS the log point, so this compiles natively per target: coraza SecAuditLog/SecAuditLogParts + per-event tagged log actions, bunkerweb modsec audit config, kong http-log/file-log/tcp-log plugins, envoy access_log with a JSON format string. Writ-native (OWASP-API-2023 retired the dedicated logging class, so this is attributed to SSEC-AUDIT, never an API cell).",
+      "type": "object",
+      "required": ["events"],
+      "additionalProperties": false,
+      "properties": {
+        "events": {
+          "description": "Which security-relevant events to log. At least one required.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["auth-failure", "auth-success", "authz-deny", "rate-limit-trip", "injection-block", "request", "response"]
+          }
+        },
+        "sink": {
+          "description": "Where the log line is delivered. Defaults to 'stdout' when omitted. 'http-collector' requires sinkRef (the collector URL).",
+          "type": "string",
+          "enum": ["stdout", "file", "syslog", "http-collector"],
+          "default": "stdout"
+        },
+        "sinkRef": {
+          "$ref": "#/$defs/VarRef",
+          "description": "Collector endpoint reference (e.g. ${LOG_COLLECTOR_URL}). Required when sink === 'http-collector'."
+        },
+        "piiRedaction": {
+          "description": "When true, declared pii:true fields plus the built-in sensitive-name heuristic are masked/omitted from the emitted log line, so the log template never contains the sensitive field value verbatim. Default false for backcompat.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "allOf": [
+        {
+          "description": "sink:'http-collector' requires a sinkRef to know where to ship the log.",
+          "if": { "properties": { "sink": { "const": "http-collector" } }, "required": ["sink"] },
+          "then": { "required": ["sinkRef"] }
+        }
+      ]
+    },
+
+    "RequestPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contentType": {
+          "description": "R1.2 allowlist",
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "maxBodySize": { "$ref": "#/$defs/ByteSize" },
+        "schema": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/ParamSchema" }
+        },
+        "denyUnknownFields": {
+          "description": "v0.3 PW-2: reject request body fields outside `schema`. Default false for backcompat.",
+          "type": "boolean",
+          "default": false
+        },
+        "allowedFields": {
+          "description": "v0.4 S-8 shorthand: request body must contain ONLY these top-level fields; equivalent to setting denyUnknownFields: true and listing them all in `schema` with the default ParamSchema. Cannot coexist with denyUnknownFields: false.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "denyFields": {
+          "description": "v0.8 (API6): denylist of server-controlled fields a client must never set; reject the request if any is present in the body. The mass-assignment defense that does NOT require a full allowlist — use for reserved/privileged keys (objectId, _id, role, isAdmin, __proto__) when the route persists req.body wholesale and the legitimate field set is open.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        },
+        "allowedMethods": {
+          "description": "v0.4 S-3: server-side HTTP method enforcement (separate from CORS preflight).",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+          }
+        },
+        "disableExternalEntities": {
+          "description": "v0.4 S-5: XXE defense. When true, the XML parser must disable external entity resolution and DTD processing. Default false for backcompat; recommended true for any endpoint that parses XML.",
+          "type": "boolean",
+          "default": false
+        },
+        "disallowXml": {
+          "description": "v0.4 S-5: reject requests with Content-Type application/xml, text/xml, or application/*+xml. Use when the endpoint never legitimately consumes XML.",
+          "type": "boolean",
+          "default": false
+        },
+        "signature": { "$ref": "#/$defs/RequestSignature" },
+        "idempotencyKey": { "$ref": "#/$defs/IdempotencyKey" },
+        "serializeBy": { "$ref": "#/$defs/SerializeBy" },
+        "concurrencyLimit": {
+          "description": "v0.8 (deferred-residuals, API6): max simultaneous in-flight requests for the serializeBy key (concurrencyLimit:1 == strict serialize). PARTIAL AT BEST — edge serialization only, NOT in-handler transaction atomicity. Only meaningful alongside serializeBy.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "dataAtRest": { "$ref": "#/$defs/DataAtRest" },
+        "allowedHosts": {
+          "description": "v0.3: Host header allowlist.",
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "duplicateParamPolicy": {
+          "description": "v0.3: HTTP Parameter Pollution defense. Default reject.",
+          "type": "string",
+          "enum": ["first", "last", "reject"],
+          "default": "reject"
+        },
+        "headerInjectionGuard": {
+          "description": "v0.3: reject header values containing CR/LF/NUL. Default false for backcompat.",
+          "type": "boolean",
+          "default": false
+        },
+        "pathCanonicalization": {
+          "description": "v0.3: canonicalize URL path (percent-decode, resolve ./..//) before pattern checks. Default false for backcompat.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "allOf": [
+        {
+          "description": "v0.4 S-8: allowedFields is a shorthand for denyUnknownFields:true; it cannot coexist with an explicit denyUnknownFields:false.",
+          "if": { "required": ["allowedFields"] },
+          "then": {
+            "not": {
+              "required": ["denyUnknownFields"],
+              "properties": { "denyUnknownFields": { "const": false } }
+            }
+          }
+        }
+      ]
+    },
+
+    "CookieDefaults": {
+      "description": "v0.3: applied to all Set-Cookie headers on this endpoint's response.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "httpOnly": { "type": "boolean" },
+        "secure": { "type": "boolean" },
+        "sameSite": { "type": "string", "enum": ["Strict", "Lax", "None"] },
+        "path": { "type": "string" },
+        "domain": { "type": "string" },
+        "maxAge": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "Hsts": {
+      "type": "object",
+      "required": ["maxAge"],
+      "additionalProperties": false,
+      "properties": {
+        "maxAge": { "type": "integer", "minimum": 0 },
+        "includeSubDomains": { "type": "boolean" },
+        "preload": { "type": "boolean" }
+      }
+    },
+
+    "ResponseHeaders": {
+      "description": "v0.3: response-side hardening headers. Absent fields are not emitted.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "csp": { "type": "string" },
+        "hsts": { "$ref": "#/$defs/Hsts" },
+        "frameOptions": { "type": "string", "enum": ["DENY", "SAMEORIGIN"] },
+        "contentTypeOptions": { "type": "string", "enum": ["nosniff"] },
+        "referrerPolicy": {
+          "type": "string",
+          "enum": [
+            "no-referrer",
+            "no-referrer-when-downgrade",
+            "origin",
+            "origin-when-cross-origin",
+            "same-origin",
+            "strict-origin",
+            "strict-origin-when-cross-origin",
+            "unsafe-url"
+          ]
+        },
+        "permissionsPolicy": { "type": "string" },
+        "coop": { "type": "string", "enum": ["unsafe-none", "same-origin-allow-popups", "same-origin"] },
+        "coep": { "type": "string", "enum": ["unsafe-none", "require-corp", "credentialless"] },
+        "corp": { "type": "string", "enum": ["same-site", "same-origin", "cross-origin"] },
+        "cacheControl": { "type": "string" }
+      }
+    },
+
+    "ResponsePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "contentType": { "type": "array", "items": { "type": "string" } },
+        "schema": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/ParamSchema" }
+        },
+        "stripUnknownFields": { "type": "boolean", "default": false },
+        "forbidArrayRoot": {
+          "description": "v0.7 (API3): JSON-hijacking defense. When true, reject any response whose top-level JSON body is a bare array (matches ^\\s*\\[). Compiles to a phase:4 RESPONSE_BODY deny rule on coraza (gated on supportsResponseBodyAccess — partial where regex-over-raw-body) and bunkerweb; kong post-function partial; envoy override-only (ext_proc). Default false for backcompat.",
+          "type": "boolean",
+          "default": false
+        },
+        "headers": { "$ref": "#/$defs/ResponseHeaders" },
+        "cookies": {
+          "type": "object",
+          "required": ["defaults"],
+          "additionalProperties": false,
+          "properties": {
+            "defaults": { "$ref": "#/$defs/CookieDefaults" }
+          }
+        },
+        "errorScrubbing": {
+          "description": "v0.5 S-13: outbound error sanitization. Strip stack traces / server banners / verbose internal messages from 4xx/5xx responses. statusOverride remaps specific upstream status codes to a generic body (key: '4xx' or '5xx' status code; value: replacement body or empty string).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "stripStackTraces": { "type": "boolean", "default": false },
+            "stripServerHeaders": { "type": "boolean", "default": false },
+            "genericMessages": { "type": "boolean", "default": false },
+            "statusOverride": {
+              "type": "object",
+              "additionalProperties": { "type": "string" },
+              "propertyNames": { "pattern": "^[45][0-9][0-9]$" }
+            }
+          }
+        }
+      }
+    },
+
+    "GraphqlOperation": {
+      "description": "v0.8 (deferred-residuals): per-OPERATION GraphQL policy bound to a single named field/operation (e.g. systemDiagnostics, pastes, importPaste) that the one POST /graphql route funnels. authz reuses the Authorization rule grammar (rule-based jwt.sub==resource.owner for per-resolver BOLA → API1:2023; rbac for per-resolver BFLA → API5:2023). Per-operation maxDepth/maxComplexity/maxAliases override the block-level coarse limits (API4:2023). OVERRIDE-ONLY on every target: a gateway physically cannot evaluate per-resolver authz or per-operation cost without parsing the GraphQL query+variables out of the POST body and resolving the selection set — the SAME GraphQL-aware-processor gap as the response-schema ext_proc. Writ ships SCAFFOLDING (an ext_proc filter + a graphql-operations.json data file and/or a graphql-armor/Apollo-router config artifact); ENFORCEMENT DEPENDS ON the operator supplying the GraphQL-aware processor. Until they do, NOTHING here is enforced — therefore override-only, NOT full, NOT partial. The compiled artifact's enforcement status reads 'override-only' verbatim.",
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "name": {
+          "description": "The GraphQL field/operation name this policy binds to (e.g. 'systemDiagnostics').",
+          "type": "string",
+          "minLength": 1
+        },
+        "operationType": {
+          "type": "string",
+          "enum": ["query", "mutation", "subscription"]
+        },
+        "authz": {
+          "description": "Per-resolver authorization. Mirrors the top-level Authorization $def grammar (rbac / rule-based / abac). Presence attributes to API1:2023 (per-resolver BOLA) and API5:2023 (per-resolver BFLA). OVERRIDE-ONLY — requires an operator-supplied GraphQL-aware processor; Writ emits only the rule data + scaffolding, never an enforcing filter.",
+          "$ref": "#/$defs/Authorization"
+        },
+        "maxDepth": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "maxComplexity": { "type": "integer", "minimum": 1 },
+        "maxAliases": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "GraphqlPolicy": {
+      "description": "v0.3: GraphQL-specific limits. At least one limit OR an operations[] entry must be set. v0.8 (deferred-residuals) adds operations[] for per-operation authz + cost. The block-level coarse limits (maxDepth/maxComplexity/maxAliases/batchLimit/disableIntrospection/allowedOperations) carry capKey graphql.staticLimits (API4:2023; override-only/partial per target — a target may enforce a crude non-parsing limit). The new operations[].authz carries the distinct capKey graphql.operations.authz (API1/API5; OVERRIDE-ONLY everywhere). The two capKeys are kept separate so the per-operation authz override-only status never contaminates the coarse-limit cell and vice versa.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "maxDepth": { "type": "integer", "minimum": 1, "maximum": 50 },
+        "maxComplexity": { "type": "integer", "minimum": 1 },
+        "maxAliases": { "type": "integer", "minimum": 1 },
+        "batchLimit": { "type": "integer", "minimum": 1 },
+        "disableIntrospection": { "type": "boolean" },
+        "allowedOperations": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["query", "mutation", "subscription"] }
+        },
+        "operations": {
+          "description": "v0.8: per-operation policy bound to named GraphQL fields the single /graphql route funnels. Additive — block-level limits stay coarse; operations[] is OVERRIDE-ONLY (operator-supplied GraphQL processor required). minProperties:1 on the block is satisfied by either the coarse limits or operations[].",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/GraphqlOperation" }
+        }
+      }
+    },
+
+    "WebsocketPolicy": {
+      "description": "v0.3: WebSocket origin, size, and rate enforcement.",
+      "type": "object",
+      "required": ["allowedOrigins"],
+      "additionalProperties": false,
+      "properties": {
+        "allowedOrigins": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" }
+        },
+        "maxMessageSize": { "$ref": "#/$defs/ByteSize" },
+        "messageRateLimit": {
+          "type": "object",
+          "required": ["messages", "window"],
+          "additionalProperties": false,
+          "properties": {
+            "messages": { "type": "integer", "minimum": 1 },
+            "window": { "$ref": "#/$defs/Duration" }
+          }
+        },
+        "maxConnectionsPerIdentifier": { "type": "integer", "minimum": 1 },
+        "idleTimeout": { "$ref": "#/$defs/Duration" }
+      }
+    },
+
+    "BotProtection": {
+      "description": "v0.3: CAPTCHA-style bot challenge integration.",
+      "type": "object",
+      "required": ["provider", "secretRef", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "provider": { "type": "string", "enum": ["turnstile", "recaptcha", "hcaptcha"] },
+        "secretRef": { "$ref": "#/$defs/VarRef" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 },
+        "mode": { "type": "string", "enum": ["enforce", "observe"] }
+      }
+    },
+
+    "OutboundCall": {
+      "description": "v0.5 S-11: declared outbound call this endpoint makes (webhook delivery, downstream service, IDP, etc.). Lets the WAF assert signed-request requirements, response schema, and TLS floor before the call is allowed to leave.",
+      "type": "object",
+      "required": ["endpoint"],
+      "additionalProperties": false,
+      "properties": {
+        "endpoint": { "type": "string", "format": "uri" },
+        "signatureAlgorithm": {
+          "type": "string",
+          "enum": ["hmac-sha256", "hmac-sha512", "ed25519", "none"]
+        },
+        "secretRef": { "$ref": "#/$defs/StringOrVarRef" },
+        "timestampToleranceSeconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+        "responseSchema": {
+          "description": "OpenAPI 3.0-style schema fragment the response must validate against. Passed through to the generator unchanged.",
+          "type": "object"
+        },
+        "timeoutMs": { "type": "integer", "minimum": 1 },
+        "allowedTlsVersions": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["TLSv1.2", "TLSv1.3"] }
+        },
+        "mitigates": { "$ref": "#/$defs/OwaspMitigates" }
+      },
+      "allOf": [
+        {
+          "description": "v0.5 S-11: secretRef is required when the call is signed (signatureAlgorithm !== 'none').",
+          "if": {
+            "required": ["signatureAlgorithm"],
+            "properties": {
+              "signatureAlgorithm": { "not": { "const": "none" } }
+            }
+          },
+          "then": { "required": ["secretRef"] }
+        }
+      ]
+    },
+
+    "Tls": {
+      "description": "v0.5 S-18: TLS floor for this endpoint. Generators emit per-target equivalents (e.g. ssl_protocols in nginx, MinTLSVersion on a CloudFront distribution).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minVersion": {
+          "type": "string",
+          "enum": ["TLSv1.2", "TLSv1.3"],
+          "default": "TLSv1.2"
+        },
+        "allowedCipherSuites": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "TargetOverrides": {
+      "description": "R1.15 — escape hatch for vendor-specific config. Values are passed through unchanged.",
+      "type": "object",
+      "additionalProperties": true,
+      "propertyNames": {
+        "enum": ["kong", "kong-enterprise", "coraza", "bunkerweb", "openappsec", "firewall", "cloudflare", "aws-apigw"]
+      }
+    }
+  }
+}

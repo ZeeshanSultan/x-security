@@ -1,0 +1,49 @@
+{
+  "name": "@writ/shared",
+  "version": "0.1.0",
+  "description": "Shared types and contracts for Writ SaaS services",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./validation": {
+      "types": "./dist/validation.d.ts",
+      "import": "./dist/validation.js"
+    },
+    "./net/private-ip": {
+      "types": "./dist/net/private-ip.d.ts",
+      "import": "./dist/net/private-ip.js"
+    },
+    "./regex-grammar": {
+      "types": "./dist/regex-grammar.d.ts",
+      "import": "./dist/regex-grammar.js"
+    },
+    "./logging/redact": {
+      "types": "./dist/logging/redact.d.ts",
+      "import": "./dist/logging/redact.js"
+    },
+    "./env": {
+      "types": "./dist/env.d.ts",
+      "import": "./dist/env.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "undici": "^6.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

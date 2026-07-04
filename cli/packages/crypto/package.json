@@ -1,0 +1,21 @@
+{
+  "name": "@writ/crypto",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AES-256-GCM helpers for at-rest secret encryption (shared across Writ workspace)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx 'test/**/*.test.ts' 'src/**/*.test.ts'"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,18 @@
+# configuration file /etc/nginx/nginx.conf:
+worker_processes auto;
+events { worker_connections 1024; }
+http {
+  modsecurity on;
+  modsecurity_rules_file /etc/nginx/modsec/main.conf;
+  server { listen 8080; location / { proxy_pass http://upstream; } }
+}
+
+# configuration file /etc/nginx/modsec/main.conf:
+Include /etc/nginx/modsec/writ.conf;
+
+# configuration file /etc/nginx/modsec/writ.conf:
+SecAction "id:299740,phase:1,nolog,pass,setvar:tx.jwt_invalid=0"
+SecRule REQUEST_HEADERS:Authorization-Token "@rx ^Bearer (.+)$" "id:299743,phase:1,nolog,pass"
+SecRule &TX:bearer_token "@eq 0" "id:299744,phase:1,deny,status:401,log"
+SecAction "id:277660,phase:1,nolog,pass"
+SecRule REQUEST_HEADERS:Authorization "@rx ^Bearer (.+)$" "id:277663,phase:1,nolog,pass"

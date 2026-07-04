@@ -1,0 +1,48 @@
+{
+  "name": "@writ/cli",
+  "version": "0.1.1",
+  "description": "Writ CLI — generate/validate/test/report/diff/init against multiple gateway targets",
+  "license": "Apache-2.0",
+  "homepage": "https://usewaf.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZeeshanSultan/x-security.git"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "lazy": "./dist/bin/lazy.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build:deps": "pnpm --filter \"@writ/cli^...\" build",
+    "build": "pnpm run build:deps && tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('src/generators/firewall/scripts','dist/generators/firewall/scripts',{recursive:true})\"",
+    "bundle:npm": "pnpm run build:deps && node scripts/bundle-npm.mjs",
+    "test": "node --test --import tsx 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@writ/schema": "workspace:*",
+    "@writ/core": "workspace:*",
+    "@writ/detect-core": "workspace:*",
+    "@writ/crypto": "workspace:*",
+    "@writ/cursor-mcp": "workspace:*",
+    "@writ/aws-apigw-compiler": "workspace:*",
+    "@writ/cloudflare-compiler": "workspace:*",
+    "@stoplight/spectral-core": "^1.19.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "dockerode": "^4.0.2",
+    "js-yaml": "^4.1.0",
+    "jsondiffpatch": "^0.6.0",
+    "undici": "^6.20.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.31",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

@@ -1,0 +1,6 @@
+# Partial-load capture: only the api1 directives reached the engine
+# (the api2 block was dropped before this file was assembled — e.g. a
+# parse error truncated the slicer mid-way). 277660/277663 absent.
+SecAction "id:299740,phase:1,pass,nolog"
+SecRule REQUEST_METHOD "@streq GET" "id:299743,phase:1,deny,status:401"
+SecRule REQUEST_URI "@rx ^/vapi/api1/user/[^/]+$" "id:299744,phase:1,deny,status:429"

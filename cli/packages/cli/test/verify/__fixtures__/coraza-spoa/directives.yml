@@ -1,0 +1,12 @@
+directives: |
+  # ════════════════════════════════════════════════════════════
+  # GET /vapi/api1/user/{id}  (operationId: api1-user-by-id)
+  # ════════════════════════════════════════════════════════════
+  SecAction "id:299740,phase:1,pass,nolog"
+  SecRule REQUEST_METHOD "@streq GET" "id:299743,phase:1,deny,status:401"
+  SecRule REQUEST_URI "@rx ^/vapi/api1/user/[^/]+$" "id:299744,phase:1,deny,status:429"
+  # ════════════════════════════════════════════════════════════
+  # GET /vapi/api2/user/details  (operationId: api2-user-details)
+  # ════════════════════════════════════════════════════════════
+  SecAction "id:277660,phase:1,pass,nolog"
+  SecRule REQUEST_HEADERS:Authorization "@rx ^Bearer (.+)$" "id:277663,phase:1,pass"

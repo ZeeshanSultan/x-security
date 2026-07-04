@@ -1,0 +1,16 @@
+# /etc/cp/conf/policy.yaml (concatenated by capture script)
+policies:
+  default:
+    practices: [writ-threat-prevention, writ-rate-limit]
+  specific-rules:
+    - name: writ-asset-vapi
+      host: vapi
+practices:
+  - name: writ-threat-prevention
+  - name: writ-rate-limit
+log-triggers:
+  - name: writ-log-trigger
+custom-responses:
+  - name: writ-blocked-response
+# writ-extended schemas (agent treats as opaque metadata):
+# get-api1-user-by-id post-api3-create-user

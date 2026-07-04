@@ -1,0 +1,13 @@
+# /etc/logrotate.d/writ — sample logrotate config for Writ refresh log.
+# Copy to /etc/logrotate.d/writ and adjust paths/retention to taste.
+/var/log/writ-resolve.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root adm
+    # Append-only integrity hint: do NOT use copytruncate — it allows
+    # in-place rewrites. Rotation + recreate preserves append-only.
+}

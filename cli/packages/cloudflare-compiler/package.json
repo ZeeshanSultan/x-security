@@ -1,0 +1,26 @@
+{
+  "name": "@writ/cloudflare-compiler",
+  "version": "0.1.0",
+  "description": "Compile x-security annotations to Cloudflare WAF Custom Rules + Rate Limit + Transform JSON",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx 'test/**/*.test.ts'"
+  },
+  "dependencies": {
+    "@writ/schema": "workspace:*",
+    "@writ/core": "workspace:*",
+    "@writ/shared": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

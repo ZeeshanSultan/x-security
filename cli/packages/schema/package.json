@@ -1,0 +1,47 @@
+{
+  "name": "@writ/schema",
+  "version": "0.1.0",
+  "description": "OpenAPI x-security extension schema, Spectral ruleset, and generated TypeScript types",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
+    },
+    "./schema.json": "./src/x-security.schema.json",
+    "./owasp": "./src/owasp-mapping.json",
+    "./spectral-ruleset": "./spectral-ruleset.yaml"
+  },
+  "files": [
+    "dist",
+    "src/x-security.schema.json",
+    "src/owasp-mapping.json",
+    "spectral-ruleset.yaml",
+    "functions"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp src/x-security.schema.json src/owasp-mapping.json dist/",
+    "gen:types": "json2ts -i src/x-security.schema.json -o src/generated/x-security.d.ts --no-additional-properties",
+    "test": "node --test --import tsx 'test/**/*.test.ts'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "ajv-draft-04": "^1.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "json-schema-to-typescript": "^15.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}

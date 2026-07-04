@@ -1,0 +1,10 @@
+{
+  "ruleNames": [
+    "writ-shadow-9eb29ad55ee9-auth",
+    "writ-shadow-9eb29ad55ee9-ratelimit-0"
+  ],
+  "ruleTypes": ["auth", "ratelimit-0"],
+  "rateBasedLimit": 500,
+  "rateBasedWindowSec": 300,
+  "rateBasedKey": "IP"
+}

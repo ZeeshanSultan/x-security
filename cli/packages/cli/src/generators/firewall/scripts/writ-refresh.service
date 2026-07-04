@@ -1,0 +1,24 @@
+[Unit]
+Description=Writ firewall refresh (DNS-resolved allowlist apply)
+Documentation=https://github.com/writ/writ
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/writ-refresh.sh
+# Fail-closed: a failure here MUST NOT clear existing rules. The script
+# itself is responsible for that (it exits 0 on resolver failure to avoid
+# triggering systemd-restart loops that could thrash iptables).
+SuccessExitStatus=0
+# Hardening: the script only needs network + iptables. No private tmp
+# because the resolver writes /etc/writ/rules.current.
+ProtectSystem=false
+ProtectHome=true
+PrivateDevices=true
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+
+[Install]
+WantedBy=multi-user.target

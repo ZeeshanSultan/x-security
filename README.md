@@ -3,6 +3,7 @@
 Write policy next to the route it protects. Compile it with a deterministic CLI.
 
 - The spec, JSON Schema for validation, and examples — all in this repo
+- The reference CLI that compiles it — source in [`cli/`](cli/), published as [`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security)
 - Watch releases: schema changes are versioned and tagged
 
 ## What it looks like
@@ -36,6 +37,7 @@ have, versions in git, and diffs like code.
 | [`spectral-ruleset.yaml`](spectral-ruleset.yaml) | Spectral ruleset — lint annotated OpenAPI specs in CI |
 | [`docs/v0.8-reference.md`](docs/v0.8-reference.md) | Field-level reference for the current schema version |
 | [`examples/`](examples/) | Annotated OpenAPI specs that validate against the schema |
+| [`cli/`](cli/) | Reference CLI (`xsecurity`) — compiles annotated specs into gateway config. Published as [`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security) |
 
 ## Validate a spec
 
@@ -45,6 +47,28 @@ npx @stoplight/spectral-cli lint --ruleset spectral-ruleset.yaml your-openapi.ya
 
 Or validate a single block against `schema/x-security.schema.json` with any
 JSON Schema validator (draft 2020-12).
+
+## Compile it: the CLI
+
+The reference implementation lives in [`cli/`](cli/) — a deterministic,
+**LLM-free** CLI that turns annotated OpenAPI specs into gateway configuration
+(Kong, Coraza, BunkerWeb, OpenAppSec, Envoy, firewall) and validates, tests, and
+reports on them. Published to npm as
+[`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security);
+the installed command is `xsecurity`.
+
+```bash
+npx @chain305/x-security --help        # run without installing
+npm i -g @chain305/x-security          # global install → `xsecurity`
+```
+
+```bash
+xsecurity generate your-openapi.yaml --target kong
+xsecurity report   your-openapi.yaml --owasp
+```
+
+Build it from source or reproduce the published artifact — see
+[`cli/README.md`](cli/README.md).
 
 ## Versioning
 

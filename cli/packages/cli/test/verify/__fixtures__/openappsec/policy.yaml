@@ -1,0 +1,36 @@
+policies:
+  default:
+    mode: prevent-learn
+    practices:
+      - writ-threat-prevention
+      - writ-rate-limit
+    triggers:
+      - writ-log-trigger
+    custom-response: writ-blocked-response
+  specific-rules:
+    - name: writ-asset-vapi
+      host: vapi
+      practices:
+        - writ-threat-prevention
+        - writ-rate-limit
+practices:
+  - name: writ-threat-prevention
+    type: threat-prevention
+  - name: writ-rate-limit
+    type: rate-limit
+log-triggers:
+  - name: writ-log-trigger
+custom-responses:
+  - name: writ-blocked-response
+writ-extended:
+  schema-validation:
+    - name: get-api1-user-by-id
+      binding:
+        method: GET
+        path: /vapi/api1/user/{id}
+        operationId: api1-user-by-id
+    - name: post-api3-create-user
+      binding:
+        method: POST
+        path: /vapi/api3/user
+        operationId: api3-create-user
