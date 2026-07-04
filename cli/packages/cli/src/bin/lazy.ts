@@ -3,7 +3,9 @@
 // in ../commands/*; the bin layer only handles argv parsing, exit codes,
 // and stdout formatting.
 
-import { basename } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Command } from 'commander';
 import { runGenerate } from '../commands/generate.js';
 import { runValidate } from '../commands/validate.js';
@@ -20,6 +22,23 @@ import { registerByoCommands } from './byo-commands.js';
 import { StrictnessViolation } from '@writ/core';
 import type { ReportFormat } from '../reporters/types.js';
 
+// Read the version from the shipped package.json so `--version` can't drift
+// from the published version. package.json sits at ../package.json in the npm
+// bundle (bin/xsecurity.mjs) and ../../package.json in the dev build
+// (dist/bin/lazy.js); try both.
+function resolveVersion(): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  for (const rel of ['../package.json', '../../package.json']) {
+    try {
+      const v = JSON.parse(readFileSync(join(here, rel), 'utf8')).version;
+      if (typeof v === 'string') return v;
+    } catch {
+      // try the next candidate location
+    }
+  }
+  return '0.0.0';
+}
+
 const program = new Command();
 
 // Name the program after the invoked binary so help/usage matches however the
@@ -28,7 +47,7 @@ const program = new Command();
 program
   .name(basename(process.argv[1] ?? 'lazy').replace(/\.(mjs|cjs|js)$/, ''))
   .description('Compile, validate, test, and report on x-security policies in OpenAPI specs.')
-  .version('0.1.0');
+  .version(resolveVersion());
 
 // ------------------------------------------------------------ generate
 program

@@ -1,6 +1,6 @@
 {
   "name": "@writ/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Writ CLI — generate/validate/test/report/diff/init against multiple gateway targets",
   "license": "Apache-2.0",
   "homepage": "https://usewaf.com",
@@ -13,7 +13,9 @@
   "bin": {
     "lazy": "./dist/bin/lazy.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build:deps": "pnpm --filter \"@writ/cli^...\" build",
     "build": "pnpm run build:deps && tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('src/generators/firewall/scripts','dist/generators/firewall/scripts',{recursive:true})\"",

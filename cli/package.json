@@ -1,7 +1,7 @@
 {
   "name": "x-security-cli",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Reference CLI for the x-security OpenAPI extension. Source for the published npm package @chain305/x-security (command: xsecurity).",
   "license": "Apache-2.0",
   "engines": {
