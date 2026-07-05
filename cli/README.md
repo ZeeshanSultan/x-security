@@ -1,22 +1,28 @@
 # x-security CLI
 
-The reference implementation for the [`x-security`](../README.md) OpenAPI
-extension: a deterministic, **LLM-free** CLI that compiles annotated OpenAPI
-specs into gateway configuration and validates, tests, and reports on them. No
-API keys, no network calls to a model — the same input always produces the same
-output.
+Your API gateway and WAF already ship most of the security you need — auth, rate
+limits, request validation, ownership/BOLA rules. Most teams run them on
+defaults. `x-security` lets you write that policy **once**, as an extension of
+the OpenAPI spec you already have, and compile it to whichever gateway you run.
 
-Published to npm as **[`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security)**.
-The installed command is `xsecurity`.
+- **No new DSL** — policy lives in your OpenAPI file, next to the route it protects.
+- **No vendor lock-in** — one spec compiles to Kong, Coraza, BunkerWeb, OpenAppSec, Envoy, or a firewall bundle. Switch gateways without rewriting a line of policy.
+- **No config drift** — the spec is the source of truth; it versions and diffs like code, and `validate` catches drift against a running gateway.
+
+Deterministic. No LLM calls, no API keys.
 
 ## Install
 
-```bash
-npx @chain305/x-security --help        # run without installing
-npm i -g @chain305/x-security          # global install → `xsecurity`
+```
+npm i -g @chain305/x-security     # installs the `xsecurity` command
+xsecurity --help
 ```
 
-Requires Node 20+. Docker is only needed for `xsecurity test`.
+Or run it without installing:
+
+```
+npx @chain305/x-security --help
+```
 
 ## Commands
 
@@ -31,51 +37,13 @@ Requires Node 20+. Docker is only needed for `xsecurity test`.
 | `xsecurity init <spec>` | Add empty `x-security` blocks to operations missing them |
 | `xsecurity migrate <spec> --from 0.4 --to 0.5` | Rewrite a spec between schema versions |
 
-Run `xsecurity <command> --help` for full flags. See
-[`packages/cli/README.md`](packages/cli/README.md) for the package-level readme.
+Run `xsecurity <command> --help` for full flags.
 
-## Build from source
+## Requirements
 
-This folder is a self-contained pnpm workspace: the CLI package plus exactly the
-`@writ/*` packages it depends on (all Apache-2.0, identical to the code inlined
-into the published npm bundle). Nothing else from the upstream monorepo is
-required.
-
-```bash
-cd cli
-pnpm install
-pnpm build             # tsc build → packages/cli/dist
-node packages/cli/dist/bin/lazy.js --help
-```
-
-Reproduce the exact published npm artifact:
-
-```bash
-pnpm bundle            # → packages/cli/npm-dist  (package @chain305/x-security, command xsecurity)
-```
-
-## Layout
-
-```
-cli/
-  packages/
-    cli/                 the CLI itself (generators, reporters, verifiers)
-    schema/              x-security schema types + validation
-    core/                spec parsing + policy model
-    detect-core/         detection primitives
-    crypto/              release-bundle signing/verification
-    shared/              shared utilities
-    cursor-mcp/          Cursor MCP server surface
-    aws-apigw-compiler/  AWS API Gateway target compiler
-    cloudflare-compiler/ Cloudflare target compiler
-  docs/                  CLI-specific guides
-```
-
-## Docs
-
-- [`docs/byo-agent-plugin.md`](docs/byo-agent-plugin.md) — the BYO-agent runtime (`writ` verbs: routes, verify-finding, compile, audit, emit)
-- [`docs/schema-migration-0.4-to-0.5.md`](docs/schema-migration-0.4-to-0.5.md) — migrating specs between schema versions
+- Node 20+
+- Docker (only for `xsecurity test`)
 
 ## License
 
-[Apache-2.0](../LICENSE).
+Apache-2.0
