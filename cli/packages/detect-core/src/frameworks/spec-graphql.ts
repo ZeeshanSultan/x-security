@@ -57,10 +57,13 @@ const FIELD_LINE_RE = /^([A-Za-z_][A-Za-z0-9_]*)\s*(\([^)]*\))?\s*:/;
  * and `/* *​/` blocks only (mirrors the prototype's `strip_comments(text,"js")`
  * for the template-bearing files). */
 function stripJsComments(text: string): string {
-  const noBlocks = text.replace(/\/\*[\s\S]*?\*\//g, '');
+  // Preserve line count so `lineAt` maps to the real source line (Rule D-3):
+  // blank block-comment content (keep newlines) and blank `//`-lines instead of
+  // deleting them. Same fix as express.ts stripComments.
+  const noBlocks = text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
   return noBlocks
     .split('\n')
-    .filter((line) => !line.trimStart().startsWith('//'))
+    .map((line) => (line.trimStart().startsWith('//') ? '' : line))
     .join('\n');
 }
 

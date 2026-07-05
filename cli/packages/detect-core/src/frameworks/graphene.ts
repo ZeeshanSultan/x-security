@@ -143,9 +143,12 @@ function lineAt(text: string, index: number): number {
  * intact to avoid clobbering `#` inside strings.
  */
 function stripPyComments(text: string): string {
+  // Blank `#`-comment lines but KEEP the line so `lineAt` maps to the real
+  // source line (Rule D-3). Filtering shifts every decl below up by the comment
+  // count → wrong sourceLine. Same fix as flask.ts/express.ts.
   return text
     .split('\n')
-    .filter((line) => !line.trimStart().startsWith('#'))
+    .map((line) => (line.trimStart().startsWith('#') ? '' : line))
     .join('\n');
 }
 

@@ -85,9 +85,13 @@ function flaskMethods(tail: string): string[] {
  * comments only; conservative — does not touch `#` inside strings).
  */
 function stripPyComments(text: string): string {
+  // Blank `#`-comment lines but KEEP the line, so a route's index still maps to
+  // its real source line. Filtering the line out shifts every route below it up
+  // by the comment count → wrong `sourceLine` → broken citations (Rule D-3) and
+  // starved evidence-pack windows. Same fix as express.ts stripComments.
   return text
     .split('\n')
-    .filter((line) => !line.trimStart().startsWith('#'))
+    .map((line) => (line.trimStart().startsWith('#') ? '' : line))
     .join('\n');
 }
 

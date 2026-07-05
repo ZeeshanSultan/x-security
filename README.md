@@ -4,6 +4,7 @@ Write policy next to the route it protects. Compile it with a deterministic CLI.
 
 - The spec, JSON Schema for validation, and examples — all in this repo
 - The reference CLI that compiles it — source in [`cli/`](cli/), published as [`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security)
+- A visual policy builder — open [`policy-builder.html`](policy-builder.html) to build `x-security` policies from an OpenAPI spec (or by hand) and export an annotated spec; also hosted at [usewaf.com/policy-builder.html](https://usewaf.com/policy-builder.html)
 - Watch releases: schema changes are versioned and tagged
 
 ## What it looks like

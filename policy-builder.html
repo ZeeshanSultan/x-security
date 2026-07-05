@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>x-security policy builder</title>
+<meta name="description" content="Build route-level x-security policies for your API. Import an OpenAPI spec or add endpoints, toggle the controls each route needs, and export an annotated spec." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cpath%20d='M12%202%204%205v6c0%205%203.5%208%208%209%204.5-1%208-4%208-9V5z'%20fill='%232348E4'/%3E%3C/svg%3E" />
+</head>
+<body>
+<style>
+  :root {
+    --ground:#F6F7F9; --surface:#FFFFFF; --surface-2:#FBFCFD;
+    --ink:#101623; --muted:#616B7C; --faint:#9AA3B2;
+    --hair:#E4E8EF; --hair-strong:#D3D9E3;
+    --accent:#2348E4; --accent-soft:#EAEEFF; --accent-ink:#17318f;
+    --amber:#B5730A; --amber-soft:#FBF1DE;
+    --good:#0E8F63; --good-soft:#E4F5EE;
+    --crit:#C5372C; --crit-soft:#FBEAE8;
+    --get:#1E73C8; --post:#0E8F63; --put:#B5730A; --delete:#C5372C; --patch:#7A57D1; --other:#616B7C;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --r:9px; --r-sm:6px;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--ground); color:var(--ink); font-family:var(--sans);
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3 { margin:0; font-weight:640; letter-spacing:-.01em; }
+  button { font-family:inherit; cursor:pointer; }
+  input,select,textarea { font-family:inherit; font-size:13px; color:var(--ink); }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline:2px solid var(--accent); outline-offset:1px; }
+  .mono { font-family:var(--mono); }
+  .eyebrow { font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); }
+
+  /* ---- command bar ---- */
+  .bar { position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:16px;
+    padding:12px 20px; background:rgba(255,255,255,.86); backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--hair); }
+  .brand { display:flex; align-items:baseline; gap:10px; }
+  .brand .mark { font-family:var(--mono); font-weight:680; letter-spacing:-.02em; font-size:15px; }
+  .brand .mark b { color:var(--accent); }
+  .badge { font-family:var(--mono); font-size:11px; color:var(--muted); background:var(--surface);
+    border:1px solid var(--hair); border-radius:100px; padding:2px 9px; }
+  .bar-sp { flex:1; }
+  .btn { border:1px solid var(--hair-strong); background:var(--surface); color:var(--ink);
+    border-radius:var(--r-sm); padding:7px 13px; font-size:13px; font-weight:520; display:inline-flex;
+    align-items:center; gap:7px; transition:border-color .12s, background .12s; }
+  .btn:hover { border-color:var(--accent); }
+  .btn.pri { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.pri:hover { background:var(--accent-ink); border-color:var(--accent-ink); }
+  .btn.sm { padding:4px 9px; font-size:12px; }
+  .btn svg { width:14px; height:14px; }
+
+  /* ---- shell ---- */
+  .shell { display:grid; grid-template-columns:288px minmax(0,1fr) minmax(0,0.9fr); gap:0;
+    height:calc(100vh - 57px); }
+  @media (max-width:1180px){ .shell{ grid-template-columns:260px minmax(0,1fr); } .preview{ display:none; } }
+
+  /* ---- rail ---- */
+  .rail { border-right:1px solid var(--hair); background:var(--surface); display:flex; flex-direction:column; min-height:0; }
+  .rail-head { padding:14px 16px 10px; display:flex; align-items:center; justify-content:space-between; }
+  .rail-list { overflow-y:auto; padding:2px 10px 16px; flex:1; }
+  .ep { width:100%; text-align:left; border:1px solid transparent; background:none; border-radius:var(--r-sm);
+    padding:8px 9px; display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+  .ep:hover { background:var(--surface-2); }
+  .ep.on { background:var(--accent-soft); border-color:#cdd8ff; }
+  .verb { font-family:var(--mono); font-size:10.5px; font-weight:680; letter-spacing:.03em;
+    padding:2px 5px; border-radius:4px; color:#fff; min-width:44px; text-align:center; }
+  .verb.GET{background:var(--get);} .verb.POST{background:var(--post);} .verb.PUT{background:var(--put);}
+  .verb.DELETE{background:var(--delete);} .verb.PATCH{background:var(--patch);}
+  .verb.HEAD,.verb.OPTIONS,.verb.ANY{background:var(--other);}
+  .ep-path { font-family:var(--mono); font-size:12.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ep .cov { margin-left:auto; font-family:var(--mono); font-size:10px; color:var(--faint); }
+  .ep.on .cov { color:var(--accent); }
+  .rail-empty { color:var(--faint); font-size:13px; padding:24px 14px; text-align:center; line-height:1.6; }
+
+  /* ---- editor ---- */
+  .editor { overflow-y:auto; padding:22px 26px 80px; min-height:0; }
+  .ep-title { display:flex; align-items:center; gap:12px; margin-bottom:4px; flex-wrap:wrap; }
+  .ep-title .verb { font-size:12px; padding:3px 8px; }
+  .ep-title input.pathedit { font-family:var(--mono); font-size:17px; font-weight:600; border:none;
+    background:none; color:var(--ink); padding:2px 4px; border-radius:4px; min-width:220px; flex:1; }
+  .ep-title input.pathedit:hover { background:var(--surface-2); }
+  .ep-sub { color:var(--muted); font-size:12.5px; margin-bottom:20px; }
+  .ep-sub b { color:var(--good); font-weight:600; }
+
+  .card { background:var(--surface); border:1px solid var(--hair); border-radius:var(--r); margin-bottom:14px; overflow:hidden; }
+  .card-head { display:flex; align-items:center; gap:12px; padding:13px 16px; }
+  .card-head .ttl { font-size:14px; font-weight:600; }
+  .card-head .desc { font-size:12px; color:var(--muted); }
+  .card-head .owasp { font-family:var(--mono); font-size:10px; color:var(--faint); border:1px solid var(--hair); border-radius:4px; padding:1px 5px; }
+  .card-head .sp { flex:1; }
+  .card-body { padding:4px 16px 16px; border-top:1px solid var(--hair); display:none; }
+  .card.open .card-body { display:block; }
+
+  /* toggle */
+  .sw { --w:34px; --h:20px; position:relative; width:var(--w); height:var(--h); flex:none; }
+  .sw input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+  .sw .track { position:absolute; inset:0; background:var(--hair-strong); border-radius:100px; transition:background .15s; }
+  .sw .knob { position:absolute; top:2px; left:2px; width:16px; height:16px; background:#fff; border-radius:50%;
+    box-shadow:0 1px 2px rgba(16,22,35,.3); transition:transform .15s; }
+  .sw input:checked ~ .track { background:var(--accent); }
+  .sw input:checked ~ .knob { transform:translateX(14px); }
+
+  /* fields */
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px 14px; padding-top:12px; }
+  .f { display:flex; flex-direction:column; gap:5px; }
+  .f > label { font-family:var(--mono); font-size:11px; letter-spacing:.04em; color:var(--muted); text-transform:uppercase; }
+  .f input[type=text], .f input[type=number], .f select, .f textarea {
+    border:1px solid var(--hair-strong); background:var(--surface); border-radius:var(--r-sm); padding:7px 9px; width:100%; }
+  .f textarea { resize:vertical; min-height:52px; font-family:var(--mono); font-size:12px; }
+  .f .hint { font-size:11px; color:var(--faint); }
+  .chk { display:flex; align-items:center; gap:9px; padding:8px 0; }
+  .chk input { width:16px; height:16px; accent-color:var(--accent); }
+  .chk label { font-size:13px; }
+  .chk .k { font-family:var(--mono); font-size:12px; color:var(--muted); }
+  .checks { display:flex; flex-direction:column; gap:2px; padding-top:8px; border-top:1px solid var(--hair); margin-top:12px; }
+
+  /* param + rule rows */
+  .rows { display:flex; flex-direction:column; gap:10px; padding-top:12px; }
+  .prow { border:1px solid var(--hair); border-radius:var(--r-sm); background:var(--surface-2); padding:11px 12px; }
+  .prow-head { display:flex; align-items:center; gap:9px; margin-bottom:2px; }
+  .prow-head .pname { font-family:var(--mono); font-weight:600; font-size:13px; border:none; background:none; padding:2px 3px; border-radius:3px; }
+  .prow-head .pname:hover { background:#fff; }
+  .loc { font-family:var(--mono); font-size:10px; color:var(--muted); background:#fff; border:1px solid var(--hair); border-radius:4px; padding:1px 5px; }
+  .x { margin-left:auto; border:none; background:none; color:var(--faint); font-size:16px; line-height:1; padding:2px 6px; border-radius:4px; }
+  .x:hover { color:var(--crit); background:var(--crit-soft); }
+  .rule { display:grid; grid-template-columns:1fr 120px 1fr auto; gap:8px; align-items:center; }
+  .rule input, .rule select { border:1px solid var(--hair-strong); border-radius:var(--r-sm); padding:6px 8px; }
+
+  .tag-in { display:flex; flex-wrap:wrap; gap:6px; align-items:center; border:1px solid var(--hair-strong);
+    border-radius:var(--r-sm); padding:5px 7px; }
+  .tag-in input { border:none; background:none; flex:1; min-width:80px; padding:3px; }
+  .tag { font-family:var(--mono); font-size:11px; background:var(--accent-soft); color:var(--accent-ink);
+    border-radius:4px; padding:2px 6px; display:inline-flex; gap:5px; align-items:center; }
+  .tag button { border:none; background:none; color:var(--accent-ink); cursor:pointer; font-size:12px; line-height:1; padding:0; }
+
+  .addrow { margin-top:12px; }
+  .muted-btn { border:1px dashed var(--hair-strong); background:none; color:var(--muted); border-radius:var(--r-sm);
+    padding:7px 12px; font-size:12.5px; width:100%; }
+  .muted-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* preview */
+  .preview { border-left:1px solid var(--hair); background:#0E1420; color:#cbd5e6; display:flex; flex-direction:column; min-height:0; }
+  .pv-head { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid #1e293b; }
+  .pv-head .eyebrow { color:#64748b; }
+  .pv-tab { font-family:var(--mono); font-size:11.5px; color:#94a3b8; background:none; border:1px solid #26324a; border-radius:5px; padding:3px 9px; }
+  .pv-tab.on { color:#fff; background:#1c2942; border-color:#33507f; }
+  .pv-body { flex:1; overflow:auto; padding:14px 16px; }
+  pre.code { margin:0; font-family:var(--mono); font-size:12px; line-height:1.65; white-space:pre; color:#cbd5e6; }
+  .code .k { color:#7dd3fc; } .code .s { color:#a7f3d0; } .code .n { color:#fca5a5; } .code .b { color:#c4b5fd; }
+  .pv-empty { color:#475569; font-family:var(--mono); font-size:12px; padding:20px; }
+
+  .banner { margin:0 0 16px; padding:9px 13px; border-radius:var(--r-sm); font-size:12.5px; display:none; }
+  .banner.err { display:block; background:var(--crit-soft); color:#8f271e; border:1px solid #f0c4bf; }
+  .banner.ok { display:block; background:var(--good-soft); color:#0a6647; border:1px solid #bfe7d5; }
+
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px); opacity:0;
+    background:var(--ink); color:#fff; font-size:13px; padding:9px 16px; border-radius:100px; z-index:50;
+    transition:transform .2s, opacity .2s; pointer-events:none; }
+  .toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+  @media (prefers-reduced-motion:reduce){ *{transition:none!important;} }
+</style>
+
+<div class="bar">
+  <div class="brand">
+    <span class="mark">x&#8209;security<b>·</b>builder</span>
+  </div>
+  <span class="badge" id="schemaBadge">schema v0.8</span>
+  <div class="bar-sp"></div>
+  <input type="file" id="file" accept=".json,.yaml,.yml,.txt" hidden />
+  <button class="btn" id="importBtn" title="Upload an OpenAPI spec (JSON or YAML)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3m0 0L8 7m4-4 4 4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    Import OpenAPI
+  </button>
+  <button class="btn" id="sampleBtn" title="Load a sample spec">Sample</button>
+  <button class="btn pri" id="exportBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    Export
+  </button>
+</div>
+
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-head">
+      <span class="eyebrow">Endpoints <span id="epCount" class="mono" style="color:var(--faint)"></span></span>
+      <button class="btn sm" id="addEp">+ Add</button>
+    </div>
+    <div class="rail-list" id="railList"></div>
+  </aside>
+
+  <main class="editor" id="editor"></main>
+
+  <aside class="preview">
+    <div class="pv-head">
+      <span class="eyebrow">Preview</span>
+      <div class="bar-sp" style="flex:1"></div>
+      <button class="pv-tab on" data-pv="one">this route</button>
+      <button class="pv-tab" data-pv="all">full spec</button>
+    </div>
+    <div class="pv-body"><pre class="code" id="pvCode"></pre><div class="pv-empty" id="pvEmpty">Select an endpoint to see its <span style="color:#7dd3fc">x-security</span> block.</div></div>
+  </aside>
+</div>
+
+<!-- export dialog -->
+<div id="exportPanel" style="display:none; position:fixed; inset:0; z-index:40; background:rgba(16,22,35,.4); align-items:center; justify-content:center;">
+  <div style="background:#fff; border-radius:12px; width:min(560px,92vw); overflow:hidden; box-shadow:0 24px 60px rgba(16,22,35,.28);">
+    <div style="padding:16px 20px; border-bottom:1px solid var(--hair); display:flex; align-items:center;">
+      <h3 style="font-size:15px;">Export policy</h3>
+      <div style="flex:1"></div>
+      <button class="x" id="exportClose" style="font-size:20px">&times;</button>
+    </div>
+    <div style="padding:18px 20px; display:flex; flex-direction:column; gap:10px;">
+      <button class="btn" data-ex="openapi" style="justify-content:flex-start;">Annotated OpenAPI &nbsp;<span class="mono" style="color:var(--muted);font-size:12px">— your spec with x-security on every operation (.json)</span></button>
+      <button class="btn" data-ex="policies" style="justify-content:flex-start;">Policies bundle &nbsp;<span class="mono" style="color:var(--muted);font-size:12px">— { emissions:[…] } per route (.json)</span></button>
+      <button class="btn" data-ex="copy" style="justify-content:flex-start;">Copy annotated OpenAPI to clipboard</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(s,r){ return (r||document).querySelector(s); };
+  var METHODS = ["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"];
+  var SEM = ["string","integer","float","boolean","email","phone","url","date","datetime","uuid","ip-address","name","free-text","binary"];
+  var SINKS = ["sql","nosql","os-command","xpath","ldap","code-eval","xss","deserialization","ai-prompt"];
+  var PROFILES = ["","auth-endpoint","standard-crud","file-upload","webhook-receiver","public-read-only","admin-panel","server-rendered-page","graphql-resolver","grpc-method","internal-rpc","static-asset","unknown"];
+  var AUTHN = ["bearer-jwt","api-key","oauth2","mtls","basic","custom-token","none"];
+  var OPS = ["equals","not-equals","in","not-in","matches","contains"];
+
+  // ---- state ----
+  var state = { eps:[], sel:-1, pv:"one" };
+
+  function blankPolicy(){ return {}; }
+  function addEndpoint(method, path, params){
+    state.eps.push({ method:(method||"GET").toUpperCase(), path:path||"/new-endpoint",
+      params:(params||[]), policy: blankPolicy() });
+    return state.eps.length-1;
+  }
+
+  // ---- nested path set/get on the policy object ----
+  function setPath(obj, pathStr, val){
+    if(!pathStr) return;
+    var keys = pathStr.split("."), o = obj;
+    for (var i=0;i<keys.length-1;i++){ if(o[keys[i]]==null || typeof o[keys[i]]!=="object") o[keys[i]]={}; o=o[keys[i]]; }
+    var last = keys[keys.length-1];
+    if (val===""||val==null||val===false||(Array.isArray(val)&&!val.length)) { delete o[last]; }
+    else o[last]=val;
+  }
+  function getPath(obj, pathStr){ if(!pathStr) return undefined; var keys=pathStr.split("."), o=obj; for(var i=0;i<keys.length;i++){ if(o==null) return undefined; o=o[keys[i]]; } return o; }
+  function prune(o){ // drop empty objects
+    if (o && typeof o==="object" && !Array.isArray(o)){ Object.keys(o).forEach(function(k){ prune(o[k]);
+      if (o[k] && typeof o[k]==="object" && !Array.isArray(o[k]) && !Object.keys(o[k]).length) delete o[k]; }); }
+    return o;
+  }
+
+  // ---- rendering ----
+  function verbEl(m){ var s=document.createElement("span"); s.className="verb "+m; s.textContent=m; return s; }
+  function renderRail(){
+    var list = $("#railList"); list.innerHTML="";
+    $("#epCount").textContent = state.eps.length? state.eps.length : "";
+    if (!state.eps.length){ list.innerHTML='<div class="rail-empty">No endpoints yet.<br>Import an OpenAPI spec or add one manually.</div>'; return; }
+    state.eps.forEach(function(ep,i){
+      var b=document.createElement("button"); b.className="ep"+(i===state.sel?" on":"");
+      b.appendChild(verbEl(ep.method));
+      var p=document.createElement("span"); p.className="ep-path"; p.textContent=ep.path; b.appendChild(p);
+      var controls = Object.keys(prune(JSON.parse(JSON.stringify(ep.policy)))).length;
+      var c=document.createElement("span"); c.className="cov"; c.textContent = controls? controls+"▪" : ""; b.appendChild(c);
+      b.onclick=function(){ state.sel=i; render(); };
+      list.appendChild(b);
+    });
+  }
+
+  // section helper
+  function card(id, title, desc, owasp, enabled, onToggle, bodyFn){
+    var c=document.createElement("div"); c.className="card"+(enabled?" open":"");
+    var h=document.createElement("div"); h.className="card-head";
+    var sw=document.createElement("label"); sw.className="sw";
+    sw.innerHTML='<input type="checkbox" '+(enabled?"checked":"")+'><span class="track"></span><span class="knob"></span>';
+    sw.querySelector("input").onchange=function(e){ onToggle(e.target.checked); };
+    h.appendChild(sw);
+    var t=document.createElement("div"); t.innerHTML='<div class="ttl">'+title+'</div><div class="desc">'+desc+'</div>'; h.appendChild(t);
+    h.appendChild(Object.assign(document.createElement("div"),{className:"sp"}));
+    if(owasp){ var o=document.createElement("span"); o.className="owasp"; o.textContent=owasp; h.appendChild(o); }
+    c.appendChild(h);
+    var body=document.createElement("div"); body.className="card-body";
+    if(enabled && bodyFn) bodyFn(body);
+    c.appendChild(body);
+    return c;
+  }
+
+  // a bound input helper (updates model without re-render)
+  function field(label, type, path, opts){
+    opts=opts||{}; var f=document.createElement("div"); f.className="f";
+    var ep=state.eps[state.sel];
+    var l=document.createElement("label"); l.textContent=label; f.appendChild(l);
+    var el;
+    if(type==="select"){ el=document.createElement("select"); (opts.options||[]).forEach(function(o){
+      var op=document.createElement("option"); op.value=(typeof o==="object"?o.v:o); op.textContent=(typeof o==="object"?o.t:(o||"—")); el.appendChild(op); }); }
+    else if(type==="textarea"){ el=document.createElement("textarea"); }
+    else { el=document.createElement("input"); el.type=type; if(opts.ph) el.placeholder=opts.ph; if(opts.step) el.step=opts.step; }
+    var cur=getPath(ep.policy, path);
+    if(cur!=null) el.value = Array.isArray(cur)? cur.join(", ") : cur;
+    el.oninput=el.onchange=function(){
+      var v=el.value;
+      if(type==="number") v = v===""? "" : Number(v);
+      if(opts.list) v = v.split(",").map(function(s){return s.trim();}).filter(Boolean);
+      setPath(ep.policy, path, v);
+      updatePreview(); renderRail();
+    };
+    f.appendChild(el);
+    if(opts.hint){ var h=document.createElement("div"); h.className="hint"; h.textContent=opts.hint; f.appendChild(h); }
+    return f;
+  }
+  function checkbox(labelHtml, path){
+    var ep=state.eps[state.sel]; var w=document.createElement("div"); w.className="chk";
+    var c=document.createElement("input"); c.type="checkbox"; c.checked = !!getPath(ep.policy,path);
+    c.onchange=function(){ setPath(ep.policy,path,c.checked); updatePreview(); renderRail(); };
+    var l=document.createElement("label"); l.innerHTML=labelHtml;
+    w.appendChild(c); w.appendChild(l); return w;
+  }
+
+  function renderEditor(){
+    var ed=$("#editor"); ed.innerHTML="";
+    if(state.sel<0 || !state.eps[state.sel]){
+      ed.innerHTML='<div style="max-width:520px; margin:8vh auto 0; text-align:center;">'+
+        '<div class="eyebrow" style="margin-bottom:10px">x-security policy builder</div>'+
+        '<h2 style="font-size:22px; margin-bottom:8px; text-wrap:balance">Compile route-level API security you can read.</h2>'+
+        '<p style="color:var(--muted); line-height:1.65">Import an OpenAPI spec or add an endpoint, then switch on the controls each route needs — authentication, ownership rules, request validation, rate limits. Export an annotated spec at the end.</p>'+
+        '<div style="margin-top:20px; display:flex; gap:10px; justify-content:center;"><button class="btn pri" onclick="document.getElementById(\'importBtn\').click()">Import OpenAPI</button><button class="btn" id="empSample">Load a sample</button></div></div>';
+      var es=$("#empSample"); if(es) es.onclick=loadSample;
+      return;
+    }
+    var ep=state.eps[state.sel]; var P=ep.policy;
+
+    var banner=document.createElement("div"); banner.className="banner"; banner.id="edBanner"; ed.appendChild(banner);
+
+    var title=document.createElement("div"); title.className="ep-title";
+    title.appendChild(verbEl(ep.method));
+    var pe=document.createElement("input"); pe.className="pathedit mono"; pe.value=ep.path;
+    pe.oninput=function(){ ep.path=pe.value; renderRail(); updatePreview(); };
+    title.appendChild(pe);
+    var del=document.createElement("button"); del.className="btn sm"; del.textContent="Delete route";
+    del.onclick=function(){ state.eps.splice(state.sel,1); state.sel=Math.min(state.sel,state.eps.length-1); render(); };
+    title.appendChild(del);
+    ed.appendChild(title);
+
+    var sub=document.createElement("div"); sub.className="ep-sub";
+    sub.innerHTML = ep.params.length? ("Method + "+ep.params.length+" parameter"+(ep.params.length>1?"s":"")+" detected. Toggle the controls this route needs — <b>only what you enable is emitted</b>.")
+      : "Toggle the controls this route needs — only what you enable is emitted.";
+    ed.appendChild(sub);
+
+    // method + profile quick row
+    var top=document.createElement("div"); top.className="card"; top.style.padding="0";
+    var tb=document.createElement("div"); tb.className="grid"; tb.style.padding="14px 16px";
+    var mf=field("Method","select",null,{options:METHODS}); mf.querySelector("select").value=ep.method;
+    mf.querySelector("select").oninput=function(e){ ep.method=e.target.value; renderRail(); updatePreview(); };
+    tb.appendChild(mf);
+    tb.appendChild(field("Profile","select","profile",{options:PROFILES.map(function(p){return {v:p,t:p||"— none —"};})}));
+    top.appendChild(tb); ed.appendChild(top);
+
+    // ---- Authentication ----
+    ed.appendChild(card("authn","Authentication","Require a verified caller identity at the gateway.","API2",
+      !!P.authentication, function(on){ if(on){ P.authentication={type:"bearer-jwt"}; } else delete P.authentication; renderEditor(); updatePreview(); renderRail(); },
+      function(body){ var g=document.createElement("div"); g.className="grid";
+        g.appendChild(field("Type","select","authentication.type",{options:AUTHN}));
+        g.appendChild(field("JWKS URI","text","authentication.jwksUri",{ph:"https://idp/.well-known/jwks.json"}));
+        g.appendChild(field("Allowed algorithms","text","authentication.allowedAlgorithms",{ph:"RS256, ES256",list:true}));
+        g.appendChild(field("Issuer","text","authentication.issuer",{ph:"https://idp/"}));
+        g.appendChild(field("Audience","text","authentication.audience",{ph:"api://default"}));
+        g.appendChild(field("Scopes","text","authentication.scopes",{ph:"read, write",list:true}));
+        body.appendChild(g);
+        var ck=document.createElement("div"); ck.className="checks";
+        ck.appendChild(checkbox('Require MFA <span class="k">mfaRequired</span>','authentication.mfaRequired'));
+        ck.appendChild(checkbox('Rotate session on auth <span class="k">sessionRotateOnAuth</span>','authentication.sessionRotateOnAuth'));
+        body.appendChild(ck);
+      }));
+
+    // ---- Authorization / BOLA ----
+    ed.appendChild(card("authz","Authorization","Tie the object to the caller — the fix for BOLA / IDOR.","API1",
+      !!P.authorization, function(on){ if(on){ P.authorization={type:"rule-based",rules:[]}; } else delete P.authorization; renderEditor(); updatePreview(); renderRail(); },
+      function(body){ var g=document.createElement("div"); g.className="grid";
+        g.appendChild(field("Type","select","authorization.type",{options:["rule-based","rbac","abac"]}));
+        g.appendChild(field("Roles (rbac)","text","authorization.roles",{ph:"admin, editor",list:true}));
+        body.appendChild(g);
+        var lbl=document.createElement("div"); lbl.className="eyebrow"; lbl.style.margin="16px 0 2px"; lbl.textContent="Ownership rules"; body.appendChild(lbl);
+        var rows=document.createElement("div"); rows.className="rows"; body.appendChild(rows);
+        (P.authorization.rules||[]).forEach(function(r,ri){
+          var row=document.createElement("div"); row.className="rule";
+          var fi=document.createElement("input"); fi.placeholder="request.params.id"; fi.value=r.field||""; fi.oninput=function(){r.field=fi.value; updatePreview();};
+          var op=document.createElement("select"); OPS.forEach(function(o){ var x=document.createElement("option"); x.value=o;x.textContent=o; op.appendChild(x);}); op.value=r.operator||"equals"; op.onchange=function(){r.operator=op.value; updatePreview();};
+          var vi=document.createElement("input"); vi.placeholder="jwt.sub"; vi.value=(r.value&&r.value.ref)||""; vi.oninput=function(){ r.value={ref:vi.value}; updatePreview();};
+          var xb=document.createElement("button"); xb.className="x"; xb.innerHTML="&times;"; xb.onclick=function(){ P.authorization.rules.splice(ri,1); renderEditor(); updatePreview();};
+          row.appendChild(fi); row.appendChild(op); row.appendChild(vi); row.appendChild(xb); rows.appendChild(row);
+        });
+        var add=document.createElement("button"); add.className="muted-btn addrow"; add.textContent="+ Add ownership rule  (request field  ⟶  operator  ⟶  jwt claim)";
+        add.onclick=function(){ P.authorization.rules=P.authorization.rules||[]; P.authorization.rules.push({field:"",operator:"equals",value:{ref:""}}); renderEditor(); updatePreview();};
+        body.appendChild(add);
+      }));
+
+    // ---- Rate limit ----
+    ed.appendChild(card("rl","Rate limit","Cap request volume per caller — brute force, scraping, abuse.","API4",
+      !!P.rateLimit, function(on){ if(on){ P.rateLimit={requests:100,window:"1m"}; } else delete P.rateLimit; renderEditor(); updatePreview(); renderRail(); },
+      function(body){ var g=document.createElement("div"); g.className="grid";
+        g.appendChild(field("Requests","number","rateLimit.requests",{ph:"100"}));
+        g.appendChild(field("Window","text","rateLimit.window",{ph:"1m  ·  30s  ·  1h"}));
+        g.appendChild(field("Burst","number","rateLimit.burst",{ph:"optional"}));
+        g.appendChild(field("Applies to","select","rateLimit.when",{options:[{v:"",t:"all callers"},{v:"authenticated",t:"authenticated"},{v:"unauthenticated",t:"unauthenticated"}]}));
+        body.appendChild(g);
+      }));
+
+    // ---- Request validation + params ----
+    ed.appendChild(card("req","Request validation","Constrain the request body, params and content type at the edge.","API8·API3",
+      !!P.request, function(on){ if(on){ P.request={denyUnknownFields:true}; } else delete P.request; renderEditor(); updatePreview(); renderRail(); },
+      function(body){
+        var g=document.createElement("div"); g.className="grid";
+        g.appendChild(field("Content-Type allowlist","text","request.contentType",{ph:"application/json",list:true}));
+        g.appendChild(field("Max body size","text","request.maxBodySize",{ph:"256kb  ·  1mb"}));
+        g.appendChild(field("Duplicate params","select","request.duplicateParamPolicy",{options:[{v:"",t:"—"},"first","last","reject"]}));
+        body.appendChild(g);
+        var ck=document.createElement("div"); ck.className="checks";
+        ck.appendChild(checkbox('Reject unknown fields <span class="k">denyUnknownFields</span> — mass-assignment defense','request.denyUnknownFields'));
+        ck.appendChild(checkbox('Canonicalize path <span class="k">pathCanonicalization</span>','request.pathCanonicalization'));
+        ck.appendChild(checkbox('Header-injection guard <span class="k">headerInjectionGuard</span>','request.headerInjectionGuard'));
+        ck.appendChild(checkbox('Disable XML external entities <span class="k">disableExternalEntities</span>','request.disableExternalEntities'));
+        body.appendChild(ck);
+
+        // parameter schema editor
+        var lbl=document.createElement("div"); lbl.className="eyebrow"; lbl.style.margin="18px 0 2px"; lbl.textContent="Parameter schema"; body.appendChild(lbl);
+        var rows=document.createElement("div"); rows.className="rows"; body.appendChild(rows);
+        P.request.schema = P.request.schema || {};
+        // seed rows from detected params + any already in schema
+        var names=[]; ep.params.forEach(function(p){ if(names.indexOf(p.name)<0) names.push(p.name); });
+        Object.keys(P.request.schema).forEach(function(n){ if(names.indexOf(n)<0) names.push(n); });
+        names.forEach(function(n){ rows.appendChild(paramRow(ep,P,n)); });
+        var add=document.createElement("button"); add.className="muted-btn addrow"; add.textContent="+ Add parameter";
+        add.onclick=function(){ var nm="param"+(names.length+1); ep.params.push({name:nm,in:"query"}); P.request.schema[nm]={type:"string"}; renderEditor(); updatePreview();};
+        body.appendChild(add);
+      }));
+
+    // ---- Response ----
+    ed.appendChild(card("res","Response hardening","Strip unexpected fields, scrub errors, set security headers.","API3",
+      !!P.response, function(on){ if(on){ P.response={stripUnknownFields:true}; } else delete P.response; renderEditor(); updatePreview(); renderRail(); },
+      function(body){ var g=document.createElement("div"); g.className="grid";
+        g.appendChild(field("Content-Type","text","response.contentType",{ph:"application/json",list:true}));
+        body.appendChild(g);
+        var ck=document.createElement("div"); ck.className="checks";
+        ck.appendChild(checkbox('Strip unknown fields <span class="k">stripUnknownFields</span> — stop over-exposure','response.stripUnknownFields'));
+        ck.appendChild(checkbox('Forbid array at JSON root <span class="k">forbidArrayRoot</span>','response.forbidArrayRoot'));
+        ck.appendChild(checkbox('Scrub error bodies <span class="k">errorScrubbing.enabled</span>','response.errorScrubbing.enabled'));
+        body.appendChild(ck);
+      }));
+
+    // ---- Advanced ----
+    var adv=card("adv","Advanced controls","CORS · CSRF · timeouts · IP policy · TLS · bot protection.","",
+      !!(P.cors||P.csrf||P.timeout||P.ipPolicy||P.tls||P.botProtection), function(on){ if(!on){ ["cors","csrf","timeout","ipPolicy","tls","botProtection"].forEach(function(k){delete P[k];}); } renderEditor(); updatePreview(); },
+      function(body){
+        var ck=document.createElement("div"); ck.className="checks"; ck.style.borderTop="none"; ck.style.paddingTop="4px";
+        ck.appendChild(checkbox('CSRF — origin check <span class="k">csrf.method=origin-check</span>','csrf.method'));
+        body.appendChild(ck);
+        var g=document.createElement("div"); g.className="grid";
+        g.appendChild(field("CORS origins","text","cors.allowedOrigins",{ph:"https://app.example.com",list:true}));
+        g.appendChild(field("Read timeout (ms)","number","timeout.read",{ph:"5000"}));
+        g.appendChild(field("IP allowlist","text","ipPolicy.allow",{ph:"10.0.0.0/8",list:true}));
+        g.appendChild(field("IP denylist","text","ipPolicy.deny",{ph:"",list:true}));
+        g.appendChild(field("Min TLS","select","tls.minVersion",{options:[{v:"",t:"—"},"1.2","1.3"]}));
+        g.appendChild(field("Bot protection","select","botProtection.provider",{options:[{v:"",t:"—"},"turnstile","recaptcha","hcaptcha"]}));
+        body.appendChild(g);
+      });
+    // csrf.method stores boolean via checkbox — coerce to the enum on export
+    ed.appendChild(adv);
+
+    updatePreview();
+  }
+
+  function paramRow(ep,P,name){
+    var spec = P.request.schema[name] = P.request.schema[name] || {type:"string"};
+    var loc = (ep.params.find(function(p){return p.name===name;})||{}).in || "query";
+    var row=document.createElement("div"); row.className="prow";
+    var head=document.createElement("div"); head.className="prow-head";
+    var nm=document.createElement("input"); nm.className="pname"; nm.value=name;
+    nm.onchange=function(){ var nv=nm.value.trim(); if(nv && nv!==name){ P.request.schema[nv]=spec; delete P.request.schema[name];
+      var pp=ep.params.find(function(p){return p.name===name;}); if(pp) pp.name=nv; renderEditor(); updatePreview(); } };
+    head.appendChild(nm);
+    var lc=document.createElement("span"); lc.className="loc"; lc.textContent="in:"+loc; head.appendChild(lc);
+    var xb=document.createElement("button"); xb.className="x"; xb.innerHTML="&times;";
+    xb.onclick=function(){ delete P.request.schema[name]; var idx=ep.params.findIndex(function(p){return p.name===name;}); if(idx>=0) ep.params.splice(idx,1); renderEditor(); updatePreview(); };
+    head.appendChild(xb); row.appendChild(head);
+
+    var g=document.createElement("div"); g.className="grid"; g.style.paddingTop="10px";
+    function pf(label,type,key,opts){ opts=opts||{}; var f=document.createElement("div"); f.className="f";
+      var l=document.createElement("label"); l.textContent=label; f.appendChild(l); var el;
+      if(type==="select"){ el=document.createElement("select"); opts.options.forEach(function(o){var op=document.createElement("option");op.value=o;op.textContent=o||"—";el.appendChild(op);}); }
+      else { el=document.createElement("input"); el.type=type; if(opts.ph)el.placeholder=opts.ph; }
+      if(spec[key]!=null) el.value = Array.isArray(spec[key])? spec[key].join(", ") : spec[key];
+      el.oninput=el.onchange=function(){ var v=el.value; if(type==="number") v=v===""?"":Number(v); if(opts.list) v=v.split(",").map(function(s){return s.trim();}).filter(Boolean);
+        if(v===""||v==null||(Array.isArray(v)&&!v.length)) delete spec[key]; else spec[key]=v; updatePreview(); };
+      f.appendChild(el); return f;
+    }
+    g.appendChild(pf("Type","select","type",{options:SEM}));
+    var t = spec.type||"string";
+    if(["string","name","email","free-text"].indexOf(t)>=0){ g.appendChild(pf("Max length","number","maxLength",{ph:"255"})); g.appendChild(pf("Min length","number","minLength",{ph:""})); g.appendChild(pf("Pattern","text","pattern",{ph:"^[A-Za-z0-9 ._-]+$"})); }
+    if(["integer","float"].indexOf(t)>=0){ g.appendChild(pf("Min","number","min",{ph:""})); g.appendChild(pf("Max","number","max",{ph:""})); }
+    if(t==="url"){ g.appendChild(pf("Domain allowlist","text","domainAllowlist",{ph:"api.example.com",list:true})); }
+    if(t==="binary"){ g.appendChild(pf("Allowed MIME","text","allowedMimeTypes",{ph:"image/png",list:true})); g.appendChild(pf("Max size","text","maxSize",{ph:"5mb"})); g.appendChild(pf("Extension allowlist","text","extensionAllowlist",{ph:"png, jpg",list:true})); }
+    row.appendChild(g);
+
+    var ck=document.createElement("div"); ck.className="checks";
+    if(t==="url"){ var c1=document.createElement("div"); c1.className="chk"; var i1=document.createElement("input"); i1.type="checkbox"; i1.checked=!!spec.blockPrivateRanges; i1.onchange=function(){ if(i1.checked)spec.blockPrivateRanges=true; else delete spec.blockPrivateRanges; updatePreview();}; var l1=document.createElement("label"); l1.innerHTML='Block private ranges <span class="k">blockPrivateRanges</span> — SSRF guard'; c1.appendChild(i1); c1.appendChild(l1); ck.appendChild(c1); }
+    if(t==="binary"){ var c2=document.createElement("div"); c2.className="chk"; var i2=document.createElement("input"); i2.type="checkbox"; i2.checked=!!spec.magicByteCheck; i2.onchange=function(){ if(i2.checked)spec.magicByteCheck=true; else delete spec.magicByteCheck; updatePreview();}; var l2=document.createElement("label"); l2.innerHTML='Verify magic bytes <span class="k">magicByteCheck</span>'; c2.appendChild(i2); c2.appendChild(l2); ck.appendChild(c2); }
+    // injection guard multiselect
+    var ig=document.createElement("div"); ig.className="chk"; ig.style.flexWrap="wrap"; ig.style.gap="6px";
+    var igl=document.createElement("span"); igl.className="k"; igl.style.marginRight="4px"; igl.textContent="injectionGuard:"; ig.appendChild(igl);
+    SINKS.forEach(function(sk){ var on=(spec.injectionGuard||[]).indexOf(sk)>=0;
+      var t2=document.createElement("button"); t2.className="tag"; t2.style.cursor="pointer"; t2.style.opacity=on?"1":".4"; t2.textContent=sk;
+      t2.onclick=function(){ spec.injectionGuard=spec.injectionGuard||[]; var i=spec.injectionGuard.indexOf(sk); if(i>=0)spec.injectionGuard.splice(i,1); else spec.injectionGuard.push(sk); if(!spec.injectionGuard.length)delete spec.injectionGuard; renderEditor(); updatePreview();};
+      ig.appendChild(t2); });
+    ck.appendChild(ig);
+    row.appendChild(ck);
+    return row;
+  }
+
+  // ---- x-security block from policy (clean + coerce) ----
+  function buildXSec(ep){
+    var P = JSON.parse(JSON.stringify(ep.policy));
+    if(P.csrf && P.csrf.method===true) P.csrf={method:"origin-check"};
+    if(P.csrf && !P.csrf.method) delete P.csrf;
+    if(P.response && P.response.errorScrubbing && P.response.errorScrubbing.enabled===false) delete P.response.errorScrubbing;
+    // ipPolicy allow/deny are arrays
+    prune(P);
+    return Object.keys(P).length? P : null;
+  }
+
+  // ---- preview ----
+  function syntax(json){
+    return json.replace(/&/g,"&amp;").replace(/</g,"&lt;")
+      .replace(/"(\\.|[^"\\])*"(\s*:)?/g,function(m,_,c){ return '<span class="'+(c?"k":"s")+'">'+m+"</span>"; })
+      .replace(/\b(true|false|null)\b/g,'<span class="b">$1</span>')
+      .replace(/: (-?\d+\.?\d*)/g,': <span class="n">$1</span>');
+  }
+  function updatePreview(){
+    var code=$("#pvCode"), empty=$("#pvEmpty");
+    var obj;
+    if(state.pv==="all"){ obj=buildSpec(); }
+    else { if(state.sel<0){ code.innerHTML=""; empty.style.display="block"; return; }
+      var x=buildXSec(state.eps[state.sel]); obj = x? {"x-security":x} : {}; }
+    empty.style.display = (state.pv==="one" && state.sel<0)?"block":"none";
+    code.innerHTML = syntax(JSON.stringify(obj,null,2));
+  }
+
+  // ---- build outputs ----
+  function buildSpec(){
+    var spec = window.__importedSpec ? JSON.parse(JSON.stringify(window.__importedSpec)) : { openapi:"3.0.3", info:{title:"x-security policy set",version:"1.0.0"}, paths:{} };
+    spec.paths = spec.paths || {};
+    state.eps.forEach(function(ep){
+      var x=buildXSec(ep); var pth=spec.paths[ep.path]=spec.paths[ep.path]||{};
+      var op=pth[ep.method.toLowerCase()]=pth[ep.method.toLowerCase()]||{ responses:{"200":{description:"OK"}} };
+      if(x) op["x-security"]=x; else delete op["x-security"];
+    });
+    return spec;
+  }
+  function buildPolicies(){
+    return { schema:"x-security/0.8", emissions: state.eps.map(function(ep){ var x=buildXSec(ep);
+      return { endpointId: ep.method+" "+ep.path, reviewRequired:false, policy: x||null }; }) };
+  }
+
+  // ---- OpenAPI import ----
+  function importSpec(obj){
+    window.__importedSpec = obj;
+    state.eps=[];
+    var paths = obj.paths||{};
+    Object.keys(paths).forEach(function(path){
+      var item=paths[path]||{};
+      var pathParams=(item.parameters||[]);
+      METHODS.forEach(function(m){ var op=item[m.toLowerCase()]; if(!op) return;
+        var params=[];
+        (pathParams.concat(op.parameters||[])).forEach(function(pp){ if(pp&&pp.name) params.push({name:pp.name, in:pp.in||"query"}); });
+        // requestBody json schema properties
+        try{ var body=op.requestBody&&op.requestBody.content; if(body){ var mt=body["application/json"]||body[Object.keys(body)[0]];
+          var props=mt&&mt.schema&&mt.schema.properties; if(props) Object.keys(props).forEach(function(k){ params.push({name:k,in:"body"}); }); } }catch(e){}
+        var i=addEndpoint(m, path, params);
+        // seed request.schema for detected params with a bare type
+        if(params.length){ var P=state.eps[i].policy; }
+      });
+    });
+    if(!state.eps.length) throw new Error("No paths found. Is this an OpenAPI 3 document with a `paths` object?");
+    state.sel=0; render();
+    banner("ok","Imported "+state.eps.length+" endpoint"+(state.eps.length>1?"s":"")+". Toggle the controls each route needs.");
+  }
+  function banner(kind,msg){ var b=$("#edBanner"); if(!b) return; b.className="banner "+kind; b.textContent=msg; if(kind==="ok") setTimeout(function(){ b.className="banner"; },4000); }
+
+  // ---- tiny YAML (block-style OpenAPI subset) ----
+  function parseYAML(src){
+    var lines = src.replace(/\t/g,"  ").split(/\r?\n/).filter(function(l){ return l.trim()!=="" && l.trim()[0]!=="#"; });
+    var i=0;
+    function indent(l){ return l.match(/^ */)[0].length; }
+    function scalar(v){ v=v.trim(); if(v==="")return null;
+      if((v[0]==='"'&&v.slice(-1)==='"')||(v[0]==="'"&&v.slice(-1)==="'")) return v.slice(1,-1);
+      if(v==="true")return true; if(v==="false")return false; if(v==="null")return null;
+      if(/^-?\d+$/.test(v))return parseInt(v,10); if(/^-?\d*\.\d+$/.test(v))return parseFloat(v);
+      return v; }
+    function parseBlock(min){
+      var isList = lines[i]!==undefined && lines[i].trim()[0]==="-" && indent(lines[i])>=min;
+      if(isList){ var arr=[]; var lvl=indent(lines[i]);
+        while(i<lines.length && indent(lines[i])===lvl && lines[i].trim()[0]==="-"){
+          var rest=lines[i].trim().slice(1).trim();
+          if(rest===""){ i++; arr.push(parseBlock(lvl+1)); }
+          else if(/^[\w".'/-]+\s*:/.test(rest)){ // inline "- key: val" → object starting on this line
+            lines[i]=lines[i].replace(/-\s/,"  "); arr.push(parseBlock(lvl+2>indent(lines[i])?indent(lines[i]):lvl+2));
+          } else { arr.push(scalar(rest)); i++; }
+        } return arr;
+      }
+      var obj={}; var lvl=lines[i]!==undefined?indent(lines[i]):min;
+      while(i<lines.length && indent(lines[i])===lvl){
+        var line=lines[i].trim(); var m=line.match(/^("(?:\\.|[^"])*"|'[^']*'|[^:]+):\s*(.*)$/);
+        if(!m){ i++; continue; }
+        var key=scalar(m[1]); var val=m[2];
+        if(val===""||val==="|"||val===">"){ i++;
+          if(i<lines.length && indent(lines[i])>lvl){ obj[key]=parseBlock(lvl+1); } else obj[key]=null;
+        } else { obj[key]=scalar(val); i++; }
+      }
+      return obj;
+    }
+    return parseBlock(0);
+  }
+
+  function readFile(f){ var r=new FileReader(); r.onload=function(){ try{
+      var txt=r.result, obj; if(txt.trim()[0]==="{") obj=JSON.parse(txt); else obj=parseYAML(txt);
+      importSpec(obj);
+    }catch(e){ state.sel=-1; render(); banner("err","Couldn't parse that spec: "+e.message); showToast("Import failed — "+e.message); } }; r.readAsText(f); }
+
+  // ---- sample ----
+  function loadSample(){
+    importSpec({ openapi:"3.0.3", info:{title:"Notes API",version:"1.0.0"}, paths:{
+      "/auth/login":{ post:{ requestBody:{content:{"application/json":{schema:{properties:{username:{},password:{}}}}}}, responses:{"200":{description:"ok"}} } },
+      "/notes":{ get:{responses:{"200":{description:"ok"}}}, post:{ requestBody:{content:{"application/json":{schema:{properties:{title:{},body:{}}}}}}, responses:{"201":{description:"created"}} } },
+      "/notes/{id}":{ parameters:[{name:"id",in:"path"}], get:{responses:{"200":{description:"ok"}}}, delete:{responses:{"204":{description:"no content"}}} }
+    }});
+  }
+
+  // ---- export ----
+  function download(name,obj){ var blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+    var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
+  function showToast(m){ var t=$("#toast"); t.textContent=m; t.classList.add("show"); setTimeout(function(){t.classList.remove("show");},1800); }
+
+  // ---- render root ----
+  function render(){ renderRail(); renderEditor(); updatePreview(); }
+
+  // ---- wire ----
+  $("#importBtn").onclick=function(){ $("#file").click(); };
+  $("#file").onchange=function(e){ if(e.target.files[0]) readFile(e.target.files[0]); e.target.value=""; };
+  $("#sampleBtn").onclick=loadSample;
+  $("#addEp").onclick=function(){ state.sel=addEndpoint("GET","/new-endpoint",[]); render(); };
+  document.querySelectorAll(".pv-tab").forEach(function(t){ t.onclick=function(){ state.pv=t.dataset.pv;
+    document.querySelectorAll(".pv-tab").forEach(function(x){x.classList.toggle("on",x===t);}); updatePreview(); }; });
+  $("#exportBtn").onclick=function(){ if(!state.eps.length){ showToast("Add or import an endpoint first."); return;} $("#exportPanel").style.display="flex"; };
+  $("#exportClose").onclick=function(){ $("#exportPanel").style.display="none"; };
+  $("#exportPanel").onclick=function(e){ if(e.target===$("#exportPanel")) $("#exportPanel").style.display="none"; };
+  document.querySelectorAll("[data-ex]").forEach(function(b){ b.onclick=function(){ var k=b.dataset.ex;
+    if(k==="openapi"){ download("openapi.x-security.json", buildSpec()); showToast("Annotated OpenAPI downloaded"); }
+    else if(k==="policies"){ download("x-security.policies.json", buildPolicies()); showToast("Policies bundle downloaded"); }
+    else if(k==="copy"){ navigator.clipboard.writeText(JSON.stringify(buildSpec(),null,2)).then(function(){showToast("Copied to clipboard");}); }
+    $("#exportPanel").style.display="none";
+  }; });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

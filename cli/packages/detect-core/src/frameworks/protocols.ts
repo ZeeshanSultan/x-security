@@ -51,15 +51,24 @@ function lineAt(text: string, index: number): number {
  * inside string literals.
  */
 function stripComments(text: string, lang: 'js' | 'py'): string {
+  // Preserve line count so `lineAt` maps to the real source line (Rule D-3):
+  // blank block-comment content (keep newlines) and blank full-line comments
+  // instead of deleting them. Same fix as express.ts stripComments.
   let t = text;
   if (lang === 'js') {
-    t = t.replace(/\/\*[\s\S]*?\*\//g, '');
+    t = t.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
   }
   const out: string[] = [];
   for (let line of t.split('\n')) {
     const s = line.trimStart();
-    if (lang === 'js' && s.startsWith('//')) continue;
-    if (lang === 'py' && s.startsWith('#')) continue;
+    if (lang === 'js' && s.startsWith('//')) {
+      out.push('');
+      continue;
+    }
+    if (lang === 'py' && s.startsWith('#')) {
+      out.push('');
+      continue;
+    }
     if (lang === 'js') {
       line = line.replace(/(^|[^:'"])\/\/.*$/, '$1');
     }
