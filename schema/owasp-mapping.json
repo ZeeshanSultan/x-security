@@ -40,19 +40,19 @@
     "mitigatedBy": ["mtls", "request.schema.domainAllowlist", "request.signature", "request.allowedHosts"]
   },
   "SSEC-INJECTION": {
-    "name": "Injection (LazySecurity-native)",
+    "name": "Injection (x-security-native)",
     "mitigatedBy": ["request.schema.injectionGuard"]
   },
   "SSEC-PROMPT": {
-    "name": "LLM Prompt Injection (LazySecurity-native)",
+    "name": "LLM Prompt Injection (x-security-native)",
     "mitigatedBy": ["request.schema.injectionGuard"]
   },
   "SSEC-AUDIT": {
-    "name": "Audit Logging (LazySecurity-native)",
+    "name": "Audit Logging (x-security-native)",
     "mitigatedBy": ["logging"]
   },
   "SSEC-STORAGE": {
-    "name": "At-Rest Storage Posture (LazySecurity-native, advisory-only)",
+    "name": "At-Rest Storage Posture (x-security-native, advisory-only)",
     "mitigatedBy": ["request.dataAtRest"]
   }
 }

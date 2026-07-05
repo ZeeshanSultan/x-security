@@ -9,7 +9,7 @@ functions:
   - urlParamNeedsSsrfPolicy
 rules:
   lazysecurity-x-security-valid:
-    description: x-security block must validate against the LazySecurity JSON Schema
+    description: x-security block must validate against the x-security JSON Schema
     message: "{{error}}"
     severity: error
     given: "$.paths[*][get,post,put,patch,delete,head,options].x-security"
@@ -50,7 +50,7 @@ rules:
   # because Spectral built-ins can't cross-reference $.paths from a leaf JSONPath.
   xsec-replacement-endpoint-exists:
     description: x-security.replacementEndpoint must reference a path declared in this OpenAPI document
-    documentationUrl: https://lazy.chain305.com/docs/rules/xsec-replacement-endpoint-exists
+    documentationUrl: https://usewaf.com/docs/rules/xsec-replacement-endpoint-exists
     message: "{{error}}"
     severity: warn
     given: "$.paths[*][get,post,put,patch,delete,head,options].x-security.replacementEndpoint"
@@ -60,7 +60,7 @@ rules:
   # v0.5 S-11: outboundCalls signed-without-secret check.
   xsec-outbound-call-secret-set-when-signed:
     description: outboundCalls entries declaring a signatureAlgorithm other than 'none' must also declare secretRef
-    documentationUrl: https://lazy.chain305.com/docs/rules/xsec-outbound-call-secret
+    documentationUrl: https://usewaf.com/docs/rules/xsec-outbound-call-secret
     message: "{{error}}"
     severity: error
     given: "$.paths[*][get,post,put,patch,delete,head,options].x-security.outboundCalls"
@@ -72,7 +72,7 @@ rules:
   # internal-only endpoints, but the missing policy needs to be visible.
   xsec-url-param-needs-ssrf-policy:
     description: request.schema params with type=url should declare domainAllowlist or blockPrivateRanges
-    documentationUrl: https://lazy.chain305.com/docs/rules/xsec-url-param-needs-ssrf-policy
+    documentationUrl: https://usewaf.com/docs/rules/xsec-url-param-needs-ssrf-policy
     message: "{{error}}"
     severity: warn
     given: "$.paths[*][get,post,put,patch,delete,head,options].x-security.request"
@@ -82,7 +82,7 @@ rules:
   # v0.5 S-15: redirectAllowedDomains only meaningful on type:'url' params.
   xsec-redirect-allowed-domains-with-url-type:
     description: request.schema.*.redirectAllowedDomains only applies when the param type is 'url'
-    documentationUrl: https://lazy.chain305.com/docs/rules/xsec-redirect-allowed-domains
+    documentationUrl: https://usewaf.com/docs/rules/xsec-redirect-allowed-domains
     message: "{{error}}"
     severity: warn
     given: "$.paths[*][get,post,put,patch,delete,head,options].x-security.request"
@@ -92,7 +92,7 @@ rules:
   # v0.5 S-12: account-lockout identifier shape sanity check.
   xsec-account-lockout-identifier-shape:
     description: accountLockout.identifier should reference a per-user key (header:X-Username, request.body.email, ...), not 'ip'
-    documentationUrl: https://lazy.chain305.com/docs/rules/xsec-account-lockout-identifier
+    documentationUrl: https://usewaf.com/docs/rules/xsec-account-lockout-identifier
     message: "{{error}}"
     severity: warn
     given: "$.paths[*][get,post,put,patch,delete,head,options].x-security.authentication.accountLockout"
@@ -102,7 +102,7 @@ rules:
   # v0.5 S-17: nonceCacheTtl requires nonceHeader.
   xsec-nonce-cache-requires-header:
     description: request.signature.nonceCacheTtl is meaningless without nonceHeader
-    documentationUrl: https://lazy.chain305.com/docs/rules/xsec-nonce-cache-requires-header
+    documentationUrl: https://usewaf.com/docs/rules/xsec-nonce-cache-requires-header
     message: "{{error}}"
     severity: error
     given: "$.paths[*][get,post,put,patch,delete,head,options].x-security.request.signature"
