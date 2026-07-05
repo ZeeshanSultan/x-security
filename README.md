@@ -1,11 +1,25 @@
-# x-security: security policy as an OpenAPI extension. Apache-2.0.
+# x-security — security policy as an OpenAPI extension
 
-Write policy next to the route it protects. Compile it with a deterministic CLI.
+Apache-2.0. Write policy next to the route it protects; compile it to any gateway with a deterministic CLI.
 
-- The spec, JSON Schema for validation, and examples — all in this repo
-- The reference CLI that compiles it — source in [`cli/`](cli/), published as [`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security)
-- A visual policy builder — open [`policy-builder.html`](policy-builder.html) to build `x-security` policies from an OpenAPI spec (or by hand) and export an annotated spec; also hosted at [usewaf.com/policy-builder.html](https://usewaf.com/policy-builder.html)
-- Watch releases: schema changes are versioned and tagged
+**Most teams run their API gateway and WAF on defaults.** The security is
+already in the box — authentication, rate limits, request validation,
+ownership/BOLA checks — but turning it on means learning each vendor's config
+DSL, and the rules you write lock you into that vendor and drift out of sync
+with your code.
+
+**`x-security` is one security policy per route, written as an extension of the
+OpenAPI spec you already have.** It versions in git, diffs like code, and a
+deterministic CLI compiles it to whichever gateway you run.
+
+- **No new DSL** — it's your OpenAPI file.
+- **No vendor lock-in** — one spec compiles to Kong, Coraza, BunkerWeb, OpenAppSec, Envoy, or a firewall bundle. Switch gateways without rewriting policy.
+- **No config drift** — the spec is the source of truth; drift fails CI.
+
+This repo is the open spec: the JSON Schema, the OWASP mapping, a Spectral
+ruleset, examples, and the reference CLI that compiles it —
+[`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security).
+Watch releases; schema changes are versioned and tagged.
 
 ## What it looks like
 
@@ -29,6 +43,35 @@ paths:
 One `x-security` block per route. It lives in the OpenAPI file you already
 have, versions in git, and diffs like code.
 
+## How it works
+
+1. **Annotate** — attach an `x-security` block to each route: by hand, with the
+   [visual builder](https://usewaf.com/policy-builder.html), or with the free AI
+   plugin that reads your code and drafts the policy for you.
+2. **Validate** — lint the annotated spec against the JSON Schema + Spectral
+   ruleset in CI, so a malformed policy never merges.
+3. **Compile** — `xsecurity generate` turns the spec into native config for your
+   gateway. One spec, any supported target.
+4. **Enforce & catch drift** — deploy the config, then run `xsecurity validate`
+   so CI fails the moment the gateway and the spec disagree.
+
+## Quickstart
+
+```bash
+# Validate any annotated spec against the schema + ruleset
+npx @stoplight/spectral-cli lint --ruleset spectral-ruleset.yaml your-openapi.yaml
+
+# Compile it to the gateway you run
+npm i -g @chain305/x-security
+xsecurity generate your-openapi.yaml --target kong > kong.yaml
+xsecurity report   your-openapi.yaml            # OWASP API Top 10 coverage
+xsecurity validate your-openapi.yaml --target kong --gateway http://localhost:8001
+```
+
+Full CLI walkthrough — install, `init`, `test`, `verify`, drift gating — in
+[`cli/README.md`](cli/README.md). Or validate a single block against
+`schema/x-security.schema.json` with any JSON Schema validator (draft 2020-12).
+
 ## Contents
 
 | Path | What it is |
@@ -38,38 +81,8 @@ have, versions in git, and diffs like code.
 | [`spectral-ruleset.yaml`](spectral-ruleset.yaml) | Spectral ruleset — lint annotated OpenAPI specs in CI |
 | [`docs/v0.8-reference.md`](docs/v0.8-reference.md) | Field-level reference for the current schema version |
 | [`examples/`](examples/) | Annotated OpenAPI specs that validate against the schema |
+| [`policy-builder.html`](policy-builder.html) | Visual builder — build `x-security` policies from an OpenAPI spec (or by hand) and export an annotated spec. Also hosted at [usewaf.com/policy-builder.html](https://usewaf.com/policy-builder.html) |
 | [`cli/`](cli/) | Reference CLI (`xsecurity`) — compiles annotated specs into gateway config. Published as [`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security) |
-
-## Validate a spec
-
-```bash
-npx @stoplight/spectral-cli lint --ruleset spectral-ruleset.yaml your-openapi.yaml
-```
-
-Or validate a single block against `schema/x-security.schema.json` with any
-JSON Schema validator (draft 2020-12).
-
-## Compile it: the CLI
-
-The reference implementation lives in [`cli/`](cli/) — a deterministic,
-**LLM-free** CLI that turns annotated OpenAPI specs into gateway configuration
-(Kong, Coraza, BunkerWeb, OpenAppSec, Envoy, firewall) and validates, tests, and
-reports on them. Published to npm as
-[`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security);
-the installed command is `xsecurity`.
-
-```bash
-npx @chain305/x-security --help        # run without installing
-npm i -g @chain305/x-security          # global install → `xsecurity`
-```
-
-```bash
-xsecurity generate your-openapi.yaml --target kong
-xsecurity report   your-openapi.yaml --owasp
-```
-
-Build it from source or reproduce the published artifact — see
-[`cli/README.md`](cli/README.md).
 
 ## Versioning
 
