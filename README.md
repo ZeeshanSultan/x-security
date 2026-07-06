@@ -94,22 +94,22 @@ Full CLI walkthrough — install, `init`, `test`, `verify`, drift gating — in
 
 ### OWASP API Top 10 coverage per target
 
-How much of each class a target can **enforce natively**. 🟢 full · 🟡 partial · 🔴 gap · ⚪ not yet measured.
+How much of each class a target can **enforce natively**. 🟢 full · 🟡 partial · 🔴 gap · ⚪ not yet measured. Authorization cells show **stateless → with a JWT identity wired**.
 
 | OWASP API class | Cloudflare | AWS API GW | BunkerWeb |
 | --- | :--: | :--: | :--: |
-| API1 · Broken Object Level Auth (BOLA) | 🔴 | 🔴 | 🔴 |
+| API1 · Broken Object Level Auth (BOLA) | 🔴→🟡 | 🔴→🟢 | 🔴 |
 | API2 · Broken Authentication | 🟡 | 🟡 | 🟡 |
 | API3 · Broken Object Property Auth (BOPLA) | 🟡 | 🟡 | 🟡 |
 | API4 · Unrestricted Resource Consumption | 🟢 | 🟡 | 🟡 |
-| API5 · Broken Function Level Auth (BFLA) | 🟡 | 🟡 | 🟡 |
+| API5 · Broken Function Level Auth (BFLA) | 🟡 | 🟡→🟢 | 🟡 |
 | API6 · Unrestricted Access to Business Flows | 🟡 | 🟡 | 🟡 |
 | API7 · Server-Side Request Forgery (SSRF) | 🔴 | 🔴 | 🟢 |
 | API8 · Security Misconfiguration | 🟡 | 🟡 | 🟡 |
 | API9 · Improper Inventory Management | 🔴 | 🔴 | 🟡 |
 | API10 · Unsafe Consumption of APIs | 🟡 | 🟡 | 🟡 |
 
-Only these three targets are independently **measured** today; Kong, Coraza, NGINX, Envoy and OpenAppSec compile the same policy but aren't yet published with a per-class measurement (⚪). Authorization classes (**API1**, **API5**) rise when JWT **identity** is wired — with identity context API1 reaches 🟡 on Cloudflare and 🟢 on AWS, and API5 reaches 🟢 on AWS. Full per-field matrix (incl. the Writ-native injection / prompt-injection / audit classes): **[usewaf.com/coverage](https://usewaf.com/coverage)**.
+Only these three targets are independently **measured** today; Kong, Coraza, NGINX, Envoy and OpenAppSec compile the same policy but aren't yet published with a per-class measurement (⚪). Cells like **🔴→🟢** are the same control stateless vs. with a JWT identity wired — ownership checks (BOLA/BFLA) need to know who the caller is, so a stateless WAF can't enforce them. A **🟡** means the target enforces most of the class natively, not all. Full per-field matrix (incl. the Writ-native injection / prompt-injection / audit classes): **[usewaf.com/coverage](https://usewaf.com/coverage)**.
 
 ## Contents
 
