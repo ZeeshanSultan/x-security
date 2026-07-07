@@ -5,7 +5,7 @@
 // which matches the generator's strategy of one route per endpoint.
 
 import { request } from 'undici';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import type { KongPlugin } from '../generators/kong/types.js';
 import type { DriftIssue, DriftReport } from '../reporters/types.js';
 import { buildExpected, diffExpectedVsActual } from './kong-shared.js';
@@ -31,11 +31,22 @@ interface ListResponse<T> {
   next?: string | null;
 }
 
-async function fetchAll<T>(baseUrl: string, resource: string): Promise<T[]> {
+async function fetchAll<T>(baseUrl: string, resource: string, timeoutMs?: number): Promise<T[]> {
   const out: T[] = [];
   let url: string | null = `${baseUrl.replace(/\/$/, '')}/${resource}`;
   while (url) {
-    const res = await request(url, { method: 'GET' });
+    let res;
+    try {
+      res = await request(url, {
+        method: 'GET',
+        ...(timeoutMs !== undefined ? { signal: AbortSignal.timeout(timeoutMs) } : {})
+      });
+    } catch (e) {
+      if ((e as Error).name === 'TimeoutError' || (e as Error).name === 'AbortError') {
+        throw new Error(`Kong admin GET ${url} timed out after ${timeoutMs}ms`);
+      }
+      throw e;
+    }
     if (res.statusCode >= 400) {
       throw new Error(`Kong admin GET ${url} → ${res.statusCode}`);
     }
@@ -51,10 +62,10 @@ export interface KongAdminClient {
   plugins(): Promise<KongAdminPlugin[]>;
 }
 
-export function createHttpClient(baseUrl: string): KongAdminClient {
+export function createHttpClient(baseUrl: string, timeoutMs?: number): KongAdminClient {
   return {
-    routes: () => fetchAll<KongAdminRoute>(baseUrl, 'routes'),
-    plugins: () => fetchAll<KongAdminPlugin>(baseUrl, 'plugins')
+    routes: () => fetchAll<KongAdminRoute>(baseUrl, 'routes', timeoutMs),
+    plugins: () => fetchAll<KongAdminPlugin>(baseUrl, 'plugins', timeoutMs)
   };
 }
 
@@ -91,10 +102,12 @@ export function indexActualFromAdmin(
 export interface AdminDriftOptions {
   gatewayUrl: string;
   client?: KongAdminClient; // injectable for tests
+  /** Abort admin API requests after this many ms. Unset = no timeout (unchanged behavior). */
+  timeoutMs?: number;
 }
 
 export async function detectAdminDrift(spec: SpecIR, opts: AdminDriftOptions): Promise<DriftReport> {
-  const client = opts.client ?? createHttpClient(opts.gatewayUrl);
+  const client = opts.client ?? createHttpClient(opts.gatewayUrl, opts.timeoutMs);
   const [routes, plugins] = await Promise.all([client.routes(), client.plugins()]);
   const actual = indexActualFromAdmin(routes, plugins, spec);
   const expected = buildExpected(spec);

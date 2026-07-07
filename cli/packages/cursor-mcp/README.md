@@ -1,4 +1,4 @@
-# @writ/cursor-mcp
+# @x-security/cursor-mcp
 
 A minimal [Model Context Protocol](https://modelcontextprotocol.io/) server
 that exposes Writ's annotation, linting, and endpoint-check tools to
@@ -53,6 +53,6 @@ multiplexed auth.
 ## Development
 
 ```bash
-pnpm --filter @writ/cursor-mcp build
-pnpm --filter @writ/cursor-mcp test
+pnpm --filter @x-security/cursor-mcp build
+pnpm --filter @x-security/cursor-mcp test
 ```

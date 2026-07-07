@@ -28,12 +28,12 @@ test('reconcile: every emitted entity present → ok rows', () => {
   const emitted = [
     { id: 'envoy.filters.http.jwt_authn', kind: 'envoy-http-filter' as const, endpoint: '(http-filters)', label: 'filter envoy.filters.http.jwt_authn' },
     { id: '^/api1/user/[^/]+$', kind: 'envoy-jwt-rule' as const, endpoint: '(jwt) ^/api1/user/[^/]+$', label: 'jwt rule' },
-    { id: 'writ_login_ratelimit', kind: 'envoy-ratelimit-route' as const, endpoint: '(ratelimit) writ_login_ratelimit', label: 'rl' }
+    { id: 'x_security_login_ratelimit', kind: 'envoy-ratelimit-route' as const, endpoint: '(ratelimit) x_security_login_ratelimit', label: 'rl' }
   ];
   const loaded = [
     { id: 'envoy.filters.http.jwt_authn', kind: 'envoy-http-filter' as const },
     { id: '^/api1/user/[^/]+$', kind: 'envoy-jwt-rule' as const },
-    { id: 'writ_login_ratelimit', kind: 'envoy-ratelimit-route' as const }
+    { id: 'x_security_login_ratelimit', kind: 'envoy-ratelimit-route' as const }
   ];
   const { rows, diagnostics } = envoyReader.reconcile(emitted, loaded);
   assert.ok(rows.every((r) => r.status === 'ok'));
@@ -81,7 +81,7 @@ const DUMP = {
                               {
                                 match: { safe_regex: { regex: '^/login$' }, headers: [{ name: ':method', string_match: { exact: 'POST' } }] },
                                 typed_per_filter_config: {
-                                  'envoy.filters.http.local_ratelimit': { stat_prefix: 'writ_login_ratelimit' },
+                                  'envoy.filters.http.local_ratelimit': { stat_prefix: 'x_security_login_ratelimit' },
                                   'envoy.filters.http.cors': { allow_credentials: true }
                                 }
                               }
@@ -93,7 +93,7 @@ const DUMP = {
                         {
                           name: 'envoy.filters.http.jwt_authn',
                           typed_config: {
-                            providers: { writ_jwt: {} },
+                            providers: { x_security_jwt: {} },
                             rules: [{ match: { safe_regex: { regex: '^/secured$' } } }]
                           }
                         },
@@ -103,17 +103,17 @@ const DUMP = {
                             rules: {
                               action: 'ALLOW',
                               policies: {
-                                'writ-rbac-admin': {},
-                                'writ-rbac-super': {}
+                                'x-security-rbac-admin': {},
+                                'x-security-rbac-super': {}
                               }
                             }
                           }
                         },
-                        { name: 'envoy.filters.http.local_ratelimit', typed_config: { stat_prefix: 'writ_chain_ratelimit' } },
+                        { name: 'envoy.filters.http.local_ratelimit', typed_config: { stat_prefix: 'x_security_chain_ratelimit' } },
                         { name: 'envoy.filters.http.cors' },
                         {
                           name: 'envoy.filters.http.lua',
-                          typed_config: { inline_code: '-- writ:GET:/api1/user/1:START\nfoo\n-- writ:END' }
+                          typed_config: { inline_code: '-- xSecurity:GET:/api1/user/1:START\nfoo\n-- xSecurity:END' }
                         },
                         { name: 'envoy.filters.http.router' }
                       ]
@@ -143,14 +143,14 @@ test('collectFilterNames finds every envoy.filters.http.* name', () => {
 test('collectStatPrefixes harvests per-route prefixes', () => {
   const sp = new Set<string>();
   collectStatPrefixes(DUMP, sp);
-  assert.ok(sp.has('writ_login_ratelimit'));
-  assert.ok(sp.has('writ_chain_ratelimit'));
+  assert.ok(sp.has('x_security_login_ratelimit'));
+  assert.ok(sp.has('x_security_chain_ratelimit'));
 });
 
 test('collectRbacPolicyNames keys off action+policies map', () => {
   const pol = new Set<string>();
   collectRbacPolicyNames(DUMP, pol);
-  assert.deepEqual([...pol].sort(), ['writ-rbac-admin', 'writ-rbac-super']);
+  assert.deepEqual([...pol].sort(), ['x-security-rbac-admin', 'x-security-rbac-super']);
 });
 
 test('collectJwtRuleRegexes pulls path regexes from jwt_authn rules', () => {
@@ -188,14 +188,14 @@ static_resources:
                                 string_match: { exact: "POST" }
                           typed_per_filter_config:
                             envoy.filters.http.local_ratelimit:
-                              stat_prefix: writ_login_ratelimit
+                              stat_prefix: x_security_login_ratelimit
                             envoy.filters.http.cors:
                               allow_credentials: true
                 http_filters:
                   - name: envoy.filters.http.jwt_authn
                     typed_config:
                       providers:
-                        writ_jwt: {}
+                        x_security_jwt: {}
                       rules:
                         - match:
                             safe_regex:
@@ -208,14 +208,14 @@ static_resources:
                           policy-a: {}
                   - name: envoy.filters.http.local_ratelimit
                     typed_config:
-                      stat_prefix: writ_chain_ratelimit
+                      stat_prefix: x_security_chain_ratelimit
                   - name: envoy.filters.http.cors
                   - name: envoy.filters.http.lua
                     typed_config:
                       inline_code: |
-                        -- writ:POST:/login:START
+                        -- xSecurity:POST:/login:START
                         foo
-                        -- writ:END
+                        -- xSecurity:END
                   - name: envoy.filters.http.router
   clusters: []
 `;
@@ -232,7 +232,7 @@ test('parseEmittedSnippet harvests all wave-9 artefact kinds', () => {
   ]);
   assert.deepEqual(parsed.jwtRules, ['^/secured$']);
   assert.deepEqual(parsed.rbacPolicies, ['policy-a']);
-  assert.deepEqual(parsed.ratelimitStatPrefixes, ['writ_login_ratelimit']);
+  assert.deepEqual(parsed.ratelimitStatPrefixes, ['x_security_login_ratelimit']);
   assert.deepEqual(parsed.corsRoutes, ['POST ^/login$']);
   assert.deepEqual(parsed.endpointPolicies.sort(), ['POST:/login']);
 });

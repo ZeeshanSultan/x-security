@@ -74,7 +74,7 @@ export function driftToSarif(r: DriftReport, specPath: string): string {
       properties: { severity: i.severity }
     };
   });
-  return buildLog('writ-drift', Array.from(ruleSet.values()), results);
+  return buildLog('x-security-drift', Array.from(ruleSet.values()), results);
 }
 
 export function owaspToSarif(r: OwaspCoverageReport, specPath: string): string {
@@ -97,5 +97,5 @@ export function owaspToSarif(r: OwaspCoverageReport, specPath: string): string {
       }
     ]
   }));
-  return buildLog('writ-owasp', rules, results);
+  return buildLog('x-security-owasp', rules, results);
 }

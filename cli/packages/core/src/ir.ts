@@ -1,4 +1,4 @@
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'head' | 'options';

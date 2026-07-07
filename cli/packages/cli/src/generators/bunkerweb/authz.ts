@@ -16,7 +16,7 @@
  * identity emitter never touches).
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 
 const RBAC_BASE_ID = 970600;
 const TRUSTED_GROUPS_HEADER = 'X-Forwarded-Groups';
@@ -74,7 +74,7 @@ export function buildAuthzMultiRoleRules(endpoint: EndpointIR): string[] {
   // Boundaries: start-of-string, end-of-string, or comma either side.
   // Example: "(?:^|,)(?:admin|operator)(?:,|$)"
   const altRx = `(?:^|,)(?:${safeRoles.map((r) => r.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?:,|$)`;
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rolesStr = safeRoles.join(',');
 
   const lines: string[] = [];
@@ -82,10 +82,10 @@ export function buildAuthzMultiRoleRules(endpoint: EndpointIR): string[] {
   // Case (a): X-Forwarded-Groups header absent → deny 403.
   lines.push(
     [
-      `# Writ-generated authorization rules (rbac multi-role: ${rolesStr})`,
+      `# x-security-generated authorization rules (rbac multi-role: ${rolesStr})`,
       `# Source: ${endpoint.method} ${endpoint.path}`,
       `# Chain on X-Forwarded-Groups (set by upstream OIDC sidecar / Kong+OIDC).`,
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idMissing},phase:1,deny,status:403,log,auditlog,msg:'Writ rbac-multi-role denied (no ${TRUSTED_GROUPS_HEADER} header)',tag:'${escMsec(tag)}',tag:'writ-rule-rbac-multi-role',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idMissing},phase:1,deny,status:403,log,auditlog,msg:'x-security rbac-multi-role denied (no ${TRUSTED_GROUPS_HEADER} header)',tag:'${escMsec(tag)}',tag:'x-security-rule-rbac-multi-role',chain"`,
       `  SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "chain"`,
       `    SecRule &REQUEST_HEADERS:${TRUSTED_GROUPS_HEADER} "@eq 0" "t:none"`,
     ].join('\n')
@@ -94,9 +94,9 @@ export function buildAuthzMultiRoleRules(endpoint: EndpointIR): string[] {
   // Case (b): header present but none of the allowed roles appears in the CSV.
   lines.push(
     [
-      `# Writ-generated authorization rules (rbac multi-role: ${rolesStr})`,
+      `# x-security-generated authorization rules (rbac multi-role: ${rolesStr})`,
       `# Source: ${endpoint.method} ${endpoint.path}`,
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idNoMatch},phase:1,deny,status:403,log,auditlog,msg:'Writ rbac-multi-role denied (${TRUSTED_GROUPS_HEADER} lacks any of: ${escMsec(rolesStr)})',tag:'${escMsec(tag)}',tag:'writ-rule-rbac-multi-role',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idNoMatch},phase:1,deny,status:403,log,auditlog,msg:'x-security rbac-multi-role denied (${TRUSTED_GROUPS_HEADER} lacks any of: ${escMsec(rolesStr)})',tag:'${escMsec(tag)}',tag:'x-security-rule-rbac-multi-role',chain"`,
       `  SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "chain"`,
       `    SecRule REQUEST_HEADERS:${TRUSTED_GROUPS_HEADER} "!@rx ${escRx(altRx)}" "t:none"`,
     ].join('\n')

@@ -17,7 +17,7 @@
  *   - request.contentType allowlist  (315 reject; cheap in Lua, no native equivalent)
  *   - method-allowlist (405)          (preserved so wave-7 behaviour holds)
  *
- * Block markers (`-- writ:<METHOD>:<path>:START` / `-- writ:END`)
+ * Block markers (`-- xSecurity:<METHOD>:<path>:START` / `-- xSecurity:END`)
  * remain — the file-mode drift detector and the verify reader both key off
  * them. Without these markers, every wave-7 verify call would regress.
  *
@@ -25,7 +25,7 @@
  * and the lua filter is omitted from the bootstrap entirely.
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import { parseByteSize } from '../../coraza/rules.js';
 
 export const VERSION = '0.2.0';
@@ -83,7 +83,7 @@ interface EndpointBlockOptions {
 
 /**
  * Emit the per-endpoint Lua block. Wrapped in
- * `-- writ:<METHOD>:<path>:START` / `-- writ:END` markers.
+ * `-- xSecurity:<METHOD>:<path>:START` / `-- xSecurity:END` markers.
  *
  * Returns null when the endpoint needs no residual Lua (all fields covered by
  * native filters). The caller must skip null blocks to keep the module body
@@ -106,7 +106,7 @@ export function buildEndpointBlock(opts: EndpointBlockOptions): string | null {
     body.push(`      -- request.headerInjectionGuard: reject CR/LF/NUL in header values`);
     body.push(`      for k, v in pairs(headers) do`);
     body.push(`        if type(v) == "string" and string.match(v, "[\\r\\n\\0]") then`);
-    body.push(`          request_handle:respond({[":status"] = "400"}, "Writ: invalid header value")`);
+    body.push(`          request_handle:respond({[":status"] = "400"}, "x-security: invalid header value")`);
     body.push(`          return`);
     body.push(`        end`);
     body.push(`      end`);
@@ -122,7 +122,7 @@ export function buildEndpointBlock(opts: EndpointBlockOptions): string | null {
     body.push(`        for kv in string.gmatch(string.sub(q_string, q_pos + 1), "([^&]+)") do`);
     body.push(`          local k = string.match(kv, "^([^=]+)")`);
     body.push(`          if k and seen[k] then`);
-    body.push(`            request_handle:respond({[":status"] = "400"}, "Writ: duplicate query parameter")`);
+    body.push(`            request_handle:respond({[":status"] = "400"}, "x-security: duplicate query parameter")`);
     body.push(`            return`);
     body.push(`          end`);
     body.push(`          if k then seen[k] = true end`);
@@ -141,7 +141,7 @@ export function buildEndpointBlock(opts: EndpointBlockOptions): string | null {
       body.push(`      if string.match(ct, ${luaStr(pat)}) then ct_ok = true end`);
     }
     body.push(`      if not ct_ok then`);
-    body.push(`        request_handle:respond({[":status"] = "415"}, "Writ: unsupported Content-Type")`);
+    body.push(`        request_handle:respond({[":status"] = "415"}, "x-security: unsupported Content-Type")`);
     body.push(`        return`);
     body.push(`      end`);
   }
@@ -152,7 +152,7 @@ export function buildEndpointBlock(opts: EndpointBlockOptions): string | null {
     body.push(`      -- request.maxBodySize=${bytes} bytes`);
     body.push(`      local cl = tonumber(request_handle:headers():get("content-length") or "0") or 0`);
     body.push(`      if cl > ${bytes} then`);
-    body.push(`        request_handle:respond({[":status"] = "413"}, "Writ: request body exceeds endpoint limit")`);
+    body.push(`        request_handle:respond({[":status"] = "413"}, "x-security: request body exceeds endpoint limit")`);
     body.push(`        return`);
     body.push(`      end`);
   }
@@ -166,8 +166,8 @@ export function buildEndpointBlock(opts: EndpointBlockOptions): string | null {
 
   body.push(`    end`);
 
-  const startMarker = `    -- writ:${endpoint.method}:${endpoint.path}:START`;
-  const endMarker = `    -- writ:END`;
+  const startMarker = `    -- xSecurity:${endpoint.method}:${endpoint.path}:START`;
+  const endMarker = `    -- xSecurity:END`;
   return [startMarker, ...body, endMarker].join('\n');
 }
 
@@ -192,15 +192,15 @@ export function buildLuaModule(
 ): string {
   const lines: string[] = [];
 
-  lines.push(`-- Writ → Envoy residual Lua filter — auto-generated. DO NOT EDIT BY HAND.`);
-  lines.push(`-- generator: writ-envoy v${VERSION}`);
+  lines.push(`-- x-security → Envoy residual Lua filter — auto-generated. DO NOT EDIT BY HAND.`);
+  lines.push(`-- generator: x-security-envoy v${VERSION}`);
   lines.push(`-- source: ${specTitle} ${specVersion}`);
   lines.push(`-- This module handles ONLY fields with no native Envoy filter equivalent.`);
   lines.push(`-- JWT auth, RBAC, rate-limit, and CORS are enforced by their native filters`);
   lines.push(`-- earlier in the chain (jwt_authn, rbac, local_ratelimit, cors).`);
   lines.push('');
 
-  lines.push(`-- writ:method-allowlist:START`);
+  lines.push(`-- xSecurity:method-allowlist:START`);
   lines.push(`local method_allowlist = {`);
   const sorted = [...methodMap].sort((a, b) => a.path.localeCompare(b.path));
   for (const e of sorted) {
@@ -208,7 +208,7 @@ export function buildLuaModule(
     lines.push(`  { pattern = ${luaStr(e.pattern)}, methods = { ${methods.map(luaStr).join(', ')} } },`);
   }
   lines.push(`}`);
-  lines.push(`-- writ:method-allowlist:END`);
+  lines.push(`-- xSecurity:method-allowlist:END`);
   lines.push('');
 
   lines.push(`function envoy_on_request(request_handle)`);
@@ -229,7 +229,7 @@ export function buildLuaModule(
   lines.push(`        if m == method then method_ok = true; break end`);
   lines.push(`      end`);
   lines.push(`      if not method_ok then`);
-  lines.push(`        request_handle:respond({[":status"] = "405"}, "Writ: method not allowed")`);
+  lines.push(`        request_handle:respond({[":status"] = "405"}, "x-security: method not allowed")`);
   lines.push(`        return`);
   lines.push(`      end`);
   lines.push(`      break`);

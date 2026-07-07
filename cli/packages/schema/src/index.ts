@@ -22,7 +22,7 @@ const addFormats = ((addFormatsMod as any).default ?? addFormatsMod) as unknown 
 export { schema as xSecuritySchema, owaspMapping };
 
 // Dashboard API contracts (Zod). Available at the package root as `api.*`
-// and also as the deep import `@writ/schema/api`.
+// and also as the deep import `@x-security/schema/api`.
 export * as api from './api/index.js';
 
 export type {
@@ -88,7 +88,7 @@ addFormats(ajv04);
 
 // For Ajv04 we strip the 2020-12 meta-schema reference — the x-security schema
 // itself is dialect-agnostic; the dialect parameter only affects how parameter
-// schemas are interpreted at use-time (handled in @writ/core).
+// schemas are interpreted at use-time (handled in @x-security/core).
 const schema04 = { ...(schema as Record<string, unknown>) };
 delete schema04.$schema;
 

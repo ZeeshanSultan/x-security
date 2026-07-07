@@ -1,6 +1,6 @@
-// @writ/cloudflare-compiler
+// @x-security/cloudflare-compiler
 // Pure-function policy compiler. Input: parsed/normalized OpenAPI spec
-// (SpecIR from @writ/core). Output: Cloudflare Rulesets API JSON.
+// (SpecIR from @x-security/core). Output: Cloudflare Rulesets API JSON.
 // PRD v2 §6 (R2.1–R2.7). Deterministic, all rules default to action: "log"
 // when mode === "shadow".
 

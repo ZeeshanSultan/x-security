@@ -4,7 +4,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { modsecNginxReader, writRulesAreIncluded } from '../../src/verify/readers/modsec-nginx.js';
+import { modsecNginxReader, xSecurityRulesAreIncluded } from '../../src/verify/readers/modsec-nginx.js';
 
 // ─── Canned fixtures ────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ test('reconcile flags every rule rejected when summary says 0 rules loaded', () 
   const { rows } = modsecNginxReader.reconcile(emitted, loaded);
   assert.equal(rows[0]!.loaded, 0);
   assert.equal(rows[0]!.rejected.length, 2);
-  assert.match(rows[0]!.rejected[0]!.reason, /no Writ rules loaded/);
+  assert.match(rows[0]!.rejected[0]!.reason, /no x-security rules loaded/);
 });
 
 test('reconcile flags every rule rejected when Include is missing', () => {
@@ -69,7 +69,7 @@ test('reconcile flags every rule rejected when Include is missing', () => {
     { id: '100001', kind: 'coraza-rule' as const, endpoint: 'GET /v1/users', label: 'SecAction', line: 4 }
   ];
   const loaded = [
-    { id: '__not-included__', kind: 'coraza-rule' as const, rejectionReason: 'Writ rules file is not Include\'d by the running nginx config' },
+    { id: '__not-included__', kind: 'coraza-rule' as const, rejectionReason: 'x-security rules file is not Include\'d by the running nginx config' },
     { id: '__summary__', kind: 'coraza-rule' as const, rejectionReason: 'summary:847' }
   ];
   const { rows, diagnostics } = modsecNginxReader.reconcile(emitted, loaded);
@@ -78,7 +78,7 @@ test('reconcile flags every rule rejected when Include is missing', () => {
   assert.ok(diagnostics.some((d) => /not Include/.test(d)));
 });
 
-test('writRulesAreIncluded: direct literal Include with "writ" in path returns true', () => {
+test('xSecurityRulesAreIncluded: direct literal Include with "writ" in path returns true', () => {
   const dump = `
     http {
       Include /etc/nginx/conf.d/*.conf;
@@ -86,14 +86,14 @@ test('writRulesAreIncluded: direct literal Include with "writ" in path returns t
     }
   `;
   // No container needed — direct literal hit.
-  assert.equal(writRulesAreIncluded(dump), true);
+  assert.equal(xSecurityRulesAreIncluded(dump), true);
 });
 
-test('writRulesAreIncluded: empty dump returns true (benefit of doubt)', () => {
-  assert.equal(writRulesAreIncluded(''), true);
+test('xSecurityRulesAreIncluded: empty dump returns true (benefit of doubt)', () => {
+  assert.equal(xSecurityRulesAreIncluded(''), true);
 });
 
-test('writRulesAreIncluded: glob Include with no container and no literal match returns false', () => {
+test('xSecurityRulesAreIncluded: glob Include with no container and no literal match returns false', () => {
   // This is the REPORT-v4 Open-6 survival-mount case BEFORE docker resolve.
   // Without a container handle, we cannot resolve the glob — the only
   // safe answer is "not detected".
@@ -102,13 +102,13 @@ test('writRulesAreIncluded: glob Include with no container and no literal match 
       Include /etc/modsecurity.d/owasp-crs/rules/*.conf;
     }
   `;
-  assert.equal(writRulesAreIncluded(dump), false);
+  assert.equal(xSecurityRulesAreIncluded(dump), false);
 });
 
-test('writRulesAreIncluded: directive whose path literal mentions writ via glob parent returns true', () => {
+test('xSecurityRulesAreIncluded: directive whose path literal mentions writ via glob parent returns true', () => {
   // e.g. `Include /etc/modsecurity.d/writ/*.conf` — substring hit.
   const dump = `Include /etc/modsecurity.d/writ/*.conf;`;
-  assert.equal(writRulesAreIncluded(dump), true);
+  assert.equal(xSecurityRulesAreIncluded(dump), true);
 });
 
 test('reconcile attributes parse error to the specific rule on that line', () => {

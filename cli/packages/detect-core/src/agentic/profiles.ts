@@ -8,7 +8,7 @@
 // allowed by the schema. Anything left undefined is "the agent must decide or
 // mark reviewRequired."
 
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 import type { ProfileName } from './schema.js';
 
 /**

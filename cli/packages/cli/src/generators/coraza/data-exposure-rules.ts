@@ -32,8 +32,8 @@
  * errorScrubbing is declared, so collision probability is acceptable.
  */
 
-import type { EndpointIR } from '@writ/core';
-import type { ParamSchema } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { ParamSchema } from '@x-security/schema';
 import { CORAZA_GO_PROFILE, type CorazaEngineProfile, type EngineWarning } from './profiles.js';
 import { endpointHash, pathRegex } from './rules.js';
 
@@ -124,7 +124,7 @@ export function buildOutputSanitizationRules(
     });
     return [];
   }
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const pathRx = pathRegex(endpoint.path);
   const term = chainTerm(profile);
   const rules: string[] = [];
@@ -140,7 +140,7 @@ export function buildOutputSanitizationRules(
             `(common across Python / Node / Java / Go runtimes). msg carries 'id:268'\n` +
             `for scorer attribution.`
         ),
-        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'Writ id:268 output sanitization (stack trace leak)',tag:'${esc(tag)}',tag:'writ-output-sanitization',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'x-security id:268 output sanitization (stack trace leak)',tag:'${esc(tag)}',tag:'x-security-output-sanitization',chain"`,
         // Match the most common stack-frame markers: `at File.method`,
         // `Traceback (most recent call last):`, `\tat com.example.Foo`,
         // `Exception in thread`, `goroutine \d+ [running]:`.
@@ -159,7 +159,7 @@ export function buildOutputSanitizationRules(
             `native header-rewrite primitive on Coraza-Go (action 'setenv'/'setvar'\n` +
             `do not touch response headers); we deny the response instead, msg carries 'id:268'.`
         ),
-        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:3,deny,status:500,msg:'Writ id:268 output sanitization (server-version leak)',tag:'${esc(tag)}',tag:'writ-output-sanitization',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:3,deny,status:500,msg:'x-security id:268 output sanitization (server-version leak)',tag:'${esc(tag)}',tag:'x-security-output-sanitization',chain"`,
         `  SecRule RESPONSE_HEADERS:Server|RESPONSE_HEADERS:X-Powered-By "@rx ^.+$"${term}`,
       ].join('\n')
     );
@@ -174,7 +174,7 @@ export function buildOutputSanitizationRules(
             `phase:4 — deny when RESPONSE_BODY exposes raw DB/runtime error keywords\n` +
             `(SQL state, file paths, "syntax error near"). msg carries 'id:268'.`
         ),
-        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'Writ id:268 output sanitization (raw error leak)',tag:'${esc(tag)}',tag:'writ-output-sanitization',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'x-security id:268 output sanitization (raw error leak)',tag:'${esc(tag)}',tag:'x-security-output-sanitization',chain"`,
         `  SecRule RESPONSE_BODY "@rx (?i)(?:syntax error near|ORA-\\d+|ER_\\w+|psycopg2\\.|SQLSTATE|\\bENOENT\\b|undefined method|NullPointerException|panic:\\s)"${term}`,
       ].join('\n')
     );
@@ -218,7 +218,7 @@ export function buildDataExposurePiiRules(
   );
   if (sensitiveFields.length === 0) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const pathRx = pathRegex(endpoint.path);
   const term = chainTerm(profile);
   const rules: string[] = [];
@@ -233,8 +233,8 @@ export function buildDataExposurePiiRules(
             `phase:4 — deny when sensitive-named field appears in RESPONSE_BODY with\n` +
             `a non-empty string value. msg carries 'id:428' for scorer attribution.`
         ),
-        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'Writ id:428 data-exposure: response leaked sensitive field ${esc(field)}',tag:'${esc(tag)}',tag:'writ-data-exposure',chain"`,
-        `    SecRule RESPONSE_BODY "@rx \\"${esc(field)}\\"\\s*:\\s*\\"[^\\"]+\\""${term}`,
+        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'x-security id:428 data-exposure: response leaked sensitive field ${esc(field)}',tag:'${esc(tag)}',tag:'x-security-data-exposure',chain"`,
+        `    SecRule RESPONSE_BODY "@rx \\x22${esc(field)}\\x22\\s*:\\s*\\x22[^\\x22]+\\x22"${term}`,
       ].join('\n')
     );
   }

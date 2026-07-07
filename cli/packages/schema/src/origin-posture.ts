@@ -3,7 +3,7 @@
 // This file is intentionally standalone — it is NOT re-exported from
 // packages/schema/src/index.ts. Callers import it via a deep path:
 //
-//   import { OriginPostureSchema } from '@writ/schema/dist/origin-posture.js';
+//   import { OriginPostureSchema } from '@x-security/schema/dist/origin-posture.js';
 //
 // Keeping it off the main barrel avoids forcing zod into the schema
 // package's already-loaded surface (ajv + ajv-formats) for every existing

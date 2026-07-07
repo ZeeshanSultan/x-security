@@ -1,7 +1,7 @@
 {
-  "name": "@writ/core",
+  "name": "@x-security/core",
   "version": "0.1.0",
-  "description": "OpenAPI loader, variable resolver, and normalized IR for Writ generators",
+  "description": "OpenAPI loader, variable resolver, and normalized IR for x-security generators",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@apidevtools/swagger-parser": "^10.1.1",
-    "@writ/schema": "workspace:*",
+    "@x-security/schema": "workspace:*",
     "openapi-types": "^12.1.3",
     "undici": "^6.20.0",
     "yaml": "^2.5.0"

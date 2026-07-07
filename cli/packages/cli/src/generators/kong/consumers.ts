@@ -15,14 +15,14 @@
 // otherwise the operator gets a kong.yml that's still half-broken.
 
 import { createHash } from 'node:crypto';
-import type { SpecIR, EndpointIR } from '@writ/core';
+import type { SpecIR, EndpointIR } from '@x-security/core';
 import type {
   KongConsumer,
   KongJwtSecret,
   KongKeyAuthCredential,
   KongHmacAuthCredential,
   KongAcl,
-  WritWarning
+  XSecurityWarning
 } from './types.js';
 
 export interface BuildConsumersOptions {
@@ -31,8 +31,8 @@ export interface BuildConsumersOptions {
    *  so the HS256 downgrade is unnecessary and misleading. */
   enterpriseJwtRoutes?: boolean;
   /** Structured-warning sink. Receives the HS256 downgrade record so it
-   *  shows up in kong.yml's `_writ_warnings` block (not just stderr). */
-  onWarning?: (w: WritWarning) => void;
+   *  shows up in kong.yml's `_x_security_warnings` block (not just stderr). */
+  onWarning?: (w: XSecurityWarning) => void;
 }
 
 export interface ConsumerBundle {
@@ -124,7 +124,7 @@ export function buildConsumers(
     const username = consumerName(role);
     bundle.consumers.push({
       username,
-      tags: [`writ_role=${role}`]
+      tags: [`x_security_role=${role}`]
     });
 
     // ACL group: the acl plugin allow-lists the bare role name, so the
@@ -134,19 +134,19 @@ export function buildConsumers(
     if (hasApiKey) {
       bundle.keyauth_credentials.push({
         consumer: username,
-        key: `${role}_test_key_${shortHash(`${(spec.info?.title ?? 'writ')}|${role}`)}`
+        key: `${role}_test_key_${shortHash(`${(spec.info?.title ?? 'x-security')}|${role}`)}`
       });
     }
 
     if (hasJwt) {
-      const key = jwtIssuer ?? `writ-${shortHash((spec.info?.title ?? 'writ') || 'spec', 6)}`;
+      const key = jwtIssuer ?? `x-security-${shortHash((spec.info?.title ?? 'x-security') || 'spec', 6)}`;
       bundle.jwt_secrets.push({
         consumer: username,
         // Per-consumer key MUST be unique across the spec (Kong primary key
         // on `key`), so we suffix the role.
         key: `${key}#${role}`,
         algorithm: 'HS256',
-        secret: `${role}_jwt_secret_${shortHash(`${(spec.info?.title ?? 'writ')}|${role}|jwt`, 16)}`
+        secret: `${role}_jwt_secret_${shortHash(`${(spec.info?.title ?? 'x-security')}|${role}|jwt`, 16)}`
       });
     }
 
@@ -154,7 +154,7 @@ export function buildConsumers(
       bundle.hmacauth_credentials.push({
         consumer: username,
         username: role,
-        secret: `${role}_hmac_secret_${shortHash(`${(spec.info?.title ?? 'writ')}|${role}|hmac`, 16)}`
+        secret: `${role}_hmac_secret_${shortHash(`${(spec.info?.title ?? 'x-security')}|${role}|hmac`, 16)}`
       });
     }
   }
@@ -167,7 +167,7 @@ export function buildConsumers(
       'use Kong Enterprise + OIDC plugin for true RS256 + JWKS validation.'
     );
     // Capture the same downgrade in structured form so kong.yml's
-    // _writ_warnings block records it (Rule D-1: surface the gap
+    // _x_security_warnings block records it (Rule D-1: surface the gap
     // in the artifact, not just on stderr).
     if (options.onWarning) {
       // Pick a representative declared algorithm if the spec declared any.

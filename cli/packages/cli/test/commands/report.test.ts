@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as path from 'node:path';
 import { runReport } from '../../src/commands/report.js';
 import { buildAnnotationCoverage } from '../../src/reporters/owasp-analyze.js';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 
 const SPEC = path.resolve(import.meta.dirname!, '../../../../fixtures/specs/example.yaml');
 

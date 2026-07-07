@@ -8,8 +8,8 @@
  * { enabled: true }). Wave-22 W22-A.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { Cacheable } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { Cacheable } from '@x-security/schema';
 
 export interface RouteCache {
   endpoint: EndpointIR;

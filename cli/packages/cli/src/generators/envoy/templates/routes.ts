@@ -6,7 +6,7 @@
  * themselves are emitted by ./filters/*.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import { collectCache, emitRouteCache, type RouteCache } from './filters/cache.js';
 import { collectCors, type RouteCors } from './filters/cors.js';
 import { collectCsrf, emitRouteCsrf, type RouteCsrf } from './filters/csrf.js';
@@ -90,7 +90,7 @@ export function emitRouteEntry(lines: string[], ep: EndpointIR, ctx: RouteContex
       lines.push('              default_value: { numerator: 100, denominator: HUNDRED }');
       lines.push('            response_headers_to_add:');
       lines.push('              - append: false');
-      lines.push('                header: { key: x-writ-ratelimit, value: enforced }');
+      lines.push('                header: { key: x-x-security-ratelimit, value: enforced }');
     }
     if (cors) {
       lines.push('          envoy.filters.http.cors:');

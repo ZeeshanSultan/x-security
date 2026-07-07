@@ -14,9 +14,9 @@
 //     single source of truth in the compiler packages (D-1: status mirrors
 //     what the compiler emits) — we only adapt their shape here.
 
-import type { Generator, CapabilityMatrix, SpecIR, ConfigArtifact } from '@writ/core';
-import { AWS_APIGW_CAPABILITIES } from '@writ/aws-apigw-compiler';
-import { CF_CAPABILITIES } from '@writ/cloudflare-compiler';
+import type { Generator, CapabilityMatrix, SpecIR, ConfigArtifact } from '@x-security/core';
+import { AWS_APIGW_CAPABILITIES } from '@x-security/aws-apigw-compiler';
+import { CF_CAPABILITIES } from '@x-security/cloudflare-compiler';
 
 export type TargetName =
   | 'kong'

@@ -22,7 +22,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import { loadGenerator } from '../../registry.js';
 import type { EmittedArtifact, GatewayReader, LoadedArtifact, VerifyRow } from '../index.js';
 
@@ -31,7 +31,7 @@ const RULE_ID_RE = /\bid:(\d+)\b/;
 const SEC_RULE_LINE = /^\s*(SecRule|SecAction)\b/;
 
 // Nginx error-log shape (varies a bit across releases; cover the common cases):
-//   2026/05/22 ... [error] ... ModSecurity: Rules error. File: /etc/.../writ.conf. Line: 144. Column: 17. <msg>
+//   2026/05/22 ... [error] ... ModSecurity: Rules error. File: /etc/.../x-security.conf. Line: 144. Column: 17. <msg>
 const RULES_ERROR_RE =
   /ModSecurity:\s*(?:Rules error\.?\s*)?File:\s*([^.]+?)\.\s*Line:\s*(\d+)\.\s*Column:\s*(\d+)\.\s*(.*)$/;
 // Some libmodsecurity builds drop the "Rules error" prefix and just say
@@ -42,7 +42,7 @@ const GENERIC_PARSE_ERR_RE = /ModSecurity:\s*(Something wrong with [^.\n]+|SecDe
 const RULES_LOADED_SUMMARY = /rules loaded inline\/local\/remote:\s*(\d+)\/(\d+)\/(\d+)/i;
 
 /** If `gateway` is a docker:<name>, dump the running nginx config (read-only,
- *  `nginx -T`) so we can check whether the Writ rules file was actually
+ *  `nginx -T`) so we can check whether the x-security rules file was actually
  *  Include'd. Returns the dump string, or '' if the source isn't a container. */
 async function readNginxConfigDump(gateway: string): Promise<string> {
   if (!gateway.startsWith('docker:')) return '';
@@ -78,11 +78,11 @@ async function readNginxConfigDump(gateway: string): Promise<string> {
   return dump + '\n' + extra.join('\n');
 }
 
-// Writ header markers the Coraza generator emits at the top of every
+// x-security header markers the Coraza generator emits at the top of every
 // output file (see packages/cli/src/generators/coraza/index.ts:66-71).
-const WRIT_HEADER_MARKERS = [
-  'Writ → Coraza',
-  'generator: writ-coraza'
+const X_SECURITY_HEADER_MARKERS = [
+  'x-security → Coraza',
+  'generator: x-security-coraza'
 ];
 
 /** Resolve a glob Include via `docker exec ls`. Returns matched file paths.
@@ -99,7 +99,7 @@ function listGlobInContainer(container: string, glob: string): string[] {
 }
 
 /** Read the first few lines of a file inside the container and check for
- *  any Writ-emitted header marker. */
+ *  any x-security-emitted header marker. */
 function fileHasWritHeader(container: string, path: string): boolean {
   const r = spawnSync('docker', ['exec', container, 'sh', '-c', `head -5 ${JSON.stringify(path)} 2>/dev/null`], {
     encoding: 'utf8',
@@ -107,18 +107,18 @@ function fileHasWritHeader(container: string, path: string): boolean {
   });
   if (r.error || r.status !== 0) return false;
   const head = r.stdout || '';
-  return WRIT_HEADER_MARKERS.some((m) => head.includes(m));
+  return X_SECURITY_HEADER_MARKERS.some((m) => head.includes(m));
 }
 
 /** True iff the running nginx config Include's something that resolves to a
- *  Writ-emitted .conf file. We accept:
- *   (1) a literal `Include .../writ*.conf` directive,
+ *  x-security-emitted .conf file. We accept:
+ *   (1) a literal `Include .../x-security*.conf` directive,
  *   (2) a glob include (`Include /dir/*.conf`) where the glob matches a file
- *       whose name contains "writ" OR whose first 5 lines carry the
- *       Writ generator header marker (survival-mount case — REPORT-v4
- *       Open-6: rules ride a CRS-style glob and the literal "writ" is
+ *       whose name contains "x-security" OR whose first 5 lines carry the
+ *       x-security generator header marker (survival-mount case — REPORT-v4
+ *       Open-6: rules ride a CRS-style glob and the literal "x-security" is
  *       only in the resolved filename, not the directive). */
-export function writRulesAreIncluded(nginxDump: string, container?: string): boolean {
+export function xSecurityRulesAreIncluded(nginxDump: string, container?: string): boolean {
   if (!nginxDump) return true; // unknown — benefit of doubt; rule-count summary catches real failure
   const lines = nginxDump.split('\n');
   const includes: string[] = [];
@@ -126,17 +126,17 @@ export function writRulesAreIncluded(nginxDump: string, container?: string): boo
     const m = line.match(/^\s*Include\s+(\S+)/i);
     if (m && m[1]) includes.push(m[1]);
   }
-  // (1) Direct hit: any Include path text contains "writ".
-  if (includes.some((i) => /writ/i.test(i))) return true;
+  // (1) Direct hit: any Include path text contains "x-security".
+  if (includes.some((i) => /x-security|writ/i.test(i))) return true;
 
   // (2) Glob hit: any glob Include whose resolved files include either a
-  // file named *writ* OR a file with our header marker. Only doable
+  // file named *x-security* OR a file with our header marker. Only doable
   // when we have a container to `docker exec` into.
   if (!container) return false;
   const globs = includes.filter((i) => /[*?[]/.test(i));
   for (const glob of globs) {
     const matched = listGlobInContainer(container, glob);
-    if (matched.some((p) => /writ/i.test(p))) return true;
+    if (matched.some((p) => /x-security|writ/i.test(p))) return true;
     for (const p of matched) {
       if (fileHasWritHeader(container, p)) return true;
     }
@@ -228,21 +228,22 @@ export const modsecNginxReader: GatewayReader = {
     return scanEmittedRules(directives);
   },
 
-  async readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]> {
+  async readLoadedArtifacts(gateway: string, _timeoutMs?: number): Promise<LoadedArtifact[]> {
+    // No outbound HTTP here — reads a log file / `docker logs`. timeoutMs n/a.
     const raw = await readGatewaySource(gateway);
     const out: LoadedArtifact[] = [];
 
     // Inclusion check via `nginx -T` — the most reliable load-side signal.
-    // If Writ's rules file isn't Include'd by the running config, NO
+    // If x-security's rules file isn't Include'd by the running config, NO
     // rules of ours loaded regardless of what the count summary says.
     const nginxDump = await readNginxConfigDump(gateway);
     const container = gateway.startsWith('docker:') ? gateway.slice('docker:'.length) : undefined;
-    const included = writRulesAreIncluded(nginxDump, container);
+    const included = xSecurityRulesAreIncluded(nginxDump, container);
     if (nginxDump && !included) {
       out.push({
         id: '__not-included__',
         kind: 'coraza-rule',
-        rejectionReason: 'Writ rules file is not Include\'d by the running nginx config (nginx -T) — every emitted rule is unloaded'
+        rejectionReason: 'x-security rules file is not Include\'d by the running nginx config (nginx -T) — every emitted rule is unloaded'
       });
     }
 
@@ -297,7 +298,7 @@ export const modsecNginxReader: GatewayReader = {
     }
 
     if (notIncluded) {
-      diagnostics.push(notIncluded.rejectionReason ?? 'Writ rules file not included by gateway config');
+      diagnostics.push(notIncluded.rejectionReason ?? 'x-security rules file not included by gateway config');
     }
 
     const rejectionsByLine = new Map<number, LoadedArtifact>();
@@ -317,14 +318,14 @@ export const modsecNginxReader: GatewayReader = {
     }
 
     const rows: VerifyRow[] = [];
-    // Heuristic: if the gateway loaded ZERO Writ rules (summary
+    // Heuristic: if the gateway loaded ZERO x-security rules (summary
     // shows 0 local, or all parse-aborted before any rule reached the
     // engine), mark every emitted rule as rejected with the most
     // informative generic reason we have.
     const everythingRejected = !!notIncluded || (summaryKnown && totalLoadedFromSummary === 0);
     const genericReason = notIncluded?.rejectionReason
       ?? genericRejections[0]?.rejectionReason
-      ?? (everythingRejected ? 'no Writ rules loaded (file likely not included by nginx, or parse aborted at engine-globals)' : '');
+      ?? (everythingRejected ? 'no x-security rules loaded (file likely not included by nginx, or parse aborted at engine-globals)' : '');
 
     for (const [endpoint, arts] of byEndpoint) {
       const rejected: VerifyRow['rejected'] = [];

@@ -8,7 +8,7 @@ import type {
   AuthorizationRule,
   ParamSchema,
   XSecurityPolicy,
-} from '@writ/schema';
+} from '@x-security/schema';
 
 import { canonicalizePolicy } from './canonical.js';
 import type {

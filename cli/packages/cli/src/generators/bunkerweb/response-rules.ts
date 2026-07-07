@@ -17,8 +17,8 @@
  * `e2e/scoring/scoring_lib/attribution.py` maps both engines the same way.
  */
 
-import type { EndpointIR } from '@writ/core';
-import type { ParamSchema } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { ParamSchema } from '@x-security/schema';
 import type { SettingMap } from './settings.js';
 
 const OUTPUT_SANITIZE_BASE = 268000;
@@ -93,7 +93,7 @@ export function buildPiiResponseRules(endpoint: EndpointIR): string[] {
   if (fields.length === 0) return [];
 
   const pathRx = pathRegex(endpoint.path);
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const h = stableHash(endpoint.method, endpoint.path);
   const rules: string[] = [];
 
@@ -101,9 +101,9 @@ export function buildPiiResponseRules(endpoint: EndpointIR): string[] {
     const id = DATA_EXPOSURE_PII_BASE + ((h * 17 + 3 + i) % 999);
     rules.push(
       [
-        `# Writ-generated response PII filter (id:428)`,
+        `# x-security-generated response PII filter (id:428)`,
         `# Source: ${endpoint.method} ${endpoint.path}, field: ${field}`,
-        `SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'Writ id:428 data-exposure: response leaked sensitive field ${escMsec(field)}',tag:'${escMsec(tag)}',tag:'writ-data-exposure',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'x-security id:428 data-exposure: response leaked sensitive field ${escMsec(field)}',tag:'${escMsec(tag)}',tag:'x-security-data-exposure',chain"`,
         `  SecRule RESPONSE_BODY "@rx \\"${escMsec(field)}\\"\\s*:\\s*\\"[^\\"]+\\"" "t:none"`,
       ].join('\n')
     );
@@ -122,7 +122,7 @@ export function buildErrorScrubbingRules(endpoint: EndpointIR): string[] {
   if (!scrub) return [];
 
   const pathRx = pathRegex(endpoint.path);
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const h = stableHash(endpoint.method, endpoint.path);
   const rules: string[] = [];
   let slot = 0;
@@ -131,9 +131,9 @@ export function buildErrorScrubbingRules(endpoint: EndpointIR): string[] {
     const id = OUTPUT_SANITIZE_BASE + ((h * 31 + 7 + slot++) % 999);
     rules.push(
       [
-        `# Writ-generated response error-scrubbing (id:268, stack traces)`,
+        `# x-security-generated response error-scrubbing (id:268, stack traces)`,
         `# Source: ${endpoint.method} ${endpoint.path}`,
-        `SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'Writ id:268 output sanitization (stack trace leak)',tag:'${escMsec(tag)}',tag:'writ-output-sanitization',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'x-security id:268 output sanitization (stack trace leak)',tag:'${escMsec(tag)}',tag:'x-security-output-sanitization',chain"`,
         // Common stack-frame markers across Python / Node / Java / Go.
         // RE2-safe: only character classes + non-capturing groups + bounded \\d+.
         `  SecRule RESPONSE_BODY "@rx (?:Traceback \\(most recent call last\\)|Exception in thread|\\bat\\s+[\\w.]+\\.[\\w$<>]+\\(|goroutine\\s+\\d+\\s+\\[)" "t:none"`,
@@ -145,9 +145,9 @@ export function buildErrorScrubbingRules(endpoint: EndpointIR): string[] {
     const id = OUTPUT_SANITIZE_BASE + ((h * 31 + 7 + slot++) % 999);
     rules.push(
       [
-        `# Writ-generated response error-scrubbing (id:268, generic messages)`,
+        `# x-security-generated response error-scrubbing (id:268, generic messages)`,
         `# Source: ${endpoint.method} ${endpoint.path}`,
-        `SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'Writ id:268 output sanitization (raw error leak)',tag:'${escMsec(tag)}',tag:'writ-output-sanitization',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${escRx(pathRx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'x-security id:268 output sanitization (raw error leak)',tag:'${escMsec(tag)}',tag:'x-security-output-sanitization',chain"`,
         `  SecRule RESPONSE_BODY "@rx (?i)(?:syntax error near|ORA-\\d+|ER_\\w+|psycopg2\\.|SQLSTATE|\\bENOENT\\b|undefined method|NullPointerException|panic:\\s)" "t:none"`,
       ].join('\n')
     );

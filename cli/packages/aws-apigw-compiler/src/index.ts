@@ -1,6 +1,6 @@
-// @writ/aws-apigw-compiler
+// @x-security/aws-apigw-compiler
 // Pure-function policy compiler. Input: parsed/normalized OpenAPI spec
-// (SpecIR from @writ/core). Output: AWS WAFv2 rules + API Gateway
+// (SpecIR from @x-security/core). Output: AWS WAFv2 rules + API Gateway
 // resource-policy fragments + Usage Plan specs.
 // PRD v2 §6 (P1 — AWS API Gateway target). Deterministic; all blocking
 // rules default to `Count` in shadow mode.

@@ -1,6 +1,6 @@
 // CSV reporter for OWASP coverage and drift reports.
 
-import type { OwaspId } from '@writ/schema';
+import type { OwaspId } from '@x-security/schema';
 import type {
   AnnotationCoverageReport,
   DriftReport,

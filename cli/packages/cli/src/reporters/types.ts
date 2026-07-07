@@ -1,6 +1,6 @@
 // Shared data shapes consumed by every reporter.
 
-import type { OwaspId } from '@writ/schema';
+import type { OwaspId } from '@x-security/schema';
 
 export type ReportFormat = 'table' | 'json' | 'sarif' | 'csv' | 'html' | 'junit';
 

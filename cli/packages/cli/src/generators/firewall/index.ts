@@ -14,8 +14,8 @@ import type {
   Generator,
   CapabilityMatrix,
   SpecIR,
-} from '@writ/core';
-import type { EndpointIR } from '@writ/core';
+} from '@x-security/core';
+import type { EndpointIR } from '@x-security/core';
 import { buildIptablesV4, buildIptablesV6 } from './iptables.js';
 import { loadWrapperScripts } from './scripts-loader.js';
 import { collectSsrfPolicyWarnings } from '../ssrf-policy-check.js';
@@ -99,7 +99,7 @@ export const firewallGenerator: FirewallGenerator = {
     // Deploy-time DNS wrapper scripts. These are emitted as separate
     // artifacts (one per file) so the deployer can stage them to
     // /usr/local/sbin and /etc/systemd/system independently of the .rules
-    // files. Without these, the `@@WRIT_RESOLVE:<fqdn>@@` tokens in
+    // files. Without these, the `@@X_SECURITY_RESOLVE:<fqdn>@@` tokens in
     // the rulesets are inert and the default-deny terminator blocks all
     // egress (fail-closed — intentional).
     const wrappers: ConfigArtifact[] = loadWrapperScripts().map((w) => ({

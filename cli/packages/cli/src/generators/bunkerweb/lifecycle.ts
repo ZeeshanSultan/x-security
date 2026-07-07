@@ -2,7 +2,7 @@
  * Lifecycle SecRules — closes drift on `deprecated`.
  *
  * Emits a phase:1 SecRule that returns 410 Gone for endpoints marked
- * `deprecated: true`. The msg + tag carries `writ-deprecated-endpoint-block`
+ * `deprecated: true`. The msg + tag carries `x-security-deprecated-endpoint-block`
  * which `e2e/scoring/scoring_lib/attribution.py` (line 35, 59, 126) already
  * maps to the `deprecated-endpoint-block` intent. Mirrors the Kong
  * pre-function approach in `packages/cli/src/generators/kong/plugins.ts:983`.
@@ -18,10 +18,10 @@
  * + small offsets, never landing in the 500-599 window).
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 
 const DEPRECATED_BASE_ID = 970500;
-const DEPRECATED_TAG = 'writ-deprecated-endpoint-block';
+const DEPRECATED_TAG = 'x-security-deprecated-endpoint-block';
 
 function escMsec(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -67,10 +67,10 @@ export function buildLifecycleRules(endpoint: EndpointIR): string[] {
   const replacement = endpoint.policy.replacementEndpoint
     ? ` use ${endpoint.policy.replacementEndpoint}`
     : '';
-  const msg = `Writ: ${DEPRECATED_TAG} ${endpoint.method} ${endpoint.path}${sunset}${replacement}`;
+  const msg = `x-security: ${DEPRECATED_TAG} ${endpoint.method} ${endpoint.path}${sunset}${replacement}`;
 
   const lines = [
-    `# Writ-generated lifecycle rule (deprecated endpoint → 410 Gone)`,
+    `# x-security-generated lifecycle rule (deprecated endpoint → 410 Gone)`,
     `# Source: ${endpoint.method} ${endpoint.path}` +
       (endpoint.policy.sunsetDate ? ` (sunsetDate: ${endpoint.policy.sunsetDate})` : ''),
     `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:410,log,auditlog,msg:'${escMsec(msg)}',tag:'${DEPRECATED_TAG}',chain"`,

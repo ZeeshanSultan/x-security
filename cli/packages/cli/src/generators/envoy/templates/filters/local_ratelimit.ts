@@ -28,7 +28,7 @@
  * applied when `burst` is unset.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import { parseDurationSec } from '../../../coraza/rules.js';
 import { safeStatId } from '../yaml-util.js';
 
@@ -62,7 +62,7 @@ export function collectRateLimits(spec: SpecIR): RouteRateLimit[] {
       maxTokens,
       tokensPerFill: primary.requests,
       fillIntervalSec: sec,
-      statPrefix: `writ_${safeStatId(ep)}_ratelimit`
+      statPrefix: `x_security_${safeStatId(ep)}_ratelimit`
     });
   }
   return out;
@@ -74,16 +74,16 @@ export function emitLocalRateLimitChain(lines: string[]): void {
   lines.push('  - name: envoy.filters.http.local_ratelimit');
   lines.push('    typed_config:');
   lines.push('      "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit');
-  lines.push('      stat_prefix: writ_chain_ratelimit');
+  lines.push('      stat_prefix: x_security_chain_ratelimit');
   // W16-A: Envoy treats a missing token_bucket on an *enforced* chain filter
   // as a 0-token bucket → every request 429s before per-route configs run.
   // We keep filter_enabled at 100% so the filter still tracks stats, but
   // pin filter_enforced numerator to 0 so chain-level enforcement is a no-op.
   // Per-route typed_per_filter_config carries the real token buckets.
   lines.push('      filter_enabled:');
-  lines.push('        runtime_key: writ.local_ratelimit_enabled');
+  lines.push('        runtime_key: x-security.local_ratelimit_enabled');
   lines.push('        default_value: { numerator: 100, denominator: HUNDRED }');
   lines.push('      filter_enforced:');
-  lines.push('        runtime_key: writ.local_ratelimit_enforced');
+  lines.push('        runtime_key: x-security.local_ratelimit_enforced');
   lines.push('        default_value: { numerator: 0, denominator: HUNDRED }');
 }

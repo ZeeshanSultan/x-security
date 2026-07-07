@@ -6,7 +6,7 @@
  * pins their exact output.
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 
 /** YAML double-quote a string. */
 export function yamlString(s: string): string {

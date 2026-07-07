@@ -9,8 +9,8 @@
  * (ipPolicy.deny) policy using source_ip principals. Wave-22 W22-A.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { Cidr, IpPolicy } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { Cidr, IpPolicy } from '@x-security/schema';
 import { yamlString } from '../yaml-util.js';
 
 export const IP_RBAC_FILTER_NAME = 'envoy.filters.http.rbac.ip';
@@ -71,7 +71,7 @@ export function emitRouteIpPolicy(lines: string[], pol: RouteIpPolicy): void {
     // DENY takes precedence: a deny match returns 403 before the allow rule runs.
     lines.push('                action: DENY');
     lines.push('                policies:');
-    lines.push('                  writ-ip-deny:');
+    lines.push('                  x-security-ip-deny:');
     lines.push('                    permissions: [{ any: true }]');
     lines.push('                    principals:');
     for (const c of pol.deny) {
@@ -82,7 +82,7 @@ export function emitRouteIpPolicy(lines: string[], pol: RouteIpPolicy): void {
   } else {
     lines.push('                action: ALLOW');
     lines.push('                policies:');
-    lines.push('                  writ-ip-allow:');
+    lines.push('                  x-security-ip-allow:');
     lines.push('                    permissions: [{ any: true }]');
     lines.push('                    principals:');
     for (const c of pol.allow) {

@@ -1,6 +1,6 @@
-# /etc/logrotate.d/writ — sample logrotate config for Writ refresh log.
-# Copy to /etc/logrotate.d/writ and adjust paths/retention to taste.
-/var/log/writ-resolve.log {
+# /etc/logrotate.d/x-security — sample logrotate config for XSecurity refresh log.
+# Copy to /etc/logrotate.d/x-security and adjust paths/retention to taste.
+/var/log/x-security-resolve.log {
     weekly
     rotate 8
     compress

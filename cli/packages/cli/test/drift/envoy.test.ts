@@ -7,13 +7,13 @@
  *   - strip the 401 line from an endpoint block → CRITICAL.
  *   - strip the 413 line from an endpoint block → HIGH.
  *   - remove a rate_limit_descriptors entry from the YAML → CRITICAL.
- *   - add a spurious writ-tagged block → LOW.
+ *   - add a spurious x-security-tagged block → LOW.
  */
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as path from 'node:path';
-import { loadSpec } from '@writ/core';
+import { loadSpec } from '@x-security/core';
 import { detectEnvoyDrift } from '../../src/drift/envoy.js';
 import { envoyGenerator } from '../../src/generators/envoy/index.js';
 
@@ -28,9 +28,9 @@ async function gen(): Promise<{ specYaml: string; lua: string; spec: Awaited<Ret
   return {
     spec,
     specYaml: arts.find((a) => a.path === 'envoy.yaml')!.content,
-    // wave-9: writ.lua only emitted when residual fields are present.
+    // wave-9: x-security.lua only emitted when residual fields are present.
     // The example fixture has contentType/maxBodySize so it IS emitted.
-    lua: arts.find((a) => a.path === 'writ.lua')!.content
+    lua: arts.find((a) => a.path === 'x-security.lua')!.content
   };
 }
 
@@ -50,7 +50,7 @@ test('envoy drift: tampered (removed) endpoint block flagged CRITICAL', async ()
   const { spec, specYaml, lua } = await gen();
   // Strip the login endpoint block entirely (START..END inclusive).
   const tampered = lua.replace(
-    /\s*-- writ:POST:\/api\/auth\/login:START[\s\S]*?-- writ:END\s*/,
+    /\s*-- xSecurity:POST:\/api\/auth\/login:START[\s\S]*?-- xSecurity:END\s*/,
     '\n'
   );
   assert.notEqual(tampered, lua, 'sanity: replacement happened');
@@ -86,7 +86,7 @@ test('envoy drift: missing jwt_authn rule for admin endpoint flagged CRITICAL', 
 
 test('envoy drift: missing body-size (413) line in login block flagged HIGH', async () => {
   const { spec, specYaml, lua } = await gen();
-  const m = /(-- writ:POST:\/api\/auth\/login:START[\s\S]*?-- writ:END)/.exec(lua);
+  const m = /(-- xSecurity:POST:\/api\/auth\/login:START[\s\S]*?-- xSecurity:END)/.exec(lua);
   assert.ok(m, 'login block located');
   const scrubbed = m![1]!
     .split('\n')
@@ -114,8 +114,8 @@ test('envoy drift: missing per-route local_ratelimit stat_prefix flagged CRITICA
   // Wave-9: rate-limit lives in route-level typed_per_filter_config.
   // Rename the login route's stat_prefix so the wave-9 detector sees it missing.
   const stripped = specYaml.replace(
-    /stat_prefix: writ_login_ratelimit/,
-    'stat_prefix: writ_disabled'
+    /stat_prefix: x_security_login_ratelimit/,
+    'stat_prefix: x_security_disabled'
   );
   assert.notEqual(stripped, specYaml, 'sanity: stat_prefix rewritten');
   const r = await detectEnvoyDrift(spec, {
@@ -130,13 +130,13 @@ test('envoy drift: missing per-route local_ratelimit stat_prefix flagged CRITICA
   assert.equal(desc!.severity, 'CRITICAL');
 });
 
-test('envoy drift: unknown writ-tagged block flagged LOW', async () => {
+test('envoy drift: unknown x-security-tagged block flagged LOW', async () => {
   const { spec, specYaml, lua } = await gen();
   // Inject a bogus endpoint block.
   const bogus =
-    '\n    -- writ:DELETE:/api/ghost:START\n' +
+    '\n    -- xSecurity:DELETE:/api/ghost:START\n' +
     '    if true then end\n' +
-    '    -- writ:END\n';
+    '    -- xSecurity:END\n';
   const tampered = lua + bogus;
   const r = await detectEnvoyDrift(spec, {
     filePath: 'fake.yaml',

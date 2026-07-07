@@ -1,4 +1,4 @@
-// @writ/detect-core — the deterministic correctness core.
+// @x-security/detect-core — the deterministic correctness core.
 //
 // Everything here is exact, reproducible, and LLM-free: route extraction,
 // schema validation, the V1–V7 verifiers, cite byte-match (V6) + tightness
@@ -190,4 +190,4 @@ export type {
 } from './agentic/tool-types.js';
 
 // --- Schema validation passthrough -----------------------------------------
-export { validateXSecurity } from '@writ/schema';
+export { validateXSecurity } from '@x-security/schema';

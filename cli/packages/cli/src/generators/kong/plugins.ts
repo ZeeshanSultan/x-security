@@ -12,18 +12,18 @@ import type {
   RequestSignature,
   ResponsePolicy,
   ParamSchema
-} from '@writ/schema';
+} from '@x-security/schema';
 
 // Cacheable isn't re-exported from the schema barrel; mirror the inline shape.
 type Cacheable =
   | boolean
   | { enabled: boolean; ttl?: number; varyBy?: string[] };
-import type { KongPlugin, WritWarning } from './types.js';
+import type { KongPlugin, XSecurityWarning } from './types.js';
 
 // Sink for structured warnings (HS256 downgrade, hmac-auth header overrides,
 // enterprise-only plugin drops, etc.). The generator collects these per
-// generate() call and embeds them in kong.yml under _writ_warnings.
-export type WarningSink = (w: WritWarning) => void;
+// generate() call and embeds them in kong.yml under _x_security_warnings.
+export type WarningSink = (w: XSecurityWarning) => void;
 
 // Login-style endpoint heuristic. Used by the rate-limit builder to force
 // `limit_by: ip` instead of `consumer` — unauthenticated login/signup
@@ -206,9 +206,9 @@ export function buildSignaturePlugin(
 ): KongPlugin[] {
   if (!sig) return [];
 
-  const recordWarning = (w: Omit<WritWarning, 'endpoint'>): void => {
+  const recordWarning = (w: Omit<XSecurityWarning, 'endpoint'>): void => {
     if (ctx?.warn) {
-      const full: WritWarning = {
+      const full: XSecurityWarning = {
         ...w,
         ...(ctx.endpoint ? { endpoint: ctx.endpoint } : {})
       };
@@ -319,7 +319,7 @@ export function buildAuthzPlugins(authz: Authorization | undefined): KongPlugin[
 //      resourceLookup.endpoint substituting the identifier extracted via
 //      resourceLookup.identifierFrom (request.params.<x> / request.path / ...).
 //   3. Evaluate each rule (AND across all rules). Mismatch → 403 with a
-//      Writ tag in the response body so the verify reader and access
+//      XSecurity tag in the response body so the verify reader and access
 //      logs both pick it up.
 //
 // Limitations surfaced as warnings:
@@ -331,17 +331,17 @@ export function buildAuthzPlugins(authz: Authorization | undefined): KongPlugin[
 //    when ref === 'principal.id', because Kong OSS's authenticated_credential
 //    only exposes the JWT-style consumer identity.
 
-const SS_BOLA_TAG = 'writ-rule-bola-403';
+const SS_BOLA_TAG = 'x-security-rule-bola-403';
 
 // W10-11: shared_dict cache TTL (seconds). Conservative default because the
 // cache means owner changes (transfers, deletes) take up to TTL seconds to
 // propagate. Operators tune via `targetOverrides.kong.bolaCacheTtl`.
 const SS_BOLA_CACHE_TTL_SECONDS = 60;
 // Shared dict name. Operators must declare this via the Kong env var
-// `KONG_NGINX_HTTP_LUA_SHARED_DICT="writ_bola_cache 10m"` (the
+// `KONG_NGINX_HTTP_LUA_SHARED_DICT="x_security_bola_cache 10m"` (the
 // declarative kong.yml cannot configure nginx-level directives). The Lua
 // is nil-safe when the dict is missing — see buildAuthzLua.
-export const SS_BOLA_CACHE_DICT = 'writ_bola_cache';
+export const SS_BOLA_CACHE_DICT = 'x_security_bola_cache';
 export const SS_BOLA_CACHE_DICT_SIZE = '10m';
 
 // Render a Lua expression that reads from a RuleRef (`jwt.sub`, `principal.id`,
@@ -432,7 +432,7 @@ function refToLuaExpr(ref: string): { expr: string; needsResource: boolean } {
 }
 
 // Lua string literal — handles backslash + double-quote escapes and
-// non-printable bytes via \nnn. Defensive: Writ rule values are
+// non-printable bytes via \nnn. Defensive: XSecurity rule values are
 // operator-controlled and may contain quotes.
 function luaStr(s: string): string {
   return '"' + s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
@@ -463,9 +463,9 @@ function buildResourceUrlExpr(endpoint: string, identifierFrom: string): string 
 // Build the Lua access-phase snippet for one endpoint's authorization rules.
 function buildAuthzLua(authz: Authorization, ctx: { endpoint?: string }): {
   lua: string;
-  warnings: WritWarning[];
+  warnings: XSecurityWarning[];
 } {
-  const warnings: WritWarning[] = [];
+  const warnings: XSecurityWarning[] = [];
   const rules = authz.rules ?? [];
   let anyResourceRef = false;
   const ruleSnippets: string[] = [];
@@ -549,7 +549,7 @@ function buildAuthzLua(authz: Authorization, ctx: { endpoint?: string }): {
       `  if ${condition} then`,
       `    kong.log.warn("[${SS_BOLA_TAG}] rule ${i + 1} (${rule.field} ${rule.operator}) denied")`,
       `    return kong.response.exit(403, {`,
-      `      message = "Writ: BOLA denied",`,
+      `      message = "XSecurity: BOLA denied",`,
       `      tag = "${SS_BOLA_TAG}",`,
       `      rule = ${i + 1}`,
       `    })`,
@@ -573,12 +573,12 @@ function buildAuthzLua(authz: Authorization, ctx: { endpoint?: string }): {
   }
 
   const head: string[] = [
-    `-- Writ K-1 BOLA pre-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity K-1 BOLA pre-function for endpoint=${ctx.endpoint ?? '?'}`,
     `local cjson = require("cjson.safe")`,
     `local principal = ${refToLuaExpr('jwt.sub').expr}`,
     `if not principal then`,
     `  kong.log.warn("[${SS_BOLA_TAG}] no authenticated principal; denying")`,
-    `  return kong.response.exit(401, {message = "Writ: no authenticated principal", tag = "${SS_BOLA_TAG}"})`,
+    `  return kong.response.exit(401, {message = "XSecurity: no authenticated principal", tag = "${SS_BOLA_TAG}"})`,
     `end`,
     ``
   ];
@@ -590,26 +590,26 @@ function buildAuthzLua(authz: Authorization, ctx: { endpoint?: string }): {
     // per-request HTTP roundtrip. Cache TTL is configurable via
     // targetOverrides.kong.bolaCacheTtl (default 60s — see STATUS.md for the
     // owner-change propagation tradeoff). The cache lookup is nil-safe: if
-    // ngx.shared.writ_bola_cache is not declared at the nginx layer
+    // ngx.shared.x_security_bola_cache is not declared at the nginx layer
     // (missing KONG_NGINX_HTTP_LUA_SHARED_DICT), we fall through to the
     // HTTP-only path so the rule still enforces — only the perf win is lost.
     head.push(
       `-- W10-11: shared_dict cache (key=principal:resource_id, TTL=${SS_BOLA_CACHE_TTL_SECONDS}s)`,
-      `local ss_cache = ngx.shared.writ_bola_cache`,
+      `local ss_cache = ngx.shared.x_security_bola_cache`,
       `local ss_resource_id = tostring(${idExpr} or "")`,
       `local ss_cache_key = tostring(principal) .. ":" .. ss_resource_id`,
       `local ss_cached_owner = ss_cache and ss_cache:get(ss_cache_key) or nil`,
       `local ss_resource = nil`,
       `if ss_cached_owner ~= nil then`,
-      `  kong.log.warn("[writ-bola] cache_hit key=" .. ss_cache_key .. " owner=" .. tostring(ss_cached_owner))`,
+      `  kong.log.warn("[x-security-bola] cache_hit key=" .. ss_cache_key .. " owner=" .. tostring(ss_cached_owner))`,
       `  ss_resource = { ownerId = ss_cached_owner, _ss_cached = true }`,
       `else`,
       `  -- resource lookup: ${lookup.endpoint} (identifier from ${lookup.identifierFrom})`,
-      `  kong.log.warn("[writ-bola] cache_miss key=" .. ss_cache_key)`,
+      `  kong.log.warn("[x-security-bola] cache_miss key=" .. ss_cache_key)`,
       `  local ok_req, http = pcall(require, "resty.http")`,
       `  if not ok_req then`,
       `    kong.log.warn("[${SS_BOLA_TAG}] resty.http not available; failing closed")`,
-      `    return kong.response.exit(403, {message = "Writ: resource access denied", tag = "${SS_BOLA_TAG}", reason = "resty_http_missing"})`,
+      `    return kong.response.exit(403, {message = "XSecurity: resource access denied", tag = "${SS_BOLA_TAG}", reason = "resty_http_missing"})`,
       `  end`,
       `  local httpc = http.new()`,
       `  httpc:set_timeout(2000)`,
@@ -619,19 +619,19 @@ function buildAuthzLua(authz: Authorization, ctx: { endpoint?: string }): {
       `      method = "GET",`,
       `      headers = {`,
       `        ["Authorization"] = kong.request.get_header("Authorization"),`,
-      `        ["X-Writ-Internal"] = "rule-lookup"`,
+      `        ["X-XSecurity-Internal"] = "rule-lookup"`,
       `      },`,
       `      ssl_verify = false`,
       `    })`,
       `  end)`,
       `  if not ok_call or not res or res.status ~= 200 then`,
-      `    kong.log.warn("[writ-bola] resource lookup failed status=" .. tostring(res and res.status or "no_response"))`,
-      `    return kong.response.exit(403, {message = "Writ: resource access denied", tag = "${SS_BOLA_TAG}", reason = "lookup_failed"})`,
+      `    kong.log.warn("[x-security-bola] resource lookup failed status=" .. tostring(res and res.status or "no_response"))`,
+      `    return kong.response.exit(403, {message = "XSecurity: resource access denied", tag = "${SS_BOLA_TAG}", reason = "lookup_failed"})`,
       `  end`,
       `  local ok_decode, body = pcall(cjson.decode, res.body or "{}")`,
       `  if not ok_decode or type(body) ~= "table" then`,
-      `    kong.log.warn("[writ-bola] decode failed for " .. lookup_url)`,
-      `    return kong.response.exit(403, {message = "Writ: invalid resource response", tag = "${SS_BOLA_TAG}", reason = "decode_failed"})`,
+      `    kong.log.warn("[x-security-bola] decode failed for " .. lookup_url)`,
+      `    return kong.response.exit(403, {message = "XSecurity: invalid resource response", tag = "${SS_BOLA_TAG}", reason = "decode_failed"})`,
       `  end`,
       `  ss_resource = body`,
       `  if ss_cache and body.ownerId ~= nil then`,
@@ -702,11 +702,11 @@ export function buildRuleBasedAuthzPlugins(
 // requests where the URL param's host is not in the allowlist or matches a
 // private/loopback prefix.
 //
-// Marker: response body carries `tag = "writ-rule-ssrf-403"` so the
+// Marker: response body carries `tag = "x-security-rule-ssrf-403"` so the
 // scorer maps the denial to defense-class `url-allowlist`.
 
-const SS_SSRF_TAG = 'writ-rule-ssrf-403';
-const SS_SSRF_PRIVATE_TAG = 'writ-rule-ssrf-private-403';
+const SS_SSRF_TAG = 'x-security-rule-ssrf-403';
+const SS_SSRF_PRIVATE_TAG = 'x-security-rule-ssrf-private-403';
 
 /** Lua table literal of lowercased allowed hosts, e.g. `{["roottusk.com"]=true}`. */
 function luaHostSet(domains: readonly string[]): string {
@@ -753,7 +753,7 @@ export function buildSsrfPreFunctionPlugins(
   // omit the require entirely. See docs/incidents/2026-05-23-kong-cjson-sandbox.md
   // and Rule D-1 (no shortcuts that mask LLM-path quality issues).
   const lines: string[] = [
-    `-- Writ W19-A SSRF url-allowlist pre-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity W19-A SSRF url-allowlist pre-function for endpoint=${ctx.endpoint ?? '?'}`,
     `-- W21-C: pure Kong PDK + Lua stdlib (no external module loads). Hardened`,
     `-- OSS deployments restrict the untrusted_lua sandbox; this snippet runs there.`,
     ``,
@@ -786,13 +786,13 @@ export function buildSsrfPreFunctionPlugins(
       lines.push(`    local ss_allow = ${luaHostSet(it.allow)}`);
       lines.push(`    if not host or not ss_allow[host] then`);
       lines.push(`      kong.log.warn("[${SS_SSRF_TAG}] host '" .. tostring(host) .. "' not in domainAllowlist for ${it.field}")`);
-      lines.push(`      return kong.response.exit(403, {message = "Writ: SSRF url not in domainAllowlist", tag = "${SS_SSRF_TAG}", field = ${luaStr(it.field)}})`);
+      lines.push(`      return kong.response.exit(403, {message = "XSecurity: SSRF url not in domainAllowlist", tag = "${SS_SSRF_TAG}", field = ${luaStr(it.field)}})`);
       lines.push(`    end`);
     }
     if (it.block) {
       lines.push(`    if ss_is_private(host) then`);
       lines.push(`      kong.log.warn("[${SS_SSRF_PRIVATE_TAG}] private-range host '" .. tostring(host) .. "' on ${it.field}")`);
-      lines.push(`      return kong.response.exit(403, {message = "Writ: SSRF blocked private/loopback host", tag = "${SS_SSRF_PRIVATE_TAG}", field = ${luaStr(it.field)}})`);
+      lines.push(`      return kong.response.exit(403, {message = "XSecurity: SSRF blocked private/loopback host", tag = "${SS_SSRF_PRIVATE_TAG}", field = ${luaStr(it.field)}})`);
       lines.push(`    end`);
     }
     lines.push(`  end`);
@@ -817,10 +817,10 @@ export function buildSsrfPreFunctionPlugins(
 // `request.allowedFields`. When `allowedFields` is set, it wins; otherwise
 // we derive the allowlist from `request.schema` top-level keys.
 //
-// Marker: response body `tag = "writ-mass-assign-403"` and access-log
+// Marker: response body `tag = "x-security-mass-assign-403"` and access-log
 // `kong.log.warn` so the scorer's docker channel picks it up.
 
-const SS_MASS_ASSIGN_TAG = 'writ-mass-assign-403';
+const SS_MASS_ASSIGN_TAG = 'x-security-mass-assign-403';
 
 export function buildMassAssignPreFunctionPlugins(
   request: RequestPolicy | undefined,
@@ -861,7 +861,7 @@ export function buildMassAssignPreFunctionPlugins(
 
   const luaAllowTable = '{' + allow.map((k) => `[${luaStr(k)}]=true`).join(', ') + '}';
   const lua = [
-    `-- Writ K-3 mass-assignment pre-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity K-3 mass-assignment pre-function for endpoint=${ctx.endpoint ?? '?'}`,
     `-- Allowlist sourced from ${explicitAllow ? 'request.allowedFields' : 'request.schema top-level keys'}.`,
     `local ss_allow = ${luaAllowTable}`,
     `local body = kong.request.get_body()`,
@@ -870,7 +870,7 @@ export function buildMassAssignPreFunctionPlugins(
     `    if not ss_allow[k] then`,
     `      kong.log.warn("[${SS_MASS_ASSIGN_TAG}] unknown field '" .. tostring(k) .. "' rejected")`,
     `      return kong.response.exit(403, {`,
-    `        message = "Writ: unknown field rejected",`,
+    `        message = "XSecurity: unknown field rejected",`,
     `        tag = "${SS_MASS_ASSIGN_TAG}",`,
     `        field = tostring(k)`,
     `      })`,
@@ -890,14 +890,14 @@ export function buildMassAssignPreFunctionPlugins(
 //
 // vAPI eval gap: POST /vapi/api8/user/login body `{"username":"' OR 1=1-- -"}`
 // succeeded because Kong OSS has no native SQLi detector. We add a heuristic
-// regex over JSON body string values. Marker: `writ-sqli-403`.
+// regex over JSON body string values. Marker: `x-security-sqli-403`.
 //
 // Spec gate: request declares `contentType` includes application/json AND has
 // a body schema (otherwise we have no signal this endpoint takes JSON input).
 // Don't emit on endpoints that don't accept JSON bodies (saves cycles + avoids
 // breaking non-body methods like GET).
 
-const SS_SQLI_TAG = 'writ-sqli-403';
+const SS_SQLI_TAG = 'x-security-sqli-403';
 // Lua patterns (not PCRE) — Kong pre-function runs against Lua's string lib.
 // Patterns are intentionally narrow: classic union-based, comment-injection,
 // boolean-tautology, and DDL-injection signatures. False-positive risk on
@@ -932,7 +932,7 @@ export function buildSqliPreFunctionPlugins(
   }
 
   const lua = [
-    `-- Writ K-4 SQLi heuristic pre-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity K-4 SQLi heuristic pre-function for endpoint=${ctx.endpoint ?? '?'}`,
     `-- Scans JSON body string values for classic SQLi patterns; rejects on hit.`,
     `local body = kong.request.get_body()`,
     `if type(body) == "table" then`,
@@ -948,7 +948,7 @@ export function buildSqliPreFunctionPlugins(
     `  if hit_field ~= nil then`,
     `    kong.log.warn("[${SS_SQLI_TAG}] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")`,
     `    return kong.response.exit(403, {`,
-    `      message = "Writ: SQLi pattern rejected",`,
+    `      message = "XSecurity: SQLi pattern rejected",`,
     `      tag = "${SS_SQLI_TAG}",`,
     `      field = tostring(hit_field),`,
     `      rule = hit_rule`,
@@ -970,7 +970,7 @@ export function buildSqliPreFunctionPlugins(
 // can't tell whether the 429s are "deprecated endpoint should be blocked
 // entirely" or "rate-limit doing its job". Spec declares
 // `x-security.deprecated: true` (and OpenAPI op-level `deprecated: true`),
-// so we emit a hard 410 Gone with marker `writ-deprecated-endpoint-block`.
+// so we emit a hard 410 Gone with marker `x-security-deprecated-endpoint-block`.
 //
 // This runs in the access phase BEFORE rate-limit, so it short-circuits
 // every request with the marker tag, letting attribution.py classify the
@@ -982,7 +982,7 @@ export function buildSqliPreFunctionPlugins(
 // is surfaced in the response body for operator/client clarity but doesn't
 // affect emission.
 
-export const SS_DEPRECATED_TAG = 'writ-deprecated-endpoint-block';
+export const SS_DEPRECATED_TAG = 'x-security-deprecated-endpoint-block';
 
 export function buildDeprecatedEndpointPlugins(
   policy: XSecurityPolicy,
@@ -990,7 +990,7 @@ export function buildDeprecatedEndpointPlugins(
 ): KongPlugin[] {
   if (policy.deprecated !== true) return [];
   const bodyFields: string[] = [
-    `message = "Writ: endpoint is deprecated"`,
+    `message = "XSecurity: endpoint is deprecated"`,
     `tag = "${SS_DEPRECATED_TAG}"`
   ];
   if (policy.sunsetDate) bodyFields.push(`sunset = ${luaStr(policy.sunsetDate)}`);
@@ -1013,7 +1013,7 @@ export function buildDeprecatedEndpointPlugins(
   }
 
   const lua = [
-    `-- Writ K-5 deprecated-endpoint block for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity K-5 deprecated-endpoint block for endpoint=${ctx.endpoint ?? '?'}`,
     `kong.log.warn("[${SS_DEPRECATED_TAG}] request to deprecated endpoint blocked")`,
     `return kong.response.exit(${exitArgs.join(', ')})`
   ].join('\n');
@@ -1059,8 +1059,8 @@ function defaultBurst(requests: number): number {
 // instead of the default wholesale-rate-limit class.
 //
 // Scorer follow-up: add to MARKER_CLASS_RULES in attribution.py:
-//   r'writ-per-route-ratelimit:' → class=per-id-rate-limit
-export const SS_PER_ROUTE_RATELIMIT_TAG_PREFIX = 'writ-per-route-ratelimit';
+//   r'x-security-per-route-ratelimit:' → class=per-id-rate-limit
+export const SS_PER_ROUTE_RATELIMIT_TAG_PREFIX = 'x-security-per-route-ratelimit';
 
 // Context passed from the per-endpoint builder so rate-limit can detect
 // "this endpoint is unauthenticated" and force `limit_by: ip`. Without this
@@ -1181,7 +1181,7 @@ export function buildRateLimitPlugins(
       ctx.loginLike === true;
     if (isUnauthBucket && limitBy === 'consumer') {
       if (ctx.warn) {
-        const warnRec: WritWarning = {
+        const warnRec: XSecurityWarning = {
           field: 'rateLimit.limit_by',
           declared: 'consumer',
           emitted: 'ip',

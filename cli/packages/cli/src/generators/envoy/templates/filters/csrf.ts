@@ -9,8 +9,8 @@
  * Wave-22 W22-A.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { Csrf } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { Csrf } from '@x-security/schema';
 import { yamlString } from '../yaml-util.js';
 
 export interface RouteCsrf {

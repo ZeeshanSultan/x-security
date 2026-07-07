@@ -6,7 +6,7 @@
  * leans on allowedAlgorithms as the effective allowlist.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import { JWKS_CLUSTER } from '../clusters.js';
 import { asString, pathToSafeRegex, yamlString } from '../yaml-util.js';
 
@@ -25,7 +25,7 @@ export interface JwtProvider {
  * configuration (Envoy supports multiple providers in one filter).
  *
  * For wave-9 we emit a single canonical provider per spec, named
- * `writ_jwt`. Multi-provider support is a future extension; if the spec
+ * `x_security_jwt`. Multi-provider support is a future extension; if the spec
  * spread JWKS URIs across endpoints we'd need to demultiplex.
  */
 export function collectJwtEndpoints(spec: SpecIR): JwtProvider | null {
@@ -52,7 +52,7 @@ export function collectJwtEndpoints(spec: SpecIR): JwtProvider | null {
   }
   if (!jwt.length || !jwksUri) return null;
   return {
-    providerName: 'writ_jwt',
+    providerName: 'x_security_jwt',
     issuer,
     audiences: [...audiences],
     jwksUri,
@@ -76,7 +76,7 @@ export function emitJwtAuthnFilter(lines: string[], jwt: JwtProvider | null): vo
   lines.push('          from_headers:');
   lines.push(`            - name: ${yamlString(jwt.headerName)}`);
   lines.push('              value_prefix: "Bearer "');
-  lines.push('          forward_payload_header: x-writ-jwt-payload');
+  lines.push('          forward_payload_header: x-x-security-jwt-payload');
   lines.push(`          payload_in_metadata: ${jwt.providerName}`);
   lines.push('          remote_jwks:');
   lines.push('            http_uri:');

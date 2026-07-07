@@ -1,5 +1,5 @@
 // Unit tests for the pure `computeDiff` function exposed at
-// `@writ/shared/validation`. Uses node:test (matches the rest of the
+// `@x-security/shared/validation`. Uses node:test (matches the rest of the
 // shared package — node --test --import tsx).
 import { test } from "node:test";
 import assert from "node:assert/strict";

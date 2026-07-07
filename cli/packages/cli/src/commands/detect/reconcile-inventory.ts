@@ -31,7 +31,7 @@ import {
   readSlice,
   detectFilesystemHandlerCandidates,
   type RouteInventoryEntry,
-} from '@writ/detect-core';
+} from '@x-security/detect-core';
 
 export interface ReconcileRouteInput {
   method: string;

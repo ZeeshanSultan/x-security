@@ -13,21 +13,21 @@
  *
  * These are emitted as per-server prefixed settings (`<SERVER_NAME>_USE_AUTH_JWT`)
  * by the operator's compose file; the generator surfaces the bare keys in
- * writ.conf's settings-comment block and the caller prefixes them.
+ * x-security.conf's settings-comment block and the caller prefixes them.
  *
  * When BunkerWeb is fronted by an OIDC sidecar (oauth2-proxy / Kong+OIDC) the
  * native JWT chain should be disabled (`USE_AUTH_JWT=no`) and the sidecar's
  * trust headers consumed instead — DEPLOYMENT.md spells this out.
  */
 
-import type { Authentication, JwtAlgorithm } from '@writ/schema';
+import type { Authentication, JwtAlgorithm } from '@x-security/schema';
 import type { SettingMap } from './settings.js';
 
 /**
  * Algorithm sets that signal a misconfiguration the BW JWT module cannot run
  * safely (HS* requires a shared secret which the WAF doesn't have; 'none'
  * disables verification entirely). The generator-side allowedAlgorithms type
- * is already constrained to asymmetric algs by @writ/schema, so this
+ * is already constrained to asymmetric algs by @x-security/schema, so this
  * is defense-in-depth.
  */
 const ASYMMETRIC_ALGS: ReadonlySet<JwtAlgorithm> = new Set([

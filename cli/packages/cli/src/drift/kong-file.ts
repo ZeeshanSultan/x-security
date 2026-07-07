@@ -2,7 +2,7 @@
 
 import { readFile } from 'node:fs/promises';
 import * as yaml from 'js-yaml';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import type { KongPlugin } from '../generators/kong/types.js';
 import type { DriftIssue, DriftReport } from '../reporters/types.js';
 import { buildExpected, diffExpectedVsActual } from './kong-shared.js';

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { loadSpec, type SpecIR, type EndpointIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/schema';
+import { loadSpec, type SpecIR, type EndpointIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 import { corazaGenerator } from '../../src/generators/coraza/index.js';
 import {
@@ -278,7 +278,7 @@ describe('coraza: per-policy rule emission', () => {
     assert.equal(rules.length, 3);
     assert.match(rules[0]!, /SecAction/);
     const text = rules.join('\n');
-    assert.match(text, /writ\/b1\/bfla/);
+    assert.match(text, /x-security\/b1\/bfla/);
   });
 });
 
@@ -446,7 +446,7 @@ describe('coraza: generate() against example fixture', () => {
   it('embeds metadata header', async () => {
     const spec = await loadExample();
     const [art] = await corazaGenerator.generate(spec);
-    assert.match(art!.content, /generator: writ-coraza/);
+    assert.match(art!.content, /generator: x-security-coraza/);
     assert.match(art!.content, /source:/);
   });
 
@@ -462,6 +462,21 @@ describe('coraza: generate() against example fixture', () => {
     const [art] = await corazaGenerator.generate(spec);
     const expected = await readFile(GOLDEN, 'utf8');
     assert.equal(art!.content, expected);
+  });
+
+  // Regression: an `@rx` operator argument is wrapped in "..." in the SecRule
+  // grammar, so a literal double-quote inside the regex MUST be written as the
+  // PCRE hex escape \x22 — never \" (libmodsecurity3 rejects \" with
+  // "Expecting an action", crashing the nginx/coraza container at load).
+  it('never emits a literal \\" inside an @rx operator (use \\x22)', async () => {
+    const spec = await loadExample();
+    const [art] = await corazaGenerator.generate(spec);
+    for (const line of art!.content.split('\n')) {
+      const m = /"@rx ([^"]*(?:\\"[^"]*)*)"/.exec(line);
+      if (m && m[1]!.includes('\\"')) {
+        assert.fail(`@rx operator contains a literal \\" (must be \\x22): ${line.trim()}`);
+      }
+    }
   });
 });
 
@@ -489,9 +504,9 @@ describe('coraza C-1: response-body inspection', () => {
     assert.match(joined, /status:500/);
     assert.match(joined, /response\.token exceeds maxLength=2048/);
     // The leak regex inspects RESPONSE_BODY for a long token value
-    assert.match(joined, /RESPONSE_BODY "@rx \\"token\\"\\s\*:\\s\*\\"\[\^\\"\]\{2049,\}\\""/);
-    // Writ API3/BOPLA tag must be present so verify-readers can grep audit logs.
-    assert.match(joined, /writ-api3-bopla/);
+    assert.match(joined, /RESPONSE_BODY "@rx \\x22token\\x22\\s\*:\\s\*\\x22\[\^\\x22\]\{2049,\}\\x22"/);
+    // x-security API3/BOPLA tag must be present so verify-readers can grep audit logs.
+    assert.match(joined, /x-security-api3-bopla/);
     // Cost-of-doing-business warning surfaced.
     assert.ok(warnings.some((w) => w.severity === 'downgrade' && /response inspection/.test(w.reason)));
   });
@@ -574,7 +589,7 @@ describe('coraza C-1: response-body inspection', () => {
 
 // ---------- W10-1: RE2-safe pattern emission (no negative lookahead) ----------
 describe('coraza W10-1: response.schema.<field>.pattern uses RE2-safe capture + inverse-rx', () => {
-  it('emits a capture rule that extracts the field value into TX:writ_<field>', () => {
+  it('emits a capture rule that extracts the field value into TX:x_security_<field>', () => {
     const warnings: EngineWarning[] = [];
     const rules = buildResponseInspectionRules(
       ep('GET', '/api3/comment', { response: { schema: { text: { type: 'string', pattern: '^[A-Za-z0-9 ]+$' } } } }),
@@ -583,7 +598,7 @@ describe('coraza W10-1: response.schema.<field>.pattern uses RE2-safe capture + 
     );
     const joined = rules.join('\n');
     // Rule A: capture into TX
-    assert.match(joined, /capture,setvar:tx\.writ_text=%\{TX\.1\}/);
+    assert.match(joined, /capture,setvar:tx\.x_security_text=%\{TX\.1\}/);
     // The capture rule is a pass+nolog scan that does NOT deny on its own.
     assert.match(joined, /phase:4,pass,nolog/);
     // No negative lookahead — RE2 doesn't support it.
@@ -599,10 +614,10 @@ describe('coraza W10-1: response.schema.<field>.pattern uses RE2-safe capture + 
     );
     const joined = rules.join('\n');
     // Rule B: deny when the captured value does NOT match the required pattern.
-    assert.match(joined, /SecRule TX:writ_text "!@rx \^\[A-Za-z0-9 \]\+\$"/);
+    assert.match(joined, /SecRule TX:x_security_text "!@rx \^\[A-Za-z0-9 \]\+\$"/);
     assert.match(joined, /phase:4,deny,status:500/);
     assert.match(joined, /response\.text pattern mismatch \(data exposure\)/);
-    assert.match(joined, /writ-api3-bopla/);
+    assert.match(joined, /x-security-api3-bopla/);
   });
 
   it('emits no SecRule when response.schema has no enforceable constraint (defense-in-depth check)', () => {
@@ -721,7 +736,7 @@ describe('coraza W19: per-arg injectionGuard enforcement (query + JSON body)', (
     assert.match(j, /SecRule ARGS:username\|ARGS:json\.username "@detectSQLi"/);
     assert.match(j, /SecRule ARGS:password\|ARGS:json\.password "@detectSQLi"/);
     assert.match(j, /status:403/);
-    assert.match(j, /writ-injection-sqli/);
+    assert.match(j, /x-security-injection-sqli/);
     assert.match(j, /SQL injection detected in username/);
   });
 
@@ -736,7 +751,7 @@ describe('coraza W19: per-arg injectionGuard enforcement (query + JSON body)', (
     );
     const j = rules.join('\n');
     assert.match(j, /SecRule ARGS:comment\|ARGS:json\.comment "@detectXSS"/);
-    assert.match(j, /writ-injection-xss/);
+    assert.match(j, /x-security-injection-xss/);
     assert.match(j, /XSS detected in comment/);
   });
 
@@ -761,13 +776,13 @@ describe('coraza W19: per-arg injectionGuard enforcement (query + JSON body)', (
     assert.match(j, /SecRule ARGS:q\|ARGS:json\.q "@rx \(\?i\)\\\$\(\?:where\|gt/);       // nosql operator tokens
     assert.match(j, /SecRule ARGS:cmd\|ARGS:json\.cmd "!@rx \^\[\^;\|&\$/);               // os-command metachar allowlist
     assert.match(j, /SecRule ARGS:f\|ARGS:json\.f "@detectXSS"/);                         // xss
-    assert.match(j, /writ-injection-os-command/);
-    assert.match(j, /writ-injection-code-eval/);
-    assert.match(j, /writ-injection-xpath/);
-    assert.match(j, /writ-injection-ldap/);
-    assert.match(j, /writ-injection-xss/);
-    // Every emitted rule carries the Writ-native injection tag.
-    assert.equal((j.match(/tag:'writ-injection'/g) ?? []).length, 7);
+    assert.match(j, /x-security-injection-os-command/);
+    assert.match(j, /x-security-injection-code-eval/);
+    assert.match(j, /x-security-injection-xpath/);
+    assert.match(j, /x-security-injection-ldap/);
+    assert.match(j, /x-security-injection-xss/);
+    // Every emitted rule carries the x-security-native injection tag.
+    assert.equal((j.match(/tag:'x-security-injection'/g) ?? []).length, 7);
   });
 
   it('does NOT emit for string fields lacking injectionGuard (no blanket FP surface)', () => {
@@ -872,7 +887,7 @@ describe('coraza W10-9: ssrf-policy-missing warning', () => {
 });
 
 describe('coraza W19-A: SSRF url-allowlist SecRule emission', () => {
-  it('emits id:980000+ deny + writ-rule-ssrf-403 tag when domainAllowlist set', () => {
+  it('emits id:980000+ deny + x-security-rule-ssrf-403 tag when domainAllowlist set', () => {
     const rules = buildPolicyRules(
       ep('GET', '/vapi/serversurfer', {
         request: { schema: { url: { type: 'url', domainAllowlist: ['roottusk.com'] } } }
@@ -880,20 +895,20 @@ describe('coraza W19-A: SSRF url-allowlist SecRule emission', () => {
     );
     const text = rules.join('\n');
     assert.match(text, /id:98\d{4}/, 'must emit a rule id in the 980000 SSRF range');
-    assert.match(text, /tag:'writ-rule-ssrf-403'/);
+    assert.match(text, /tag:'x-security-rule-ssrf-403'/);
     // The allowlist regex anchors after scheme and only accepts roottusk.com.
     assert.match(text, /SecRule ARGS:url "!@rx/);
     assert.match(text, /roottusk/);
   });
 
-  it('emits private-range guard with writ-rule-ssrf-private-403 tag when blockPrivateRanges:true', () => {
+  it('emits private-range guard with x-security-rule-ssrf-private-403 tag when blockPrivateRanges:true', () => {
     const rules = buildPolicyRules(
       ep('POST', '/api/fetch', {
         request: { schema: { url: { type: 'url', blockPrivateRanges: true } } }
       })
     );
     const text = rules.join('\n');
-    assert.match(text, /tag:'writ-rule-ssrf-private-403'/);
+    assert.match(text, /tag:'x-security-rule-ssrf-private-403'/);
     // Private-range regex must include canonical RFC1918 + loopback + internal-only.
     // W22-B: single-backslash literal `\.` (not double) — libmodsec3/Coraza
     // pass @rx args verbatim to the regex compiler; doubling backslashes
@@ -1015,8 +1030,8 @@ describe('coraza B1: identity-aware authz (BOLA/BFLA) SecRule emission', () => {
     const text = rules.join('\n');
     assert.match(text, /id:97\d{4}/, 'must emit a rule id in the 9700xx identity range');
     assert.match(text, /id:97\d{2}10,/, 'BOLA-read offset is +10 within the slot');
-    assert.match(text, /Writ B1: BOLA-read denied/);
-    assert.match(text, /tag:'writ\/b1\/bola-read'/);
+    assert.match(text, /x-security B1: BOLA-read denied/);
+    assert.match(text, /tag:'x-security\/b1\/bola-read'/);
     assert.match(text, /SecRule REQUEST_METHOD "@streq GET"/);
     assert.match(text, /SecRule REQUEST_URI "@rx \^\(\?:\/\[\^\/\]\+\)\?\/api1\/user\/\(\[\^\/\?\]\+\)\(\?:\[\/\?\]\|\$\)"/);
     assert.match(text, /"capture,chain"/);
@@ -1036,8 +1051,8 @@ describe('coraza B1: identity-aware authz (BOLA/BFLA) SecRule emission', () => {
     );
     const text = rules.join('\n');
     assert.match(text, /id:97\d{2}11,/, 'BOLA-update offset is +11 within the slot');
-    assert.match(text, /Writ B1: BOLA-update denied/);
-    assert.match(text, /tag:'writ\/b1\/bola-update'/);
+    assert.match(text, /x-security B1: BOLA-update denied/);
+    assert.match(text, /tag:'x-security\/b1\/bola-update'/);
     assert.match(text, /SecRule REQUEST_METHOD "@streq PUT"/);
   });
 
@@ -1050,11 +1065,11 @@ describe('coraza B1: identity-aware authz (BOLA/BFLA) SecRule emission', () => {
     const text = rules.join('\n');
     // Missing-principal sibling.
     assert.match(text, /id:97\d{2}20,/, 'BFLA-missing offset is +20');
-    assert.match(text, /Writ B1: BFLA denied \(admin-only route, no authenticated principal\)/);
+    assert.match(text, /x-security B1: BFLA denied \(admin-only route, no authenticated principal\)/);
     assert.match(text, /&REQUEST_HEADERS:X-Forwarded-User "@eq 0"/);
     // Non-admin sibling.
     assert.match(text, /id:97\d{2}21,/, 'BFLA-non-role offset is +21');
-    assert.match(text, /Writ B1: BFLA denied \(admin-only route, non-admin principal\)/);
+    assert.match(text, /x-security B1: BFLA denied \(admin-only route, non-admin principal\)/);
     assert.match(text, /REQUEST_HEADERS:X-Forwarded-User "!@streq admin"/);
     // Path anchor must tolerate optional gateway prefix and trailing /, ?, $.
     assert.match(text, /SecRule REQUEST_URI "@rx \^\(\?:\/\[\^\/\]\+\)\?\/api5\/users\(\?:\[\/\?\]\|\$\)"/);
@@ -1073,7 +1088,7 @@ describe('coraza B1: identity-aware authz (BOLA/BFLA) SecRule emission', () => {
       })
     );
     const text = rules.join('\n');
-    assert.doesNotMatch(text, /writ\/b1\/bfla/);
+    assert.doesNotMatch(text, /x-security\/b1\/bfla/);
   });
 
   it('emits both BOLA and BFLA when an endpoint declares ownership AND role gate', () => {

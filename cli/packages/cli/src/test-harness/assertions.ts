@@ -2,7 +2,7 @@
 // send traffic and returns a TestCaseResult. Built so each rule can be run
 // in isolation (parallel-friendly) and produces a clear pass/fail message.
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import type { TestCaseResult, TestVerdict } from '../reporters/types.js';
 import { sendN, sendOnce, type TrafficRequest, type TrafficResponse } from './traffic.js';
 
@@ -45,7 +45,8 @@ function result(
 
 export async function assertRateLimit(
   baseUrl: string,
-  endpoint: EndpointIR
+  endpoint: EndpointIR,
+  timeoutMs?: number
 ): Promise<TestCaseResult[]> {
   const rls = endpoint.policy.rateLimit;
   if (!rls) return [];
@@ -55,7 +56,7 @@ export async function assertRateLimit(
     const start = Date.now();
     const total = rl.requests + 1;
     try {
-      const responses = await sendN(baseUrl, baseRequest(endpoint), total);
+      const responses = await sendN(baseUrl, baseRequest(endpoint), total, timeoutMs);
       const last = responses[responses.length - 1]!;
       if (last.status === 429) {
         out.push(result(endpoint, 'rateLimit', 'PASS', `429 after ${rl.requests} requests`, start));
@@ -79,12 +80,12 @@ export async function assertRateLimit(
 
 // ---------- auth ----------
 
-export async function assertAuth(baseUrl: string, endpoint: EndpointIR): Promise<TestCaseResult | null> {
+export async function assertAuth(baseUrl: string, endpoint: EndpointIR, timeoutMs?: number): Promise<TestCaseResult | null> {
   const auth = endpoint.policy.authentication;
   if (!auth || auth.type === 'none') return null;
   const start = Date.now();
   try {
-    const res = await sendOnce(baseUrl, baseRequest(endpoint));
+    const res = await sendOnce(baseUrl, baseRequest(endpoint), timeoutMs);
     if (res.status === 401 || res.status === 403) {
       return result(endpoint, 'authentication', 'PASS', `Unauth → ${res.status}`, start);
     }
@@ -102,7 +103,7 @@ export async function assertAuth(baseUrl: string, endpoint: EndpointIR): Promise
 
 // ---------- cors ----------
 
-export async function assertCors(baseUrl: string, endpoint: EndpointIR): Promise<TestCaseResult | null> {
+export async function assertCors(baseUrl: string, endpoint: EndpointIR, timeoutMs?: number): Promise<TestCaseResult | null> {
   const cors = endpoint.policy.cors;
   if (!cors || !cors.allowedOrigins?.length) return null;
   const start = Date.now();
@@ -115,7 +116,7 @@ export async function assertCors(baseUrl: string, endpoint: EndpointIR): Promise
         Origin: origin,
         'Access-Control-Request-Method': endpoint.method
       }
-    });
+    }, timeoutMs);
     const allowed = res.headers['access-control-allow-origin'];
     if (allowed && (allowed === origin || allowed === '*')) {
       return result(endpoint, 'cors', 'PASS', `CORS preflight echoed ${allowed}`, start);
@@ -130,7 +131,8 @@ export async function assertCors(baseUrl: string, endpoint: EndpointIR): Promise
 
 export async function assertMaxBodySize(
   baseUrl: string,
-  endpoint: EndpointIR
+  endpoint: EndpointIR,
+  timeoutMs?: number
 ): Promise<TestCaseResult | null> {
   const maxBody = endpoint.policy.request?.maxBodySize;
   if (!maxBody) return null;
@@ -145,7 +147,7 @@ export async function assertMaxBodySize(
     const res = await sendOnce(baseUrl, {
       ...baseRequest(endpoint, { 'Content-Type': 'application/octet-stream' }),
       body: big
-    });
+    }, timeoutMs);
     if (res.status === 413) {
       return result(endpoint, 'maxBodySize', 'PASS', `413 on ${bytes}B payload`, start);
     }
@@ -159,7 +161,8 @@ export async function assertMaxBodySize(
 
 export async function assertContentType(
   baseUrl: string,
-  endpoint: EndpointIR
+  endpoint: EndpointIR,
+  timeoutMs?: number
 ): Promise<TestCaseResult | null> {
   const allowed = endpoint.policy.request?.contentType;
   if (!allowed?.length) return null;
@@ -169,7 +172,7 @@ export async function assertContentType(
     const res = await sendOnce(baseUrl, {
       ...baseRequest(endpoint, { 'Content-Type': 'application/x-disallowed-type' }),
       body: 'x'
-    });
+    }, timeoutMs);
     if (res.status === 415 || res.status === 400) {
       return result(endpoint, 'contentType', 'PASS', `${res.status} on bad content-type`, start);
     }
@@ -181,7 +184,7 @@ export async function assertContentType(
 
 // ---------- schema ----------
 
-export async function assertSchema(baseUrl: string, endpoint: EndpointIR): Promise<TestCaseResult | null> {
+export async function assertSchema(baseUrl: string, endpoint: EndpointIR, timeoutMs?: number): Promise<TestCaseResult | null> {
   const schema = endpoint.policy.request?.schema;
   if (!schema || Object.keys(schema).length === 0) return null;
   const start = Date.now();
@@ -191,7 +194,7 @@ export async function assertSchema(baseUrl: string, endpoint: EndpointIR): Promi
     const res = await sendOnce(baseUrl, {
       ...baseRequest(endpoint, { 'Content-Type': 'application/json' }),
       body: '{}'
-    });
+    }, timeoutMs);
     if (res.status === 400 || res.status === 422) {
       return result(endpoint, 'requestSchema', 'PASS', `${res.status} on empty body`, start);
     }
@@ -205,20 +208,21 @@ export async function assertSchema(baseUrl: string, endpoint: EndpointIR): Promi
 
 export async function runAllAssertions(
   baseUrl: string,
-  endpoint: EndpointIR
+  endpoint: EndpointIR,
+  timeoutMs?: number
 ): Promise<TestCaseResult[]> {
   const cases: TestCaseResult[] = [];
-  const auth = await assertAuth(baseUrl, endpoint);
+  const auth = await assertAuth(baseUrl, endpoint, timeoutMs);
   if (auth) cases.push(auth);
-  const cors = await assertCors(baseUrl, endpoint);
+  const cors = await assertCors(baseUrl, endpoint, timeoutMs);
   if (cors) cases.push(cors);
-  const ct = await assertContentType(baseUrl, endpoint);
+  const ct = await assertContentType(baseUrl, endpoint, timeoutMs);
   if (ct) cases.push(ct);
-  const sz = await assertMaxBodySize(baseUrl, endpoint);
+  const sz = await assertMaxBodySize(baseUrl, endpoint, timeoutMs);
   if (sz) cases.push(sz);
-  const sch = await assertSchema(baseUrl, endpoint);
+  const sch = await assertSchema(baseUrl, endpoint, timeoutMs);
   if (sch) cases.push(sch);
-  cases.push(...(await assertRateLimit(baseUrl, endpoint)));
+  cases.push(...(await assertRateLimit(baseUrl, endpoint, timeoutMs)));
   return cases;
 }
 

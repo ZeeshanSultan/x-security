@@ -1,0 +1,111 @@
+openapi: 3.1.0
+info:
+  title: Example API
+  version: 1.0.0
+servers:
+  - url: https://api.example.com
+paths:
+  /api/auth/login:
+    post:
+      operationId: login
+      summary: User login
+      x-security:
+        authentication:
+          type: none
+        rateLimit:
+          requests: 5
+          window: "1m"
+          identifier: ip
+          burst: 2
+        request:
+          contentType: ["application/json"]
+          maxBodySize: "10KB"
+          schema:
+            email:
+              type: email
+              maxLength: 254
+              mitigates: ["API2:2023"]
+            password:
+              type: free-text
+              minLength: 8
+              maxLength: 128
+              mitigates: ["API2:2023"]
+        response:
+          contentType: ["application/json"]
+          schema:
+            token: { type: string, maxLength: 2048 }
+            expiresIn: { type: integer }
+        timeout:
+          read: 5000
+        cacheable: false
+        cors:
+          allowedOrigins: ["https://app.example.com"]
+          allowedMethods: ["POST"]
+          credentials: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+  /api/admin/users:
+    get:
+      operationId: listUsers
+      summary: List users (admin only)
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: "${JWKS_ENDPOINT}"
+          allowedAlgorithms: ["RS256"]
+          issuer: "${AUTH_ISSUER}"
+          audience: "${AUTH_AUDIENCE}"
+        authorization:
+          type: rbac
+          roles: ["admin", "super-admin"]
+        rateLimit:
+          requests: 30
+          window: "1m"
+          identifier: user-id
+        timeout:
+          read: 10000
+        cacheable: false
+        ipPolicy:
+          allow: ["10.0.0.0/8"]
+      responses:
+        '200':
+          description: OK
+  /api/files/upload:
+    post:
+      operationId: uploadFile
+      summary: Upload a file
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: "${JWKS_ENDPOINT}"
+          allowedAlgorithms: ["RS256"]
+        rateLimit:
+          requests: 20
+          window: "1m"
+          identifier: user-id
+        request:
+          contentType: ["multipart/form-data"]
+          maxBodySize: "50MB"
+          schema:
+            file:
+              type: binary
+              allowedMimeTypes: ["image/png", "image/jpeg", "application/pdf"]
+              maxSize: "50MB"
+              mitigates: ["API8:2023"]
+        timeout:
+          read: 30000
+        cacheable: false
+      responses:
+        '200':
+          description: OK

@@ -9,10 +9,10 @@
   },
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "build": "pnpm --filter @writ/cli build",
+    "build": "pnpm --filter @x-security/cli build",
     "test": "pnpm -r --filter=./packages/* test",
     "typecheck": "pnpm -r typecheck",
-    "bundle": "pnpm --filter @writ/cli run bundle:npm -- --name @chain305/x-security --bin xsecurity"
+    "bundle": "pnpm --filter @x-security/cli run bundle:npm -- --name @chain305/x-security --bin xsecurity"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

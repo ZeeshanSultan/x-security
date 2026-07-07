@@ -1,8 +1,8 @@
 {
-  "name": "@writ/crypto",
+  "name": "@x-security/crypto",
   "version": "0.1.0",
   "private": true,
-  "description": "AES-256-GCM helpers for at-rest secret encryption (shared across Writ workspace)",
+  "description": "AES-256-GCM helpers for at-rest secret encryption (shared across x-security workspace)",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",

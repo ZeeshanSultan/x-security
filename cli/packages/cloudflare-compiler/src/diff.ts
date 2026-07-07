@@ -61,7 +61,7 @@ function byId(a: CompiledRule, b: CompiledRule): number {
 function changedFields(a: CompiledRule, b: CompiledRule): string[] {
   const fields: (keyof CompiledRule)[] = [
     'description', 'expression', 'action', 'enabled',
-    'action_parameters', 'ratelimit', 'writ'
+    'action_parameters', 'ratelimit', 'xSecurity'
   ];
   const out: string[] = [];
   for (const f of fields) {

@@ -24,7 +24,7 @@
  * ID range: 272000..274999 (1000 per method × 3 sub-rules, hash-keyed).
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import { CORAZA_GO_PROFILE, type CorazaEngineProfile } from './profiles.js';
 import { endpointHash, pathRegex } from './rules.js';
 
@@ -58,7 +58,7 @@ export function buildCsrfRules(
   if (!csrf) return [];
   if (!STATE_CHANGING.has(endpoint.method.toUpperCase())) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const pathRx = pathRegex(endpoint.path);
   const term = chainTerm(profile);
   const slot = endpointHash(endpoint.method, endpoint.path) % 1000;
@@ -74,9 +74,9 @@ export function buildCsrfRules(
         header(
           `csrf: origin-check for ${endpoint.method} ${endpoint.path}\n` +
             `phase:1 — deny when Origin missing or not in allowedOrigins.\n` +
-            `msg carries 'id:272' substring (writ-csrf).`
+            `msg carries 'id:272' substring (x-security-csrf).`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'Writ id:272 CSRF origin not allowed',tag:'${esc(tag)}',tag:'writ-csrf',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'x-security id:272 CSRF origin not allowed',tag:'${esc(tag)}',tag:'x-security-csrf',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
         `    SecRule REQUEST_HEADERS:Origin "!@rx ${esc(originRx)}"${term}`,
       ].join('\n')
@@ -87,14 +87,14 @@ export function buildCsrfRules(
     if (!cookieName || !headerName) return [];
     const captureId = CSRF_BASE_ID + 1000 + slot;
     const denyId = CSRF_BASE_ID + 2000 + slot;
-    const txVar = `writ_csrf_${slot}`;
+    const txVar = `x_security_csrf_${slot}`;
     rules.push(
       [
         header(
           `csrf: double-submit capture for ${endpoint.method} ${endpoint.path}\n` +
             `phase:1 — capture cookie '${esc(cookieName)}' into TX:${txVar} for the equality check.`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${captureId},phase:1,pass,nolog,tag:'${esc(tag)}',tag:'writ-csrf',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${captureId},phase:1,pass,nolog,tag:'${esc(tag)}',tag:'x-security-csrf',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
         `    SecRule REQUEST_COOKIES:${cookieName} "@rx .+" "capture,setvar:tx.${txVar}=%{MATCHED_VAR}${term ? ',t:none' : ''}"`,
       ].join('\n')
@@ -104,9 +104,9 @@ export function buildCsrfRules(
         header(
           `csrf: double-submit verify for ${endpoint.method} ${endpoint.path}\n` +
             `phase:1 — deny when header '${esc(headerName)}' missing OR != TX:${txVar}.\n` +
-            `msg carries 'id:272' substring (writ-csrf).`
+            `msg carries 'id:272' substring (x-security-csrf).`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${denyId},phase:1,deny,status:403,msg:'Writ id:272 CSRF token mismatch',tag:'${esc(tag)}',tag:'writ-csrf',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${denyId},phase:1,deny,status:403,msg:'x-security id:272 CSRF token mismatch',tag:'${esc(tag)}',tag:'x-security-csrf',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
         `    SecRule REQUEST_HEADERS:${headerName} "!@streq %{TX.${txVar}}"${term}`,
       ].join('\n')
@@ -120,9 +120,9 @@ export function buildCsrfRules(
         header(
           `csrf: custom-header for ${endpoint.method} ${endpoint.path}\n` +
             `phase:1 — deny when '${esc(headerName)}' header missing/empty.\n` +
-            `msg carries 'id:272' substring (writ-csrf).`
+            `msg carries 'id:272' substring (x-security-csrf).`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'Writ id:272 CSRF custom header missing',tag:'${esc(tag)}',tag:'writ-csrf',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'x-security id:272 CSRF custom header missing',tag:'${esc(tag)}',tag:'x-security-csrf',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
         `    SecRule &REQUEST_HEADERS:${headerName} "@eq 0"${term}`,
       ].join('\n')

@@ -11,7 +11,7 @@ import {
   assertFidelity,
   StrictnessViolation,
   UnresolvedVariableError
-} from '@writ/core';
+} from '@x-security/core';
 import { isKnownTarget, loadGenerator, type TargetName } from '../registry.js';
 
 export interface GenerateOptions {
@@ -40,7 +40,7 @@ export interface GenerateOptions {
   corazaEngine?: string;
   /** Coraza-only (coraza-spoa / coraza-go): HAProxy peer-replication spec.
    *  Format: `name1:host1:port1,name2:host2:port2`. When supplied, emitted
-   *  haproxy-stick-tables.cfg includes a `peers writ` section so the
+   *  haproxy-stick-tables.cfg includes a `peers x-security` section so the
    *  stick-table counters replicate across instances. */
   corazaPeers?: string;
   /** S3 fidelity gate (opt-in): exit 4 if any spec field is unenforceable
@@ -136,7 +136,7 @@ export async function runGenerate(specPath: string, opts: GenerateOptions): Prom
     assertFidelity(spec, generator.capabilities(), { targetName: target });
   }
 
-  const outDir = opts.out ?? path.join(process.cwd(), 'writ-out', target);
+  const outDir = opts.out ?? path.join(process.cwd(), 'x-security-out', target);
   const artifactPaths: string[] = [];
 
   if (!opts.dryRun) {

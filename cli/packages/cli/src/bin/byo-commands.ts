@@ -4,7 +4,7 @@
 // one place (no duplication between the two entrypoints).
 //
 // These verbs are the deterministic correctness surface a host coding agent
-// shells out to. They pull in ONLY @writ/* + js-yaml + node builtins —
+// shells out to. They pull in ONLY @x-security/* + js-yaml + node builtins —
 // no dockerode, no @stoplight/spectral, no LLM provider SDK — which is what
 // keeps the BYO bundle self-contained and LLM-free.
 

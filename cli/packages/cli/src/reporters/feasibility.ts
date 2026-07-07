@@ -12,8 +12,8 @@
 //   (e.g. Kong for AuthN/rate-limit + Coraza WAF for schema validation), so
 //   "covered by someone" is the right rollup.
 
-import type { Generator, CapabilityMatrix } from '@writ/core';
-import type { XSecurityPolicy, SecurityCategoryId } from '@writ/schema';
+import type { Generator, CapabilityMatrix } from '@x-security/core';
+import type { XSecurityPolicy, SecurityCategoryId } from '@x-security/schema';
 import { isKnownTarget, loadGenerator, type TargetName } from '../registry.js';
 
 export type CapStatus = 'full' | 'partial' | 'override-only' | 'unsupported' | 'unknown';
@@ -174,7 +174,7 @@ function hasDomainAllowlist(p: XSecurityPolicy): boolean {
 
 /** True iff any request.schema field declares a non-empty injectionGuard[]
  *  (the per-arg sink-hardening directive: sql/nosql/os-command/xpath/ldap/
- *  code-eval/xss/deserialization/ai-prompt). Drives the Writ-native
+ *  code-eval/xss/deserialization/ai-prompt). Drives the x-security-native
  *  SSEC-INJECTION attribution; 'deserialization' rides this cell (same
  *  injection class), 'ai-prompt' is split out to SSEC-PROMPT below. */
 function hasInjectionGuard(p: XSecurityPolicy): boolean {
@@ -341,7 +341,7 @@ const OWASP_FIELDS: Record<SecurityCategoryId, FieldProbe[]> = {
     { capKey: 'request.allowedHosts', present: (p) => nonEmpty(p.request?.allowedHosts) },
     { capKey: 'mtls', present: (p) => nonEmpty(p.mtls) }
   ],
-  // SSEC-INJECTION = Writ-native injection category (W19). Mitigated by
+  // SSEC-INJECTION = x-security-native injection category (W19). Mitigated by
   // per-arg sink hardening: request.schema.<field>.injectionGuard. The probe
   // resolves against the `request.schema.injectionGuard` capability key, which
   // kong + envoy currently advertise `unsupported` (no libinjection/@detectSQLi
@@ -352,7 +352,7 @@ const OWASP_FIELDS: Record<SecurityCategoryId, FieldProbe[]> = {
   'SSEC-INJECTION': [
     { capKey: 'request.schema.injectionGuard', present: hasInjectionGuard }
   ],
-  // SSEC-PROMPT = Writ-native LLM prompt-injection category (v0.7). A
+  // SSEC-PROMPT = x-security-native LLM prompt-injection category (v0.7). A
   // distinct threat class from SSEC-INJECTION (one synthetic id per class), so
   // it gets its own probe keyed on injectionGuard.includes('ai-prompt'). It
   // resolves against the SAME `request.schema.injectionGuard` capability key —
@@ -361,7 +361,7 @@ const OWASP_FIELDS: Record<SecurityCategoryId, FieldProbe[]> = {
   'SSEC-PROMPT': [
     { capKey: 'request.schema.injectionGuard', present: hasAiPromptGuard }
   ],
-  // SSEC-AUDIT = Writ-native audit-logging category (v0.7). Mitigated by
+  // SSEC-AUDIT = x-security-native audit-logging category (v0.7). Mitigated by
   // the declarative `logging` policy (events/sink/sinkRef/piiRedaction). The
   // probe resolves against the flat `logging` capability key; until a generator
   // advertises it the verdict honestly resolves to none/partial rather than an
@@ -369,7 +369,7 @@ const OWASP_FIELDS: Record<SecurityCategoryId, FieldProbe[]> = {
   'SSEC-AUDIT': [
     { capKey: 'logging', present: (p) => nonEmpty(p.logging) }
   ],
-  // SSEC-STORAGE = Writ-native at-rest storage posture (v0.8). ADVISORY
+  // SSEC-STORAGE = x-security-native at-rest storage posture (v0.8). ADVISORY
   // ONLY. request.dataAtRest declares the protection the *app* must apply to
   // named body fields; the gateway never sees the DB write, so this compiles to
   // NOTHING enforcing. The capability is hard-pinned override-only/unsupported
@@ -393,7 +393,7 @@ export type FeasibilityVerdict = 'full' | 'partial' | 'none';
 // enforced" illusion (Rule D-1).
 const CAPKEY_DISCLAIMERS: Record<string, string> = {
   'graphql.operations.authz':
-    'override-only: per-operation GraphQL authz enforcement depends on an operator-supplied GraphQL-aware processor; Writ emits scaffolding only',
+    'override-only: per-operation GraphQL authz enforcement depends on an operator-supplied GraphQL-aware processor; x-security emits scaffolding only',
   'graphql.staticLimits':
     'override-only: coarse GraphQL cost limits depend on an operator-supplied GraphQL-aware processor; a non-parsing crude limit is partial at best',
   'request.serializeBy':

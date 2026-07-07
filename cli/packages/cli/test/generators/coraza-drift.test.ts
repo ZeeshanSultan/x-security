@@ -8,8 +8,8 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 import { buildLifecycleRules } from '../../src/generators/coraza/lifecycle-rules.ts';
 import { buildCsrfRules } from '../../src/generators/coraza/csrf-rules.ts';
@@ -44,7 +44,7 @@ describe('coraza drift: lifecycle (deprecated/sunsetDate/replacementEndpoint)', 
     assert.match(joined, /id:269/);
     assert.match(joined, /status:410/);
     assert.match(joined, /phase:1/);
-    assert.match(joined, /writ-lifecycle-410/);
+    assert.match(joined, /x-security-lifecycle-410/);
     assert.match(joined, /SecAction/);
   });
 
@@ -57,7 +57,7 @@ describe('coraza drift: lifecycle (deprecated/sunsetDate/replacementEndpoint)', 
     assert.match(joined, /id:270/);
     assert.match(joined, /setenv:Sunset=2026-12-31/);
     assert.match(joined, /phase:3/);
-    assert.match(joined, /writ-lifecycle-sunset/);
+    assert.match(joined, /x-security-lifecycle-sunset/);
   });
 
   it('emits id:271 setenv Link successor-version when replacementEndpoint set', () => {
@@ -69,7 +69,7 @@ describe('coraza drift: lifecycle (deprecated/sunsetDate/replacementEndpoint)', 
     assert.match(joined, /id:271/);
     assert.match(joined, /setenv:Link=/);
     assert.match(joined, /successor-version/);
-    assert.match(joined, /writ-lifecycle-replacement/);
+    assert.match(joined, /x-security-lifecycle-replacement/);
   });
 
   it('emits nothing when no lifecycle fields set', () => {
@@ -99,7 +99,7 @@ describe('coraza drift: CSRF', () => {
     assert.match(joined, /id:272/);
     assert.match(joined, /status:403/);
     assert.match(joined, /Origin/);
-    assert.match(joined, /writ-csrf/);
+    assert.match(joined, /x-security-csrf/);
   });
 
   it('emits double-submit capture + verify rules', () => {
@@ -113,7 +113,7 @@ describe('coraza drift: CSRF', () => {
     assert.equal(rules.length, 2, 'double-submit emits a capture + verify pair');
     assert.match(joined, /XSRF-TOKEN/);
     assert.match(joined, /X-XSRF-Token/);
-    assert.match(joined, /setvar:tx\.writ_csrf_/);
+    assert.match(joined, /setvar:tx\.x_security_csrf_/);
     assert.match(joined, /CSRF token mismatch/);
   });
 
@@ -128,7 +128,7 @@ describe('coraza drift: CSRF', () => {
     assert.match(joined, /id:272/);
     assert.match(joined, /X-CSRF-Protection/);
     assert.match(joined, /@eq 0/);
-    assert.match(joined, /writ-csrf/);
+    assert.match(joined, /x-security-csrf/);
   });
 });
 
@@ -148,7 +148,7 @@ describe('coraza drift: HPP (duplicateParamPolicy=reject)', () => {
     assert.match(joined, /id:275/);
     assert.match(joined, /&ARGS:userId/);
     assert.match(joined, /&ARGS:role/);
-    assert.match(joined, /writ-hpp-reject/);
+    assert.match(joined, /x-security-hpp-reject/);
     assert.match(joined, /@gt 1/);
   });
 
@@ -181,7 +181,7 @@ describe('coraza drift: response.contentType allowlist', () => {
     assert.match(joined, /phase:3/);
     assert.match(joined, /status:500/);
     assert.match(joined, /RESPONSE_HEADERS:Content-Type/);
-    assert.match(joined, /writ-response-ct/);
+    assert.match(joined, /x-security-response-ct/);
   });
 
   it('emits nothing when response.contentType absent', () => {

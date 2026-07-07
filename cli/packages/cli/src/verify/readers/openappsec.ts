@@ -7,9 +7,9 @@
 //
 //   1. Confirm the policy file the generator emitted reached /etc/cp/conf/.
 //      We `docker exec ls /etc/cp/conf/` and look for *.policy / *.yaml
-//      entries whose contents reference one of our Writ asset names.
+//      entries whose contents reference one of our x-security asset names.
 //      As a coarse loaded-or-not signal, the presence of the file plus a
-//      cat of its head bearing the Writ generator marker is enough.
+//      cat of its head bearing the x-security generator marker is enough.
 //   2. Per-asset attribution: scan the emitted policy for the list of
 //      `specific-rules[].name`, `practices[].name`, `assets[]`. Each one
 //      becomes an EmittedArtifact whose endpoint is its declared host/asset.
@@ -19,25 +19,25 @@
 // Verdict attribution (post-traffic) is documented but not required for
 // pre-traffic coverage gating — if /var/log/nano_agent/decision.log exists
 // and is non-empty, we add a diagnostic listing the count of decisions
-// whose practiceName contains "writ".
+// whose practiceName contains "x-security".
 //
 // Gateway addr: docker:<openappsec-agent-container>
 
 import { spawnSync } from 'node:child_process';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import * as yaml from 'js-yaml';
 import { loadGenerator } from '../../registry.js';
 import type { EmittedArtifact, GatewayReader, LoadedArtifact, VerifyRow } from '../index.js';
 
 interface EmittedPolicyShape {
-  /** Practice names: e.g. writ-threat-prevention. */
+  /** Practice names: e.g. x-security-threat-prevention. */
   practices: string[];
-  /** Specific-rule asset names: e.g. writ-asset-vapi. */
+  /** Specific-rule asset names: e.g. x-security-asset-vapi. */
   assets: Array<{ name: string; host?: string }>;
   /** Triggers/responses for diagnostic completeness. */
   triggers: string[];
   customResponses: string[];
-  /** Schema-validation entries from writ-extended. */
+  /** Schema-validation entries from x-security-extended. */
   schemaEntries: Array<{ name: string; endpoint: string }>;
 }
 
@@ -92,7 +92,7 @@ export function parseOpenappsecPolicy(policyYaml: string): EmittedPolicyShape {
   }
 
   const schemaEntries: Array<{ name: string; endpoint: string }> = [];
-  const ext = doc['writ-extended'] as Record<string, unknown> | undefined;
+  const ext = doc['x-security-extended'] as Record<string, unknown> | undefined;
   const sv = ext?.['schema-validation'];
   if (Array.isArray(sv)) {
     for (const s of sv) {
@@ -144,7 +144,7 @@ export function readAgentConf(container: string): string {
   return cat.stdout || '';
 }
 
-/** Count writ-attributed verdicts in /var/log/nano_agent/decision.log.
+/** Count x-security-attributed verdicts in /var/log/nano_agent/decision.log.
  *  Returns -1 if the log doesn't exist (most pre-traffic situations). */
 export function countWritVerdicts(container: string): number {
   const r = spawnSync(
@@ -154,7 +154,7 @@ export function countWritVerdicts(container: string): number {
       container,
       'sh',
       '-c',
-      'test -f /var/log/nano_agent/decision.log && grep -c "writ" /var/log/nano_agent/decision.log || echo MISSING'
+      'test -f /var/log/nano_agent/decision.log && grep -c "x-security" /var/log/nano_agent/decision.log || echo MISSING'
     ],
     { encoding: 'utf8', maxBuffer: 1 * 1024 * 1024 }
   );
@@ -188,7 +188,8 @@ export const openappsecReader: GatewayReader = {
     return policyToArtifacts(parseOpenappsecPolicy(policy.content));
   },
 
-  async readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]> {
+  async readLoadedArtifacts(gateway: string, _timeoutMs?: number): Promise<LoadedArtifact[]> {
+    // No outbound HTTP here — `docker exec`/`find`/`cat`. timeoutMs n/a.
     if (!gateway.startsWith('docker:')) {
       throw new Error(`openappsec gateway must be docker:<container> (got "${gateway}")`);
     }
@@ -201,7 +202,7 @@ export const openappsecReader: GatewayReader = {
         id: '__no-policy-loaded__',
         kind: 'envoy-endpoint-policy',
         rejectionReason:
-          '/etc/cp/conf/ on the openappsec agent contains no policy/yaml files — agent did not load any Writ policy'
+          '/etc/cp/conf/ on the openappsec agent contains no policy/yaml files — agent did not load any x-security policy'
       });
       return out;
     }
@@ -209,9 +210,9 @@ export const openappsecReader: GatewayReader = {
     // Anything name-like that the policy file mentions: practice names,
     // asset names, schema-validation entry names. Map by exact substring
     // presence in the on-agent text.
-    // We treat each unique "writ-*" token as a present id.
+    // We treat each unique "x-security-*" token as a present id.
     const presence = new Set<string>();
-    const reToken = /\b(writ[-A-Za-z0-9_]+|(?:get|post|put|delete|patch|head|options)-[A-Za-z0-9_-]+)\b/gi;
+    const reToken = /\b((?:x-security|writ)[-A-Za-z0-9_]+|(?:get|post|put|delete|patch|head|options)-[A-Za-z0-9_-]+)\b/gi;
     let m: RegExpExecArray | null;
     while ((m = reToken.exec(confBlob)) !== null) presence.add(m[1]!);
     for (const tok of presence) out.push({ id: tok, kind: 'envoy-endpoint-policy' });
@@ -236,7 +237,7 @@ export const openappsecReader: GatewayReader = {
     if (verdicts && verdicts.rejectionReason) {
       const n = Number(verdicts.rejectionReason.replace(/^verdicts:/, ''));
       if (Number.isFinite(n)) {
-        diagnostics.push(`/var/log/nano_agent/decision.log contains ${n} Writ-attributed verdict line(s)`);
+        diagnostics.push(`/var/log/nano_agent/decision.log contains ${n} x-security-attributed verdict line(s)`);
       }
     }
 

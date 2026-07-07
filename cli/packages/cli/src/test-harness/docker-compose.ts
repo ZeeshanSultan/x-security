@@ -1,4 +1,4 @@
-// Real Docker container lifecycle for Writ's `lazy test`
+// Real Docker container lifecycle for x-security's `lazy test`
 // closed-loop validation command.
 //
 // We drive Docker through the dockerode Node SDK so users don't need
@@ -100,9 +100,9 @@ export function buildComposePlan(opts: BuildPlanOptions): ComposePlan {
   const upstreamPort = opts.upstreamPort ?? 18080;
   const gatewayPort = opts.gatewayPort ?? 18000;
   const suffix = randomSuffix();
-  const network = `writ-${opts.target}-net-${suffix}`;
-  const upstreamName = `writ-${opts.target}-upstream-${suffix}`;
-  const gatewayName = `writ-${opts.target}-gateway-${suffix}`;
+  const network = `x-security-${opts.target}-net-${suffix}`;
+  const upstreamName = `x-security-${opts.target}-upstream-${suffix}`;
+  const gatewayName = `x-security-${opts.target}-gateway-${suffix}`;
   const image = GATEWAY_IMAGE[opts.target];
 
   // Kong-specific env defaults — declarative DBless mode pointing at the mount.

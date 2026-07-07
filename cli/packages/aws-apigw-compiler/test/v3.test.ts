@@ -21,7 +21,7 @@ test('bearer-jwt WITHOUT allowedAlgorithms is a hard error and emits no rules', 
     'expected hard error for missing allowedAlgorithms'
   );
   // No rules for this endpoint
-  assert.equal(r.webAclRules.filter(x => x.writ.endpoint_id === 'GET_/api/me').length, 0);
+  assert.equal(r.webAclRules.filter(x => x.xSecurity.endpoint_id === 'GET_/api/me').length, 0);
 });
 
 test('bearer-jwt WITH allowedAlgorithms emits jwt-alg Lambda authorizer (full)', () => {
@@ -115,7 +115,7 @@ test('csrf origin-check emits WAFv2 origin allowlist Block rule', () => {
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const rule = r.webAclRules.find(x => x.writ.rule_type === 'csrf-origin');
+  const rule = r.webAclRules.find(x => x.xSecurity.rule_type === 'csrf-origin');
   assert.ok(rule, 'expected csrf-origin WAFv2 rule');
   assert.ok(rule.Action?.Block !== undefined);
 });
@@ -220,7 +220,7 @@ test('request.allowedHosts emits WAFv2 host-header allowlist Block rule', () => 
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const rule = r.webAclRules.find(x => x.writ.rule_type === 'allowed-hosts');
+  const rule = r.webAclRules.find(x => x.xSecurity.rule_type === 'allowed-hosts');
   assert.ok(rule);
   assert.ok(rule.Action?.Block !== undefined);
   const json = JSON.stringify(rule.Statement);
@@ -260,7 +260,7 @@ test('request.headerInjectionGuard emits WAFv2 regex rule + regex pattern set', 
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const rule = r.webAclRules.find(x => x.writ.rule_type === 'header-injection-guard');
+  const rule = r.webAclRules.find(x => x.xSecurity.rule_type === 'header-injection-guard');
   assert.ok(rule);
   // Statement is wrapped in AndStatement(baseMatch, ...); drill in.
   const json = JSON.stringify(rule.Statement);
@@ -285,7 +285,7 @@ test('request.pathCanonicalization (REGIONAL) emits WAFv2 regex + warning', () =
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const rule = r.webAclRules.find(x => x.writ.rule_type === 'path-canonicalization');
+  const rule = r.webAclRules.find(x => x.xSecurity.rule_type === 'path-canonicalization');
   assert.ok(rule);
   assert.ok(r.warnings.some(w => w.field === 'request.pathCanonicalization'));
   assert.ok(r.capabilityMatrix.some(c => c.field === 'request.pathCanonicalization' && c.level === 'partial'));

@@ -25,7 +25,7 @@ import {
   type ControlHint,
   type PolicyEmission,
   type XSecurityPolicy,
-} from '@writ/detect-core';
+} from '@x-security/detect-core';
 
 export interface CompileFinding {
   /** Full control descriptor — the compiler reads the per-kind structured

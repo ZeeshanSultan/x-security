@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { generateEd25519Keypair, signEd25519 } from '@writ/crypto';
+import { generateEd25519Keypair, signEd25519 } from '@x-security/crypto';
 import { runVerifyBundle } from '../../src/commands/verify-bundle.js';
 
 // Build a valid tarball into a fresh tmpdir and return the artifact paths.

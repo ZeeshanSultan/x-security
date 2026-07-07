@@ -4,9 +4,9 @@ import { compileVirtualPatch, VirtualPatchCompileError } from '../src/index.js';
 
 const baseOpts = {
   mode: 'log' as const,
-  ruleName: 'writ-cve',
+  ruleName: 'x-security-cve',
   cveId: 'CVE-2021-44228',
-  writRuleId: 'writ-cve-log4shell-abc123',
+  xSecurityRuleId: 'x-security-cve-log4shell-abc123',
 };
 
 test('compileVirtualPatch: request-uri-denylist emits Custom Rule with uri.path matches', () => {
@@ -21,9 +21,9 @@ test('compileVirtualPatch: request-uri-denylist emits Custom Rule with uri.path 
   assert.equal(out.type, 'customRule');
   assert.equal(out.rule.expression, '(http.request.uri.path matches "\\$\\{jndi:")');
   assert.equal(out.rule.action, 'log');
-  assert.equal(out.rule.id, baseOpts.writRuleId);
+  assert.equal(out.rule.id, baseOpts.xSecurityRuleId);
   assert.ok(out.rule.description.includes('CVE-CVE-2021-44228: virtual patch'));
-  assert.equal(out.rule.writ.rule_type, 'cve-uri-denylist');
+  assert.equal(out.rule.xSecurity.rule_type, 'cve-uri-denylist');
 });
 
 test('compileVirtualPatch: request-header-denylist emits header expression with lowercased name', () => {
@@ -68,7 +68,7 @@ test('compileVirtualPatch: tighten-body-size emits body.size gt <bytes>', () => 
   );
   assert.equal(out.type, 'customRule');
   assert.equal(out.rule.expression, '(http.request.body.size gt 8192)');
-  assert.equal(out.rule.writ.rule_type, 'cve-body-size');
+  assert.equal(out.rule.xSecurity.rule_type, 'cve-body-size');
 });
 
 test('compileVirtualPatch: tighten-rate-limit emits rateLimitRule (not customRule)', () => {
@@ -101,10 +101,10 @@ test('compileVirtualPatch: tighten-rate-limit rounds non-CF windows + warns', ()
   assert.ok(out.warnings && out.warnings.some((w) => /rounded/.test(w)));
 });
 
-test('compileVirtualPatch: rule tags description with CVE ID and uses writRuleId as ref/id', () => {
+test('compileVirtualPatch: rule tags description with CVE ID and uses xSecurityRuleId as ref/id', () => {
   const out = compileVirtualPatch(
     { shape: 'request-uri-denylist', description: 'X', pattern: 'foo' },
-    { ...baseOpts, cveId: 'CVE-2024-9999', writRuleId: 'ref-xyz' },
+    { ...baseOpts, cveId: 'CVE-2024-9999', xSecurityRuleId: 'ref-xyz' },
   );
   assert.equal(out.rule.id, 'ref-xyz');
   assert.ok(out.rule.description.includes('CVE-CVE-2024-9999'));

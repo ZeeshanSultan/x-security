@@ -22,10 +22,10 @@ test('mode defaults to observe when CompileOptions is omitted', () => {
   ]);
   // No mode passed at all.
   const r = compile(spec);
-  const auth = r.rulesets[0]!.rules.find(x => x.writ.rule_type === 'auth')!;
+  const auth = r.rulesets[0]!.rules.find(x => x.xSecurity.rule_type === 'auth')!;
   assert.equal(auth.action, 'log', 'observe-mode should demote auth=block to log');
   assert.equal(auth.mode, 'observe');
-  assert.match(auth.id, /^writ-observe-/);
+  assert.match(auth.id, /^x-security-observe-/);
 });
 
 test('mode defaults to observe when options is an empty object', () => {
@@ -61,7 +61,7 @@ test('observe-mode demotes WAF Custom Rule block actions to log', () => {
   ]);
   const observe = compile(spec, { mode: 'observe' });
   const customRs = observe.rulesets.find(rs => rs.phase === 'http_request_firewall_custom')!;
-  const blocking = customRs.rules.filter(r => r.writ.rule_type !== 'cors-headers');
+  const blocking = customRs.rules.filter(r => r.xSecurity.rule_type !== 'cors-headers');
   assert.ok(blocking.length >= 3);
   for (const r of blocking) {
     assert.equal(r.action, 'log', `${r.id} should be log in observe`);
@@ -69,7 +69,7 @@ test('observe-mode demotes WAF Custom Rule block actions to log', () => {
   }
 
   const enforce = compile(spec, { mode: 'enforce' });
-  const auth = enforce.rulesets[0]!.rules.find(x => x.writ.rule_type === 'auth')!;
+  const auth = enforce.rulesets[0]!.rules.find(x => x.xSecurity.rule_type === 'auth')!;
   assert.equal(auth.action, 'block');
   assert.equal(auth.mode, 'enforce');
 });
@@ -247,7 +247,7 @@ test("legacy 'shadow' mode behaves like observe for action demotion", () => {
     })
   ]);
   const sh = compile(spec, { mode: 'shadow' });
-  const auth = sh.rulesets[0]!.rules.find(r => r.writ.rule_type === 'auth')!;
+  const auth = sh.rulesets[0]!.rules.find(r => r.xSecurity.rule_type === 'auth')!;
   assert.equal(auth.action, 'log');
   assert.equal(auth.mode, 'shadow');
   // Worker env binding still says 'observe' (the runtime keyword is observe/enforce).

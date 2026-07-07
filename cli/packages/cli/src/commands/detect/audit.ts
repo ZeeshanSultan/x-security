@@ -38,9 +38,9 @@ import {
   type ExtractedRoute,
   type RouteInventoryEntry,
   type XSecurityPolicy,
-} from '@writ/detect-core';
-import { xSecuritySchema } from '@writ/schema';
-import { policiesDir, type PolicyCites } from './store.js';
+} from '@x-security/detect-core';
+import { xSecuritySchema } from '@x-security/schema';
+import { resolvePoliciesDir, type PolicyCites } from './store.js';
 
 export interface AuditResult {
   routes: number;
@@ -263,7 +263,7 @@ async function citeMatches(repoDir: string, cite: Citation): Promise<boolean> {
 }
 
 export async function runAudit(repoDir: string): Promise<AuditResult> {
-  const dir = policiesDir(repoDir);
+  const dir = await resolvePoliciesDir(repoDir);
   let entries: string[];
   try {
     entries = (await fs.readdir(dir)).filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));

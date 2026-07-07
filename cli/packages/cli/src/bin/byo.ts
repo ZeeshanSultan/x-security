@@ -25,7 +25,7 @@ const program = new Command();
 
 program
   .name('writ')
-  .description('Writ BYO-agent runtime: deterministic verify/compile/audit/emit. LLM-free.')
+  .description('x-security BYO-agent runtime: deterministic verify/compile/audit/emit. LLM-free.')
   .version('0.1.0');
 
 registerByoCommands(program);

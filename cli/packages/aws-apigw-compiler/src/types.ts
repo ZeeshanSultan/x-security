@@ -128,7 +128,7 @@ export interface WafStatement {
 }
 
 export interface WafV2Rule {
-  /** Stable ID: `writ-<mode>-<endpoint-hash>-<rule-type>` */
+  /** Stable ID: `x-security-<mode>-<endpoint-hash>-<rule-type>` */
   Name: string;
   /** Priority, lower runs first. Assigned deterministically by compiler. */
   Priority: number;
@@ -142,8 +142,8 @@ export interface WafV2Rule {
   };
   /** Effective mode for this rule. observe → Count; enforce → Block. */
   mode: DeployMode;
-  /** Writ provenance — round-tripped via the Name (AWS WAF has no `ref` field). */
-  writ: {
+  /** x-security provenance — round-tripped via the Name (AWS WAF has no `ref` field). */
+  xSecurity: {
     endpoint_id: string;
     rule_type: string;
     source_field: string;
@@ -174,7 +174,7 @@ export interface ApiGatewayPolicyFragment {
   Action: 'execute-api:Invoke' | string;
   Resource: string;     // arn:aws:execute-api:<region>:<acct>:<api-id>/<stage>/<method>/<path>
   Condition?: Record<string, Record<string, string | string[]>>;
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -194,7 +194,7 @@ export interface RequestValidatorSpec {
   /** Reference to a Model resource (JSON Schema). */
   ModelName?: string;
   Model?: ApiGatewayModelSpec;
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -205,7 +205,7 @@ export interface ApiGatewayModelSpec {
   Name: string;
   ContentType: 'application/json' | string;
   Schema: Record<string, unknown>; // JSON Schema (draft-04 for REST APIs)
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -221,7 +221,7 @@ export interface GatewayResponseSpec {
   StatusCode?: string;
   ResponseParameters?: Record<string, string>;  // gatewayresponse.header.* keys
   ResponseTemplates?: Record<string, string>;
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -268,7 +268,7 @@ export interface LambdaAuthorizerSpec {
   mode: DeployMode;
   /** Env var the handler reads: `MODE=observe` or `MODE=enforce`. */
   envBinding: { name: 'MODE'; value: 'observe' | 'enforce' };
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -294,7 +294,7 @@ export interface CloudFrontCachePolicySpec {
   };
   /** Headers the policy strips from the request before forwarding. */
   StrippedRequestHeaders: string[];
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -314,7 +314,7 @@ export interface IntegrationResponseMappingSpec {
   ResponseParameters: Record<string, string>;
   /** Optional VTL transforms for Set-Cookie defaults. */
   ResponseTemplates?: Record<string, string>;
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -335,7 +335,7 @@ export interface WebSocketRouteSpec {
   /** Per-message constraints — enforced by attached Lambda. */
   MaxMessageSizeBytes?: number;
   MessageRateLimit?: { messages: number; windowSeconds: number };
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -384,7 +384,7 @@ export interface UsagePlanSpec {
   Throttle: { RateLimit: number; BurstLimit: number };
   Quota?: { Limit: number; Period: 'DAY' | 'WEEK' | 'MONTH' };
   ApiStages?: { ApiId: string; Stage: string }[];
-  writ: {
+  xSecurity: {
     endpoint_id: string;
     source_field: string;
   };
@@ -464,7 +464,7 @@ export interface AwsCompileOptions {
   scope?: AwsScope;
   /** Schema version stamped on each rule. */
   schemaVersion?: string;
-  /** Ruleset name prefix — defaults to `writ-shadow` (shadow) / `writ` (enforce). */
+  /** Ruleset name prefix — defaults to `x-security-shadow` (shadow) / `x-security` (enforce). */
   namePrefix?: string;
   /** Initial priority offset (rules get sequential priorities starting here). Default 0. */
   basePriority?: number;

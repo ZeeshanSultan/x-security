@@ -8,15 +8,15 @@
  * Strategy:
  *   1. Regenerate expected v4/v6 rulesets from the SpecIR via the firewall
  *      generator.
- *   2. Extract the Writ-tagged rules from both expected and actual by
- *      grepping for the `# writ:` provenance prefix and pairing each
+ *   2. Extract the XSecurity-tagged rules from both expected and actual by
+ *      grepping for the `# x-security:` provenance prefix and pairing each
  *      comment with its following non-comment rule line.
  *   3. Diff the canonical (comment, rule) pairs as ordered sets — missing
  *      pairs are reported by severity bucket based on the comment tag.
  */
 import { readFile, stat } from 'node:fs/promises';
 import * as path from 'node:path';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import type { DriftIssue, DriftReport, DriftSeverity } from '../reporters/types.js';
 import { firewallGenerator } from '../generators/firewall/index.js';
 
@@ -29,11 +29,11 @@ export interface FirewallDriftOptions {
   family?: 'v4' | 'v6';
 }
 
-/** A Writ-tagged (comment, rule) pair extracted from a ruleset. */
+/** A XSecurity-tagged (comment, rule) pair extracted from a ruleset. */
 interface TaggedRule {
-  comment: string; // full `# writ: ...` line
+  comment: string; // full `# x-security: ...` line
   rule: string;    // following `-A OUTPUT ...` line (whitespace-normalized)
-  tag: string;     // the `endpoint field` portion (between `writ:` and ` -- `)
+  tag: string;     // the `endpoint field` portion (between `x-security:` and ` -- `)
 }
 
 function normalizeRuleLine(line: string): string {
@@ -42,7 +42,7 @@ function normalizeRuleLine(line: string): string {
 
 /**
  * Extract the destination identifier from a normalized iptables rule line —
- * either a `-d <cidr>` argument or a `@@WRIT_RESOLVE:<fqdn>@@` token.
+ * either a `-d <cidr>` argument or a `@@X_SECURITY_RESOLVE:<fqdn>@@` token.
  * Returns the empty string for rules without a destination (e.g. the
  * default-deny terminator). Two rules sharing a tag but with different
  * destinations are independent protections.
@@ -50,7 +50,7 @@ function normalizeRuleLine(line: string): string {
 function destOf(rule: string): string {
   const cidr = /-d\s+(\S+)/.exec(rule);
   if (cidr && cidr[1]) return cidr[1];
-  const fqdn = /@@WRIT_RESOLVE:([^@]+)@@/.exec(rule);
+  const fqdn = /@@(?:X_SECURITY|WRIT)_RESOLVE:([^@]+)@@/.exec(rule);
   if (fqdn && fqdn[1]) return `fqdn:${fqdn[1]}`;
   return '';
 }
@@ -61,7 +61,7 @@ function extractTagged(content: string): TaggedRule[] {
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     if (!l) continue;
-    if (!l.startsWith('# writ:')) continue;
+    if (!l.startsWith('# x-security:')) continue;
     // Find the next non-empty, non-comment line.
     let j = i + 1;
     while (j < lines.length) {
@@ -71,8 +71,8 @@ function extractTagged(content: string): TaggedRule[] {
     }
     const ruleLine = lines[j];
     if (!ruleLine) continue;
-    // Tag is everything after `# writ:` and before ` -- ` (or whole line).
-    const body = l.slice('# writ:'.length).trim();
+    // Tag is everything after `# x-security:` and before ` -- ` (or whole line).
+    const body = l.slice('# x-security:'.length).trim();
     const sepIdx = body.indexOf(' -- ');
     const tag = sepIdx >= 0 ? body.slice(0, sepIdx).trim() : body;
     out.push({
@@ -135,7 +135,7 @@ function diffRuleset(
     const exact = actByKey.get(`${e.tag}::${e.rule}`);
     if (exact) continue;
     // Check whether there is *any* actual rule with this exact destination
-    // (the post-`-d <cidr>`/`@@WRIT_RESOLVE:<fqdn>@@` portion). Two
+    // (the post-`-d <cidr>`/`@@X_SECURITY_RESOLVE:<fqdn>@@` portion). Two
     // rules sharing a tag with different destinations are independent
     // protections — drop one and the other doesn't cover for it.
     const expDest = destOf(e.rule);
@@ -163,7 +163,7 @@ function diffRuleset(
   }
   void actByTag;
 
-  // Unknown writ-tagged rules in actual but not expected → LOW.
+  // Unknown x-security-tagged rules in actual but not expected → LOW.
   const expByKey = new Set(expected.map((e) => `${e.tag}::${e.rule}`));
   for (const a of actual) {
     if (!expByKey.has(`${a.tag}::${a.rule}`)) {
@@ -176,7 +176,7 @@ function diffRuleset(
         severity: 'LOW',
         expected: undefined,
         actual: a.rule,
-        message: `Unknown Writ-tagged firewall (${family}) rule: ${a.comment}`
+        message: `Unknown XSecurity-tagged firewall (${family}) rule: ${a.comment}`
       });
     }
   }

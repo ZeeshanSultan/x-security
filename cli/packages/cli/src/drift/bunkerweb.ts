@@ -2,7 +2,7 @@
  * BunkerWeb drift detector (file-mode only).
  *
  * Strategy (wave-8, after wave-6 reshape):
- *  The bunkerweb generator now emits `configs/modsec/writ.conf` — a
+ *  The bunkerweb generator now emits `configs/modsec/x-security.conf` — a
  *  plain ModSecurity rule file with a trailing block of commented operator
  *  hints (`# KEY=value    # from: <endpoints>`). Those KEY=value comments
  *  carry the env-var settings that previously lived in `variables.env`.
@@ -22,7 +22,7 @@
  *  live container's env is the verifier's job (see packages/cli/src/verify/).
  */
 import { readFile } from 'node:fs/promises';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import type { DriftIssue, DriftReport, DriftSeverity } from '../reporters/types.js';
 import { bunkerwebGenerator } from '../generators/bunkerweb/index.js';
 
@@ -59,10 +59,11 @@ function severityForKey(key: string, expected: unknown, actual: unknown): DriftS
   if (
     (key === 'USE_AUTH_BASIC' ||
       key === 'USE_MODSECURITY' ||
-      key === 'WRIT_AUTH_TYPE' ||
-      key === 'WRIT_JWKS_URI' ||
+      // Accept legacy WRIT_* keys on pre-rebrand deployments (back-compat).
+      key === 'X_SECURITY_AUTH_TYPE' || key === 'WRIT_AUTH_TYPE' ||
+      key === 'X_SECURITY_JWKS_URI' || key === 'WRIT_JWKS_URI' ||
       key === 'USE_CLIENT_SSL' ||
-      key === 'WRIT_AUTH_HEADER' ||
+      key === 'X_SECURITY_AUTH_HEADER' || key === 'WRIT_AUTH_HEADER' ||
       key === 'MODSECURITY_RULES_FILE') &&
     (actual === undefined || actual === 'no' || actual === '')
   ) {
@@ -100,7 +101,7 @@ function severityForKey(key: string, expected: unknown, actual: unknown): DriftS
 }
 
 /**
- * Parse a Writ-emitted bunkerweb `.conf` file into a flat settings map.
+ * Parse a x-security-emitted bunkerweb `.conf` file into a flat settings map.
  *
  * Recognized lines:
  *   `# KEY=value    # from: ...`  → settings[KEY] = value
@@ -185,7 +186,7 @@ export async function detectBunkerWebDrift(
   const raw = opts.yamlContent ?? (await readFile(opts.filePath, 'utf8'));
 
   const expectedArtifacts = await Promise.resolve(bunkerwebGenerator.generate(spec));
-  // The primary artifact is configs/modsec/writ.conf (artifact[0]).
+  // The primary artifact is configs/modsec/x-security.conf (artifact[0]).
   const expectedConf = expectedArtifacts[0]?.content ?? '';
 
   const expected = parseConf(expectedConf);

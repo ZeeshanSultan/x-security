@@ -1,7 +1,7 @@
 {
-  "name": "@writ/shared",
+  "name": "@x-security/shared",
   "version": "0.1.0",
-  "description": "Shared types and contracts for Writ SaaS services",
+  "description": "Shared types and contracts for x-security SaaS services",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",

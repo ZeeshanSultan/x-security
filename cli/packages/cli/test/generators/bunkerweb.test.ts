@@ -2,10 +2,10 @@
  * Tests for the BunkerWeb generator (R2.3, v6 output shape).
  *
  * Output shape (v6): two artifacts —
- *   - `configs/modsec/writ.conf` (plain ModSec SecRule directives)
+ *   - `configs/modsec/x-security.conf` (plain ModSec SecRule directives)
  *   - `DEPLOYMENT.md`                  (operator-facing deployment notes + warnings)
  *
- * Dropped in v6: `bunkerweb.yml`, `variables.env`, `plugins/writ/*` (Lua + manifest).
+ * Dropped in v6: `bunkerweb.yml`, `variables.env`, `plugins/x-security/*` (Lua + manifest).
  * Reason: BunkerWeb's libmodsec3 has no Lua support, and the plugin pipeline
  * doesn't apply rules to traffic. See STATUS.md.
  */
@@ -16,8 +16,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 import { bunkerwebGenerator } from '../../src/generators/bunkerweb/index.js';
 import {
@@ -174,10 +174,10 @@ test('buildTimeoutSettings converts ms → seconds', () => {
   assert.equal(out.SEND_TIMEOUT, '5s');
 });
 
-test('v6 output shape: emits configs/modsec/writ.conf + DEPLOYMENT.md only', () => {
+test('v6 output shape: emits configs/modsec/x-security.conf + DEPLOYMENT.md only', () => {
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(buildExampleSpec()));
   const paths = arts.map((a) => a.path).sort();
-  assert.deepEqual(paths, ['DEPLOYMENT.md', 'configs/modsec/writ.conf']);
+  assert.deepEqual(paths, ['DEPLOYMENT.md', 'configs/modsec/x-security.conf']);
   // No deprecated artifacts
   assert.ok(!arts.some((a) => a.path === 'bunkerweb.yml'), 'bunkerweb.yml dropped in v6');
   assert.ok(!arts.some((a) => a.path === 'variables.env'), 'variables.env dropped in v6');
@@ -185,9 +185,9 @@ test('v6 output shape: emits configs/modsec/writ.conf + DEPLOYMENT.md only', () 
   assert.ok(!arts.some((a) => a.path.endsWith('jwt-verify.lua')), 'lua verifier dropped in v6');
 });
 
-test('v6 modsec conf: contains Writ SecRules with rule IDs in 990000-block', () => {
+test('v6 modsec conf: contains x-security SecRules with rule IDs in 990000-block', () => {
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(buildExampleSpec()));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!;
   assert.equal(conf.format, 'conf');
   assert.ok(conf.content.includes('SecRule REQUEST_HEADERS:Authorization "@rx ^Bearer (.+)$"'));
   assert.ok(/id:990010\b/.test(conf.content));
@@ -198,7 +198,7 @@ test('v6 modsec conf: contains Writ SecRules with rule IDs in 990000-block', () 
 
 test('v6 generator output matches example.expected.conf fixture', () => {
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(buildExampleSpec()));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!;
   const expectedPath = resolve(__dirname, '../../../../fixtures/configs/bunkerweb/example.expected.conf');
   const expected = readFileSync(expectedPath, 'utf8');
   assert.equal(conf.content, expected);
@@ -240,9 +240,9 @@ test('bearer-jwt: emits header-presence SecRule chain only (no SecRuleScript)', 
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.ok(conf.includes('SecRule REQUEST_HEADERS:Authorization "@rx ^Bearer (.+)$"'));
-  assert.ok(conf.includes('Writ: missing bearer token'));
+  assert.ok(conf.includes('x-security: missing bearer token'));
   assert.ok(!conf.includes('SecRuleScript'), 'no Lua script directive in v6');
   assert.ok(!conf.includes('jwt-verify.lua'), 'no Lua path reference in v6');
 });
@@ -281,7 +281,7 @@ test('oauth2: emits header-presence chain + scopes annotation (NOT enforced)', (
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.ok(conf.includes('admin:write admin:read'));
   assert.ok(conf.includes('NOT enforced'));
 });
@@ -298,9 +298,9 @@ test('api-key: emits header-presence SecRule for the configured header name', ()
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.ok(conf.includes('SecRule REQUEST_HEADERS:X-API-Key "@rx ^.+$"'));
-  assert.ok(conf.includes('Writ: missing API key (X-API-Key)'));
+  assert.ok(conf.includes('x-security: missing API key (X-API-Key)'));
 });
 
 test('basic: emits USE_AUTH_BASIC settings hint + Basic-credentials SecRule', () => {
@@ -315,7 +315,7 @@ test('basic: emits USE_AUTH_BASIC settings hint + Basic-credentials SecRule', ()
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.ok(conf.includes('SecRule REQUEST_HEADERS:Authorization "!@rx ^Basic'));
   // Compose-level settings comment block
   assert.ok(conf.includes('USE_AUTH_BASIC=yes'));
@@ -333,7 +333,7 @@ test('authentication.type=none: emits modsec conf but no SecRule auth rules', ()
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.ok(!conf.includes('SecRule REQUEST_HEADERS:Authorization'), 'no auth rules for type=none');
   assert.ok(!conf.includes('id:990000'), 'no auth-rule IDs for type=none');
 });
@@ -356,7 +356,7 @@ test('Bug #1 regression: identical bearer-jwt rules across many endpoints emit o
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   const id990000Count = (conf.match(/id:990000\b/g) ?? []).length;
   assert.equal(id990000Count, 1, `expected 1 occurrence of id:990000, got ${id990000Count}`);
 });
@@ -373,7 +373,7 @@ test('Bug #1 regression: distinct auth types across endpoints concatenate (no fa
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.ok(conf.includes('id:990010'), 'has bearer-jwt rules');
   assert.ok(/id:99\d{4}/.test(conf), 'has rule IDs');
   assert.ok(conf.includes('api_key_present'), 'has api-key check');
@@ -391,7 +391,7 @@ test('Bug #1 regression: two distinct bearer-jwt configs (different headerName) 
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   const ids = conf.match(/id:99\d{4}\b/g) ?? [];
   const unique = new Set(ids);
   assert.equal(ids.length, unique.size, `duplicate rule IDs detected: ${ids.length} total, ${unique.size} unique`);
@@ -413,7 +413,7 @@ test('Bug #3 regression: shared URL across endpoints collapses to one LIMIT_REQ_
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   // Settings comment block lists LIMIT_REQ_URL_n=<url> — only one entry should reference our path.
   const urlEsc = url.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
   const urlMatches = (conf.match(new RegExp(`LIMIT_REQ_URL_\\d+=${urlEsc}(?=\\s|$)`, 'gm')) ?? []).length;
@@ -434,7 +434,7 @@ test('Bug #4 regression: CORS_ALLOW_METHODS unions across multiple endpoints', (
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   // The settings comment line looks like:  # CORS_ALLOW_METHODS=POST, GET, OPTIONS    # from: ...
   const m = /CORS_ALLOW_METHODS=([^\n]+?)\s{2,}#/.exec(conf);
   assert.ok(m, `CORS_ALLOW_METHODS present, conf: ${conf}`);
@@ -484,7 +484,7 @@ test('Bug #5 regression: mixed JWT audience across endpoints throws at generate 
   assert.throws(() => withSilencedStderr(() => bunkerwebGenerator.generate(spec)), /mixed JWT audience/);
 });
 
-test('W19-A: domainAllowlist on url-typed param emits SecRule id:980000+ with writ-rule-ssrf-403 tag', () => {
+test('W19-A: domainAllowlist on url-typed param emits SecRule id:980000+ with x-security-rule-ssrf-403 tag', () => {
   const spec: SpecIR = {
     openapi: '3.1.0', dialect: '3.1' as const,
     info: { title: 't', version: '1' }, servers: [], unprotectedEndpoints: [],
@@ -495,13 +495,13 @@ test('W19-A: domainAllowlist on url-typed param emits SecRule id:980000+ with wr
     ]
   };
   const arts = bunkerwebGenerator.generate(spec);
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!;
   assert.match(conf.content, /id:98\d{4}/);
-  assert.match(conf.content, /tag:'writ-rule-ssrf-403'/);
+  assert.match(conf.content, /tag:'x-security-rule-ssrf-403'/);
   assert.match(conf.content, /roottusk/);
 });
 
-test('W19-A: blockPrivateRanges emits SecRule with writ-rule-ssrf-private-403 tag', () => {
+test('W19-A: blockPrivateRanges emits SecRule with x-security-rule-ssrf-private-403 tag', () => {
   const spec: SpecIR = {
     openapi: '3.1.0', dialect: '3.1' as const,
     info: { title: 't', version: '1' }, servers: [], unprotectedEndpoints: [],
@@ -512,8 +512,8 @@ test('W19-A: blockPrivateRanges emits SecRule with writ-rule-ssrf-private-403 ta
     ]
   };
   const arts = bunkerwebGenerator.generate(spec);
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!;
-  assert.match(conf.content, /tag:'writ-rule-ssrf-private-403'/);
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!;
+  assert.match(conf.content, /tag:'x-security-rule-ssrf-private-403'/);
   // W22-B: single-backslash literal `\.` — libmodsec3 / Coraza do NOT
   // unescape @rx args, so double-backslashes would compile to "literal
   // backslash + .", causing the regex to miss every real private IP.
@@ -532,12 +532,12 @@ test('W21-D: SSRF SecRule emitted at phase:1 for query-param URL policies (so it
     ]
   };
   const arts = bunkerwebGenerator.generate(spec);
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!;
   // Both SSRF rules (allowlist + private-range) must be at phase:1 so they
   // pre-empt BunkerWeb's bundled phase:1 JWT/auth chain that would otherwise
   // wholesale-deny with 401 before any URL validation runs.
-  const allowMatch = /id:98\d{4},phase:(\d)[^\n]*writ-rule-ssrf-403/.exec(conf.content);
-  const privateMatch = /id:98\d{4},phase:(\d)[^\n]*writ-rule-ssrf-private-403/.exec(conf.content);
+  const allowMatch = /id:98\d{4},phase:(\d)[^\n]*x-security-rule-ssrf-403/.exec(conf.content);
+  const privateMatch = /id:98\d{4},phase:(\d)[^\n]*x-security-rule-ssrf-private-403/.exec(conf.content);
   assert.ok(allowMatch, 'expected ssrf allowlist SecRule in BunkerWeb conf');
   assert.ok(privateMatch, 'expected ssrf private-range SecRule in BunkerWeb conf');
   assert.equal(allowMatch[1], '1', `ssrf-403 SecRule must be phase:1, got phase:${allowMatch[1]}`);
@@ -556,8 +556,8 @@ test('W21-D: SSRF SecRule block is emitted before auth header-presence block (sa
     ]
   };
   const arts = bunkerwebGenerator.generate(spec);
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!;
-  const ssrfIdx = conf.content.indexOf('writ-rule-ssrf-403');
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!;
+  const ssrfIdx = conf.content.indexOf('x-security-rule-ssrf-403');
   const authIdx = conf.content.indexOf('missing bearer token');
   assert.ok(ssrfIdx > 0, 'expected ssrf rule in conf');
   assert.ok(authIdx > 0, 'expected auth deny rule in conf');
@@ -585,10 +585,10 @@ test('W22-B: SSRF chain must target REQUEST_FILENAME (path-only), not REQUEST_UR
     ]
   };
   const arts = bunkerwebGenerator.generate(spec);
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!;
   const ssrfBlock = conf.content.slice(
-    conf.content.indexOf('writ-rule-ssrf-403'),
-    conf.content.indexOf('writ-rule-ssrf-403') + 1200
+    conf.content.indexOf('x-security-rule-ssrf-403'),
+    conf.content.indexOf('x-security-rule-ssrf-403') + 1200
   );
   // The chain's URI-matching link must use REQUEST_FILENAME.
   assert.match(
@@ -618,10 +618,10 @@ test('W21-D regression: Coraza-SPOA SSRF SecRule stays at phase:2 (body access r
     ]
   };
   const arts = corazaGenerator.generate(spec);
-  const conf = arts.find((a) => a.content.includes('writ-rule-ssrf'))!;
+  const conf = arts.find((a) => a.content.includes('x-security-rule-ssrf'))!;
   assert.ok(conf, 'expected coraza artifact with ssrf rule');
-  const allowMatch = /id:98\d{4},phase:(\d)[^\n]*writ-rule-ssrf-403/.exec(conf.content);
-  const privateMatch = /id:98\d{4},phase:(\d)[^\n]*writ-rule-ssrf-private-403/.exec(conf.content);
+  const allowMatch = /id:98\d{4},phase:(\d)[^\n]*x-security-rule-ssrf-403/.exec(conf.content);
+  const privateMatch = /id:98\d{4},phase:(\d)[^\n]*x-security-rule-ssrf-private-403/.exec(conf.content);
   assert.ok(allowMatch && privateMatch, 'expected both ssrf SecRules in coraza output');
   assert.equal(allowMatch[1], '2', 'Coraza-SPOA ssrf-403 must remain phase:2');
   assert.equal(privateMatch[1], '2', 'Coraza-SPOA ssrf-private-403 must remain phase:2');
@@ -645,7 +645,7 @@ test('W23 JWT: bearer-jwt with jwksUri emits USE_AUTH_JWT + JWT_JWKS_URI + JWT_A
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.match(conf, /USE_AUTH_JWT=yes/);
   assert.match(conf, /JWT_JWKS_URI=https:\/\/issuer\/\.well-known\/jwks\.json/);
   assert.match(conf, /JWT_ALGORITHMS=RS256,ES256/);
@@ -665,7 +665,7 @@ test('W23 JWT: default alg list excludes HS* / none when allowedAlgorithms unset
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.match(conf, /JWT_ALGORITHMS=RS256,ES256/);
   // Must never emit symmetric or 'none' as a default.
   assert.doesNotMatch(conf, /JWT_ALGORITHMS=[^\n]*\b(?:HS256|HS384|HS512|none)\b/);
@@ -684,8 +684,8 @@ test('W23 authz: rbac with 2+ roles emits SecRule chained on X-Forwarded-Groups'
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
-  assert.match(conf, /writ-rule-rbac-multi-role/);
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
+  assert.match(conf, /x-security-rule-rbac-multi-role/);
   assert.match(conf, /X-Forwarded-Groups/);
   // Allows either admin or operator: alternation rx must include both.
   assert.match(conf, /admin\|operator/);
@@ -707,8 +707,8 @@ test('W23 authz: single-role rbac does NOT emit multi-role rules (handled by ide
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
-  assert.doesNotMatch(conf, /writ-rule-rbac-multi-role/);
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
+  assert.doesNotMatch(conf, /x-security-rule-rbac-multi-role/);
 });
 
 test('W23 response PII: request.schema with pii:true emits id:428 response-body SecRule', () => {
@@ -724,9 +724,9 @@ test('W23 response PII: request.schema with pii:true emits id:428 response-body 
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.match(conf, /id:428\d{3}/);
-  assert.match(conf, /writ-data-exposure/);
+  assert.match(conf, /x-security-data-exposure/);
   assert.match(conf, /nationalId/);
   assert.match(conf, /RESPONSE_BODY/);
 });
@@ -744,9 +744,9 @@ test('W23 errorScrubbing: stripStackTraces emits id:268 phase:4 RESPONSE_BODY ru
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.match(conf, /id:268\d{3}/);
-  assert.match(conf, /writ-output-sanitization/);
+  assert.match(conf, /x-security-output-sanitization/);
   assert.match(conf, /Traceback/);
 });
 
@@ -763,12 +763,12 @@ test('W23 errorScrubbing: stripServerHeaders emits REMOVE_HEADERS setting (Serve
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.match(conf, /REMOVE_HEADERS=[^\n]*Server/);
   assert.match(conf, /REMOVE_HEADERS=[^\n]*X-Powered-By/);
 });
 
-test('W23 deprecated: deprecated:true emits SecRule status:410 with writ-deprecated-endpoint-block tag', () => {
+test('W23 deprecated: deprecated:true emits SecRule status:410 with x-security-deprecated-endpoint-block tag', () => {
   const spec: SpecIR = {
     openapi: '3.1.0', dialect: '3.1',
     info: { title: 'A', version: '1.0.0' },
@@ -782,9 +782,9 @@ test('W23 deprecated: deprecated:true emits SecRule status:410 with writ-depreca
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.match(conf, /status:410/);
-  assert.match(conf, /writ-deprecated-endpoint-block/);
+  assert.match(conf, /x-security-deprecated-endpoint-block/);
   assert.match(conf, /id:9705\d{2}/);
   assert.match(conf, /sunset:2026-01-01|sunsetDate: 2026-01-01/);
 });
@@ -798,9 +798,9 @@ test('W23 deprecated: non-deprecated endpoints emit no 410 rule', () => {
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.doesNotMatch(conf, /status:410/);
-  assert.doesNotMatch(conf, /writ-deprecated-endpoint-block/);
+  assert.doesNotMatch(conf, /x-security-deprecated-endpoint-block/);
 });
 
 test('W23 rateLimit user-id: identifier=user-id emits CUSTOM_CONF_HTTP_LIMIT_REQ_USER_* with $http_x_forwarded_user keying', () => {
@@ -816,7 +816,7 @@ test('W23 rateLimit user-id: identifier=user-id emits CUSTOM_CONF_HTTP_LIMIT_REQ
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  const conf = arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  const conf = arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
   assert.match(conf, /CUSTOM_CONF_HTTP_LIMIT_REQ_USER_/);
   assert.match(conf, /limit_req_zone \$http_x_forwarded_user zone=lazy_user_/);
   // Defense-in-depth IP-keyed LIMIT_REQ_URL stays too.
@@ -836,7 +836,7 @@ function v07Conf(policy: XSecurityPolicy, method: EndpointIR['method'] = 'POST',
     unprotectedEndpoints: []
   };
   const arts = withSilencedStderr(() => bunkerwebGenerator.generate(spec));
-  return arts.find((a) => a.path === 'configs/modsec/writ.conf')!.content;
+  return arts.find((a) => a.path === 'configs/modsec/x-security.conf')!.content;
 }
 
 test('v0.7 injectionGuard: deserialization sink emits an @rx preamble denylist (SSEC-INJECTION)', () => {
@@ -847,7 +847,7 @@ test('v0.7 injectionGuard: deserialization sink emits an @rx preamble denylist (
   });
   assert.match(conf, /injectionGuard\[deserialization\]/);
   assert.match(conf, /ND_FUNC/);              // node-serialize preamble
-  assert.match(conf, /writ-ssec-injection/);
+  assert.match(conf, /x-security-ssec-injection/);
   assert.match(conf, /Unsafe deserialization payload in blob/);
 });
 
@@ -858,10 +858,10 @@ test('v0.7 injectionGuard: ai-prompt sink is attributed to SSEC-PROMPT, not SSEC
     cacheable: false
   });
   assert.match(conf, /injectionGuard\[ai-prompt\]/);
-  assert.match(conf, /writ-ssec-prompt/);
+  assert.match(conf, /x-security-ssec-prompt/);
   assert.match(conf, /LLM prompt injection in prompt/);
   // The ai-prompt rule must NOT ride the SSEC-INJECTION tag.
-  assert.doesNotMatch(conf, /LLM prompt injection[^\n]*writ-ssec-injection/);
+  assert.doesNotMatch(conf, /LLM prompt injection[^\n]*x-security-ssec-injection/);
 });
 
 test('v0.7 passwordPolicy: emits one !@rx strength SecRule per requirement + a blocklist rule', () => {
@@ -875,7 +875,7 @@ test('v0.7 passwordPolicy: emits one !@rx strength SecRule per requirement + a b
     },
     cacheable: false
   });
-  assert.match(conf, /writ-rule-password-policy/);
+  assert.match(conf, /x-security-rule-password-policy/);
   assert.match(conf, /password shorter than 12 chars/);
   assert.match(conf, /missing uppercase letter/);
   assert.match(conf, /missing digit/);
@@ -893,7 +893,7 @@ test('v0.7 accountLockout: header identifier inits the counter at phase:1', () =
     },
     cacheable: false
   });
-  assert.match(conf, /writ-rule-account-lockout/);
+  assert.match(conf, /x-security-rule-account-lockout/);
   assert.match(conf, /initcol:global=ss_lockout_%\{REQUEST_HEADERS\.X-Username\}/);
   assert.match(conf, /id:\d+,phase:1,pass,nolog,[^\n]*initcol:global=ss_lockout_/);
   // Increment happens at phase:5 on a failed-auth response status.
@@ -918,7 +918,7 @@ test('v0.7 forbidArrayRoot: emits a phase:4 RESPONSE_BODY bare-array deny', () =
     response: { forbidArrayRoot: true },
     cacheable: false
   });
-  assert.match(conf, /writ-rule-forbid-array-root/);
+  assert.match(conf, /x-security-rule-forbid-array-root/);
   assert.match(conf, /phase:4[^\n]*forbidArrayRoot/);
   assert.match(conf, /SecRule RESPONSE_BODY "@rx \^\[\\s/);
 });
@@ -929,20 +929,20 @@ test('v0.7 idempotencyKey: emits missing-header 400 + persistent-collection repl
     request: { idempotencyKey: { header: 'Idempotency-Key', ttl: '5m' } },
     cacheable: false
   }, 'POST', '/transfers');
-  assert.match(conf, /writ-rule-idempotency-key/);
+  assert.match(conf, /x-security-rule-idempotency-key/);
   assert.match(conf, /missing Idempotency-Key header/);
   assert.match(conf, /initcol:global=ss_idem_%\{REQUEST_HEADERS\.Idempotency-Key\}/);
   assert.match(conf, /replayed idempotency key/);
   assert.match(conf, /GLOBAL:ss_idem "@gt 1"/);
 });
 
-test('v0.7 logging: request/response events emit a phase:5 auditlog opt-in tagged writ-audit', () => {
+test('v0.7 logging: request/response events emit a phase:5 auditlog opt-in tagged x-security-audit', () => {
   const conf = v07Conf({
     authentication: { type: 'none' },
     logging: { events: ['auth-failure', 'request', 'response'], sink: 'http-collector', sinkRef: 'https://logs/', piiRedaction: true },
     cacheable: false
   });
-  assert.match(conf, /writ-audit/);
+  assert.match(conf, /x-security-audit/);
   assert.match(conf, /phase:5,pass,log,auditlog/);
   // Honest operator note: the http-collector sink + piiRedaction are not
   // enforceable at libmodsec3 and must be said so (Rule D-1, no fake full).

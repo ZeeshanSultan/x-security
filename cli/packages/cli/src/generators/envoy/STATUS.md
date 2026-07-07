@@ -80,8 +80,8 @@ identity is keyed by:
 
 ## Verification
 ```
-pnpm --filter @writ/cli build
-pnpm --filter @writ/cli test -- --test-name-pattern envoy
+pnpm --filter @x-security/cli build
+pnpm --filter @x-security/cli test -- --test-name-pattern envoy
 ```
 
 ## E2E status (wave-9)

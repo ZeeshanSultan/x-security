@@ -123,7 +123,7 @@ test('audit proves citeBacked + flips to false when a cite drifts (D-3)', async 
   assert.equal(ok.uncited.length, 0);
 
   // Tamper the sidecar so the cite no longer byte-matches → citeBacked false.
-  const sidecar = path.join(dir, '.writ', 'policies', 'POST__api__ping.cites.json');
+  const sidecar = path.join(dir, '.x-security', 'policies', 'POST__api__ping.cites.json');
   const j = JSON.parse(await fs.readFile(sidecar, 'utf8')) as { cites: Array<{ quote: string }> };
   j.cites[0]!.quote = 'this string was never in the source';
   await fs.writeFile(sidecar, JSON.stringify(j));
@@ -141,7 +141,7 @@ test('audit controls tally counts EVERY emitted control kind, not just auth+sche
   // authorization / rateLimit / denyUnknownFields / responseShape entirely.
   const mixedDir = await fs.mkdtemp(path.join(os.tmpdir(), 'cli-audit-controls-'));
   try {
-    const policiesPath = path.join(mixedDir, '.writ', 'policies');
+    const policiesPath = path.join(mixedDir, '.x-security', 'policies');
     await fs.mkdir(policiesPath, { recursive: true });
 
     const policy = {
@@ -174,7 +174,7 @@ test('audit controls tally counts EVERY emitted control kind, not just auth+sche
 
 test('emit report headlines the audit cite proof', async () => {
   await runEmit(dir, { target: 'report' });
-  const md = await fs.readFile(path.join(dir, '.writ', 'report.md'), 'utf8');
+  const md = await fs.readFile(path.join(dir, '.x-security', 'report.md'), 'utf8');
   assert.ok(/Cite-backed/.test(md));
   assert.ok(/cite/i.test(md));
 });

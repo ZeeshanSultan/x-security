@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as path from 'node:path';
-import { loadSpec } from '@writ/core';
+import { loadSpec } from '@x-security/core';
 import { detectBunkerWebDrift } from '../../src/drift/bunkerweb.js';
 import { bunkerwebGenerator } from '../../src/generators/bunkerweb/index.js';
 

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as path from 'node:path';
 import yaml from 'js-yaml';
-import { loadSpec } from '@writ/core';
+import { loadSpec } from '@x-security/core';
 import { detectOpenAppSecDrift } from '../../src/drift/openappsec.js';
 import { openappsecGenerator } from '../../src/generators/openappsec/index.js';
 
@@ -24,7 +24,7 @@ test('openappsec drift: rate-limit weakening flagged as CRITICAL', async () => {
   const artifacts = await Promise.resolve(openappsecGenerator.generate(spec));
   const doc = yaml.load(artifacts[0]!.content) as Record<string, unknown>;
   const practices = (doc.practices as Array<Record<string, unknown>>).map((p) => ({ ...p }));
-  const rl = practices.find((p) => p.name === 'writ-rate-limit');
+  const rl = practices.find((p) => p.name === 'x-security-rate-limit');
   assert.ok(rl, 'expected rate-limit practice in generator output');
   const rlBlock = rl!['rate-limit'] as { rules: Array<{ uri: string; limit: number; unit: string }> };
   // Weaken the first rule by 100x.
@@ -37,7 +37,7 @@ test('openappsec drift: rate-limit weakening flagged as CRITICAL', async () => {
 });
 
 // wave-8: openappsec relocated per-endpoint schema rules from a fictional
-// top-level `schemaValidation:` key to `writ-extended['schema-validation']`
+// top-level `schemaValidation:` key to `x-security-extended['schema-validation']`
 // in wave-7 (open-appsec proper doesn't consume the old key). Tests updated
 // to mutate the new key path.
 
@@ -45,12 +45,12 @@ test('openappsec drift: missing schemaValidation entry flagged as CRITICAL', asy
   const spec = await loadSpec(SPEC, { strict: false });
   const artifacts = await Promise.resolve(openappsecGenerator.generate(spec));
   const doc = yaml.load(artifacts[0]!.content) as Record<string, unknown>;
-  const ext = doc['writ-extended'] as { 'schema-validation': Array<unknown> };
+  const ext = doc['x-security-extended'] as { 'schema-validation': Array<unknown> };
   const sv = ext['schema-validation'];
   // Drop the first schema-validation entry.
   const dropped = {
     ...doc,
-    'writ-extended': { ...ext, 'schema-validation': sv.slice(1) }
+    'x-security-extended': { ...ext, 'schema-validation': sv.slice(1) }
   };
   const r = await detectOpenAppSecDrift(spec, {
     filePath: 'fake.yml',
@@ -65,13 +65,13 @@ test('openappsec drift: overrideMode downgrade flagged as CRITICAL', async () =>
   const spec = await loadSpec(SPEC, { strict: false });
   const artifacts = await Promise.resolve(openappsecGenerator.generate(spec));
   const doc = yaml.load(artifacts[0]!.content) as Record<string, unknown>;
-  const ext = doc['writ-extended'] as { 'schema-validation': Array<Record<string, unknown>> };
+  const ext = doc['x-security-extended'] as { 'schema-validation': Array<Record<string, unknown>> };
   const sv = ext['schema-validation'].map((s) => ({ ...s, overrideMode: 'detect' }));
   const r = await detectOpenAppSecDrift(spec, {
     filePath: 'fake.yml',
     yamlContent: yaml.dump({
       ...doc,
-      'writ-extended': { ...ext, 'schema-validation': sv }
+      'x-security-extended': { ...ext, 'schema-validation': sv }
     })
   });
   const m = r.issues.find((i) => i.field === 'schemaValidation.overrideMode');

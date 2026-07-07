@@ -19,7 +19,7 @@
 // The CVE accept-handler always passes 'log' on auto-accept; promote-to-block
 // goes through the standard `/v1/deploys/:id/promote` path.
 
-import { validateRegex } from '@writ/shared/regex-grammar';
+import { validateRegex } from '@x-security/shared/regex-grammar';
 import type { CompiledRule, RuleAction } from './types.js';
 
 const SCHEMA_VERSION_DEFAULT = '0.2.0';
@@ -60,10 +60,10 @@ export interface CompileVirtualPatchOptions {
   /** Source CVE ID (e.g. "CVE-2021-44228"). */
   cveId: string;
   /**
-   * Writ-side rule ID used as the CF rule `ref`. The CVE accept-handler
+   * x-security-side rule ID used as the CF rule `ref`. The CVE accept-handler
    * uses this to round-trip the rule across promote/demote calls.
    */
-  writRuleId: string;
+  xSecurityRuleId: string;
   /** Schema version stamped on the rule. Defaults to 0.2.0. */
   schemaVersion?: string;
 }
@@ -96,7 +96,7 @@ export function compileVirtualPatch(
           expression: `(http.request.uri.path matches "${escapeQuotes(pattern)}")`,
           action: opts.mode,
           description,
-          ref: opts.writRuleId,
+          ref: opts.xSecurityRuleId,
           cveId: opts.cveId,
           sourceField: 'targetOverrides.firewall.virtualPatch.pattern',
           schemaVersion,
@@ -121,7 +121,7 @@ export function compileVirtualPatch(
           expression: `(http.request.headers["${headerName}"][0] matches "${escapeQuotes(pattern)}")`,
           action: opts.mode,
           description,
-          ref: opts.writRuleId,
+          ref: opts.xSecurityRuleId,
           cveId: opts.cveId,
           sourceField: `targetOverrides.firewall.virtualPatch.headerName=${headerName}`,
           schemaVersion,
@@ -141,7 +141,7 @@ export function compileVirtualPatch(
           expression: `(http.request.body.raw matches "${escapeQuotes(pattern)}")`,
           action: opts.mode,
           description,
-          ref: opts.writRuleId,
+          ref: opts.xSecurityRuleId,
           cveId: opts.cveId,
           sourceField: 'targetOverrides.firewall.virtualPatch.bodyPattern',
           schemaVersion,
@@ -159,7 +159,7 @@ export function compileVirtualPatch(
           expression: `(http.request.body.size gt ${bytes})`,
           action: opts.mode,
           description,
-          ref: opts.writRuleId,
+          ref: opts.xSecurityRuleId,
           cveId: opts.cveId,
           sourceField: 'targetOverrides.firewall.virtualPatch.maxBodySize',
           schemaVersion,
@@ -193,7 +193,7 @@ export function compileVirtualPatch(
           expression: 'true',
           action: opts.mode,
           description,
-          ref: opts.writRuleId,
+          ref: opts.xSecurityRuleId,
           cveId: opts.cveId,
           sourceField: 'targetOverrides.firewall.virtualPatch.rateLimit',
           schemaVersion,
@@ -239,7 +239,7 @@ function requirePattern(pattern: string | undefined, shape: string): string {
   //   - nested quantifiers (`(a+)+` → ReDoS)
   //   - backreferences, lookaround, named groups
   //   - shorthand classes (`\w`, `\d`, `\s`) — Unicode foot-guns
-  // See @writ/shared/regex-grammar for the full grammar.
+  // See @x-security/shared/regex-grammar for the full grammar.
   const grammar = validateRegex(pattern);
   if (!grammar.ok) {
     throw new VirtualPatchCompileError(
@@ -324,7 +324,7 @@ function buildCustomRule(args: BuildArgs): CompiledRule {
     enabled: true,
     // Virtual-patch mode mirrors the rule's action: `log` → observe, `block` → enforce.
     mode: args.action === 'block' ? 'enforce' : 'observe',
-    writ: {
+    xSecurity: {
       endpoint_id: `cve:${args.cveId}`,
       rule_type: args.ruleType,
       source_field: args.sourceField,
@@ -354,7 +354,7 @@ function buildRateLimitRule(args: BuildRateLimitArgs): CompiledRule {
       mitigation_timeout: args.period,
       requests_to_origin: true,
     },
-    writ: {
+    xSecurity: {
       endpoint_id: `cve:${args.cveId}`,
       rule_type: args.ruleType,
       source_field: 'targetOverrides.firewall.virtualPatch.rateLimit',

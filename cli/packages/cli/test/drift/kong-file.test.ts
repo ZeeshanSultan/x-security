@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as path from 'node:path';
-import { loadSpec } from '@writ/core';
+import { loadSpec } from '@x-security/core';
 import { detectFileDrift } from '../../src/drift/kong-file.js';
 
 const SPEC = path.resolve(import.meta.dirname!, '../../../../fixtures/specs/example.yaml');

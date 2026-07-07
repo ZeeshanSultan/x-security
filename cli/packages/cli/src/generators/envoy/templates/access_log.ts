@@ -20,7 +20,7 @@
  *                                       upstream, is operator-run infra — NOT a
  *                                       missing enforcement processor)
  *   - piiRedaction → the JSON format omits any field that would carry a declared
- *                    PII value. Writ sources the PII field list from
+ *                    PII value. x-security sources the PII field list from
  *                    `request.dataAtRest.fields`; when redaction is on we drop
  *                    the query string and the User-Agent from the format and log
  *                    only the route-shape `:path` so no PII transits the log.
@@ -36,14 +36,14 @@
  * (wired from envoy-yaml.ts alongside the other clusters).
  */
 
-import type { LoggingEvent, LoggingSink } from '@writ/schema';
-import type { SpecIR } from '@writ/core';
+import type { LoggingEvent, LoggingSink } from '@x-security/schema';
+import type { SpecIR } from '@x-security/core';
 import { yamlString } from './yaml-util.js';
 
-export const ALS_CLUSTER = 'writ_access_log';
+export const ALS_CLUSTER = 'x_security_access_log';
 export const ALS_PORT = 9001;
 /** Default host of the operator-run gRPC access-log collector. */
-export const ALS_HOST = 'writ-log-collector';
+export const ALS_HOST = 'x-security-log-collector';
 
 /** The default text format used when no `logging` policy is present. */
 const DEFAULT_FORMAT =
@@ -133,7 +133,7 @@ function emitSinkTypedConfig(lines: string[], indent: string, r: ResolvedLogging
     lines.push(`${indent}  typed_config:`);
     lines.push(`${indent}    "@type": type.googleapis.com/envoy.extensions.access_loggers.grpc.v3.HttpGrpcAccessLogConfig`);
     lines.push(`${indent}    common_config:`);
-    lines.push(`${indent}      log_name: writ_access`);
+    lines.push(`${indent}      log_name: x_security_access`);
     lines.push(`${indent}      grpc_service:`);
     lines.push(`${indent}        envoy_grpc:`);
     lines.push(`${indent}          cluster_name: ${ALS_CLUSTER}`);
@@ -162,11 +162,11 @@ function eventFilter(event: LoggingEvent): string[] | null {
   ];
   switch (event) {
     case 'auth-failure':
-      return f(401, 'writ_log_401');
+      return f(401, 'x_security_log_401');
     case 'authz-deny':
-      return f(403, 'writ_log_403');
+      return f(403, 'x_security_log_403');
     case 'rate-limit-trip':
-      return f(429, 'writ_log_429');
+      return f(429, 'x_security_log_429');
     // injection-block / request / response have no single-status signature: they
     // ride the always-on base logger (which records every transaction). Faking a
     // narrower filter would mis-route, so we keep them on the base logger.
@@ -203,7 +203,7 @@ export function emitAccessLog(lines: string[], spec: SpecIR, prefix = '         
   }
 
   // Operator-facing provenance: events + sink + redaction posture.
-  lines.push(`${prefix}  # Writ logging (SSEC-AUDIT) — NATIVE/full.`);
+  lines.push(`${prefix}  # x-security logging (SSEC-AUDIT) — NATIVE/full.`);
   lines.push(`${prefix}  # events: ${r.events.join(', ')}`);
   lines.push(`${prefix}  # sink: ${r.sink}${r.sinkRef ? ` (sinkRef ${r.sinkRef})` : ''}; piiRedaction: ${r.piiRedaction}`);
   if (r.sink === 'syslog') {
@@ -236,7 +236,7 @@ export function emitAccessLog(lines: string[], spec: SpecIR, prefix = '         
 /**
  * Emit the gRPC ALS cluster used by the `http-collector` sink. STRICT_DNS +
  * HTTP/2, same shape as the OPA / ext_proc clusters. The collector endpoint is
- * operator-run log infra; nothing in the Writ-shipped compose resolves it.
+ * operator-run log infra; nothing in the x-security-shipped compose resolves it.
  */
 export function emitAlsCluster(lines: string[], host = ALS_HOST, port = ALS_PORT): void {
   lines.push(`  - name: ${ALS_CLUSTER}`);

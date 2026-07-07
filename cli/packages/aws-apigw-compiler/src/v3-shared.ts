@@ -1,4 +1,4 @@
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import type {
   CapabilityEntry,
   CapabilityLevel,

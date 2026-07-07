@@ -12,7 +12,7 @@
  * incident) — leave it 'partial' when coverage is incomplete.
  */
 
-import type { CapabilityMatrix } from '@writ/core';
+import type { CapabilityMatrix } from '@x-security/core';
 
 export function bunkerwebCapabilities(): CapabilityMatrix {
   return {
@@ -112,7 +112,7 @@ export function bunkerwebCapabilities(): CapabilityMatrix {
       // emits a native libmodsec3 operator per declared sink. v0.7 adds two
       // sinks that ride the SAME cell — both are real @rx denylists on the
       // field (deserialization preamble denylist; ai-prompt heuristic denylist,
-      // tagged writ-ssec-prompt) → cell stays 'full'.
+      // tagged x-security-ssec-prompt) → cell stays 'full'.
       // v0.7 (API2): authentication.passwordPolicy — phase:2 !@rx strength
       // SecRules (minLength/upper/digit/symbol/blocklist) on the body password
       // field. Real per-rule enforcement on a present password → full.
@@ -178,7 +178,7 @@ export function bunkerwebCapabilities(): CapabilityMatrix {
       'request.dataAtRest': 'unsupported',
       'mtls.pinnedCertificates': 'unsupported',
       // Promoted: deprecated emits phase:1 SecRule returning 410 with
-      // writ-deprecated-endpoint-block tag (attribution.py:35).
+      // x-security-deprecated-endpoint-block tag (attribution.py:35).
       'deprecated': 'full',
       'sunsetDate': 'partial'
     }

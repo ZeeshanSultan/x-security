@@ -1,16 +1,16 @@
 /**
  * Coraza / ModSecurity generator.
  *
- * Writ emits ModSecurity-compatible rules for four runtime profiles:
+ * x-security emits ModSecurity-compatible rules for four runtime profiles:
  * `modsec-nginx`, `modsec-apache`, `coraza-go`, `coraza-spoa`. The profile
  * is selected via `--coraza-engine` (default: `modsec-nginx`, the most
  * common deployment shape — see REPORT-v3 §3 for why this default matters).
  *
  * Output shape per profile:
  *   - libmodsecurity3 engines (`modsec-nginx`, `modsec-apache`):
- *       * `writ.conf`       — plain ModSecurity directives, no YAML
+ *       * `x-security.conf`       — plain ModSecurity directives, no YAML
  *                                   wrapper. Loaded via `Include`.
- *       * `writ-include.conf` — operator-facing snippet showing the
+ *       * `x-security-include.conf` — operator-facing snippet showing the
  *                                   right include path per engine.
  *       * `WARNINGS.md`           — structured downgrade/skip warnings if any.
  *   - Coraza-Go engines (`coraza-go`, `coraza-spoa`):
@@ -26,7 +26,7 @@
  */
 
 import { dump } from 'js-yaml';
-import type { ConfigArtifact, EndpointIR, Generator, SpecIR, CapabilityMatrix } from '@writ/core';
+import type { ConfigArtifact, EndpointIR, Generator, SpecIR, CapabilityMatrix } from '@x-security/core';
 import { buildPolicyRules, parseByteSize } from './rules.js';
 import { collectSsrfPolicyWarnings } from '../ssrf-policy-check.js';
 import { buildHaproxyStickTables, parseCorazaPeers, type HaproxyPeer } from './templates/haproxy-stick-tables.js';
@@ -41,7 +41,7 @@ import {
 
 // The *generator's* internal default stays `coraza-go` for backwards
 // compatibility (golden snapshots, library consumers). The *CLI* default
-// (writ.ts `--coraza-engine`) is `modsec-nginx` per REPORT-v3 §3,
+// (x-security.ts `--coraza-engine`) is `modsec-nginx` per REPORT-v3 §3,
 // and the CLI calls `configure({ engine })` to flip the profile before
 // invoking generate(). DEFAULT_ENGINE (`modsec-nginx`) is re-exported for
 // the bin layer to consume.
@@ -93,12 +93,12 @@ function buildDirectives(spec: SpecIR, profile: CorazaEngineProfile, warnings: E
   // Preserve the legacy banner verbatim for coraza-go so the existing golden
   // snapshot stays byte-stable. New profiles get the engine-aware banner.
   if (profile.name === 'coraza-go') {
-    lines.push('# Writ → Coraza v3.x — auto-generated. DO NOT EDIT BY HAND.');
-    lines.push(`# generator: writ-coraza v${VERSION}`);
+    lines.push('# x-security → Coraza v3.x — auto-generated. DO NOT EDIT BY HAND.');
+    lines.push(`# generator: x-security-coraza v${VERSION}`);
     lines.push(`# source: ${spec.info.title} ${spec.info.version}`);
   } else {
-    lines.push('# Writ → Coraza/ModSecurity — auto-generated. DO NOT EDIT BY HAND.');
-    lines.push(`# generator: writ-coraza v${VERSION}`);
+    lines.push('# x-security → Coraza/ModSecurity — auto-generated. DO NOT EDIT BY HAND.');
+    lines.push(`# generator: x-security-coraza v${VERSION}`);
     lines.push(`# engine:    ${profile.name}`);
     lines.push(`# source:    ${spec.info.title} ${spec.info.version}`);
   }
@@ -215,31 +215,31 @@ function buildDirectives(spec: SpecIR, profile: CorazaEngineProfile, warnings: E
 function buildIncludeSnippet(profile: CorazaEngineProfile): string {
   if (profile.name === 'modsec-nginx') {
     // For the `owasp/modsecurity-crs:nginx` image, the durable hook is to
-    // append `Include /etc/modsecurity.d/writ.conf` to setup.conf
+    // append `Include /etc/modsecurity.d/x-security.conf` to setup.conf
     // AFTER the image's entrypoint scripts have regenerated it. The image
     // regenerates setup.conf + modsecurity-override.conf from templates at
     // every container start (REPORT-v3 §3.1), so mounting over those files
     // directly does NOT survive a restart.
     //
-    // DO NOT mount writ.conf into /etc/nginx/conf.d/ — that path is
+    // DO NOT mount x-security.conf into /etc/nginx/conf.d/ — that path is
     // auto-included by nginx itself, which can't parse SecRule directives.
     //
     // See deployment-recipes/modsec-nginx.md for the entrypoint wrapper.
     return [
-      '# === Writ include for owasp/modsecurity-crs:nginx ===',
+      '# === x-security include for owasp/modsecurity-crs:nginx ===',
       '#',
-      '# Mount writ.conf to /etc/modsecurity.d/writ.conf and use',
+      '# Mount x-security.conf to /etc/modsecurity.d/x-security.conf and use',
       '# the entrypoint wrapper documented in deployment-recipes/modsec-nginx.md',
       '# to append this Include line after the image regenerates setup.conf:',
       '#',
-      'Include /etc/modsecurity.d/writ.conf',
+      'Include /etc/modsecurity.d/x-security.conf',
       '',
     ].join('\n');
   }
   if (profile.name === 'modsec-apache') {
     return [
       '# Drop into Apache config (e.g. /etc/apache2/mods-enabled/security2.conf):',
-      'Include /etc/modsecurity/writ.conf',
+      'Include /etc/modsecurity/x-security.conf',
       '',
     ].join('\n');
   }
@@ -249,7 +249,7 @@ function buildIncludeSnippet(profile: CorazaEngineProfile): string {
 
 function buildWarningsDoc(profile: CorazaEngineProfile, warnings: EngineWarning[]): string {
   const lines: string[] = [
-    `# Writ → ${profile.name} — emission warnings`,
+    `# x-security → ${profile.name} — emission warnings`,
     '',
     `Generator version: ${VERSION}`,
     `Engine profile:    ${profile.name}`,
@@ -287,7 +287,7 @@ export interface CorazaGeneratorOptions {
   engine?: CorazaEngineName;
   /** W13-D: `--coraza-peers "name1:host1:port1,name2:host2:port2"` raw value.
    *  When supplied (and engine is a coraza-go family), the emitted
-   *  haproxy-stick-tables.cfg gets a `peers writ` section + each
+   *  haproxy-stick-tables.cfg gets a `peers x-security` section + each
    *  stick-table opts in. Malformed strings → loud warning + omit peers. */
   peers?: string;
 }
@@ -341,14 +341,14 @@ export function createCorazaGenerator(opts: CorazaGeneratorOptions = {}): Coraza
       if (profile.fileExt === 'conf') {
         // libmodsecurity3 path — emit the .conf directly.
         artifacts.push({
-          path: 'writ.conf',
+          path: 'x-security.conf',
           content: directives + '\n',
           format: 'conf',
         });
         const snippet = buildIncludeSnippet(profile);
         if (snippet) {
           artifacts.push({
-            path: 'writ-include.conf',
+            path: 'x-security-include.conf',
             content: snippet,
             format: 'conf',
           });
@@ -359,7 +359,7 @@ export function createCorazaGenerator(opts: CorazaGeneratorOptions = {}): Coraza
         // directives. `engine` is only added for non-default profiles to keep
         // the byte-stable coraza-go snapshot passing.
         const meta: Record<string, unknown> = {
-          generator: 'writ-coraza',
+          generator: 'x-security-coraza',
           version: VERSION,
         };
         if (profile.name !== 'coraza-go') meta['engine'] = profile.name;
@@ -494,7 +494,7 @@ export function createCorazaGenerator(opts: CorazaGeneratorOptions = {}): Coraza
           //                      python pickle \x80 opcode frame) [v0.7]
           //   ai-prompt  → @rx LLM prompt-injection marker denylist (jailbreak /
           //                system-prompt-leak / role-override). Distinct tag
-          //                writ-prompt → SSEC-PROMPT (NOT SSEC-INJECTION) [v0.7]
+          //                x-security-prompt → SSEC-PROMPT (NOT SSEC-INJECTION) [v0.7]
           // Every sink is a real enforcing matcher on all four profiles (sql/xss
           // need the dedicated operator, present on all shipping engines; the rest
           // are plain RE2-safe @rx). → full.

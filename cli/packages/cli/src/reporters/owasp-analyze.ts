@@ -3,9 +3,9 @@
 // paths that mitigate it (from schema/owasp-mapping.json). If the endpoint
 // has ALL listed fields set, coverage = 'yes'. If SOME, 'partial'. None, 'no'.
 
-import type { SpecIR, EndpointIR } from '@writ/core';
-import { owaspMapping } from '@writ/schema';
-import type { SecurityCategoryId, XSecurityPolicy } from '@writ/schema';
+import type { SpecIR, EndpointIR } from '@x-security/core';
+import { owaspMapping } from '@x-security/schema';
+import type { SecurityCategoryId, XSecurityPolicy } from '@x-security/schema';
 import type {
   AnnotationCoverageReport,
   OwaspCoverageReport,
@@ -16,7 +16,7 @@ import {
   type FeasibilityContext
 } from './feasibility.js';
 
-// The 10 OWASP API Top-10 ids plus Writ-native synthetic categories.
+// The 10 OWASP API Top-10 ids plus x-security-native synthetic categories.
 // The SSEC ids are appended last so the OWASP matrix order is preserved and the
 // synthetic rows sort after the standard cells. Downstream reporters that render
 // a fixed 10-column matrix (human.ts) key off their own OWASP-only list and

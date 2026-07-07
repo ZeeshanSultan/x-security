@@ -66,7 +66,7 @@ export function denyLiteral(ruleClass: string): string {
     '{',
     `    "allowed": false,`,
     `    "http_status": 403,`,
-    `    "headers": {"x-writ-rule": ${regoString(marker)}},`,
+    `    "headers": {"x-x-security-rule": ${regoString(marker)}},`,
     `    "body": ${regoString(marker)}`,
     '  }'
   ].join('\n  ');

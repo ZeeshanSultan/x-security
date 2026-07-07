@@ -5,15 +5,15 @@
 // Born from REPORT-v3 §3: the Coraza generator emitted 365 SecRules but
 // ModSecurity-nginx silently loaded zero of them. The test harness checked
 // status codes — which were 403 from bundled CRS PL1, not from anything
-// Writ wrote. Nobody noticed for two release waves.
+// x-security wrote. Nobody noticed for two release waves.
 //
 // Design: per-target Reader implements re-emit (truth) + read-loaded
 // (gateway) + reconcile. The orchestrator below picks the reader,
 // computes the % loaded, and produces table/json/sarif output. No
 // gateway mutation, ever — every reader uses GET / read-only file ops.
 
-import type { SpecIR } from '@writ/core';
-import { loadSpec, buildResolverChain } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
+import { loadSpec, buildResolverChain } from '@x-security/core';
 import { kongReader } from './readers/kong.js';
 import { modsecNginxReader } from './readers/modsec-nginx.js';
 import { corazaGoReader } from './readers/coraza-go.js';
@@ -87,7 +87,9 @@ export interface VerifyReport {
 
 export interface GatewayReader {
   readEmittedArtifacts(spec: SpecIR): Promise<EmittedArtifact[]>;
-  readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]>;
+  /** `timeoutMs`, when set, bounds any outbound HTTP request the reader makes.
+   *  Readers that only touch Docker/files ignore it. */
+  readLoadedArtifacts(gateway: string, timeoutMs?: number): Promise<LoadedArtifact[]>;
   reconcile(emitted: EmittedArtifact[], loaded: LoadedArtifact[]): {
     rows: VerifyRow[];
     diagnostics: string[];
@@ -103,6 +105,8 @@ export interface VerifyOptions {
   format?: VerifyFormat;
   /** Coverage threshold (0..100). Default 90. */
   thresholdPct?: number;
+  /** Abort outbound gateway HTTP requests after this many ms. Unset = no timeout. */
+  timeoutMs?: number;
 }
 
 export interface VerifyRunResult {
@@ -132,7 +136,7 @@ export async function runVerify(specPath: string, opts: VerifyOptions): Promise<
 
   let unreachable = false;
   try {
-    loaded = await reader.readLoadedArtifacts(opts.gateway);
+    loaded = await reader.readLoadedArtifacts(opts.gateway, opts.timeoutMs);
   } catch (e) {
     const msg = (e as Error).message;
     diagnostics.push(`gateway read error: ${msg}`);

@@ -11,7 +11,7 @@
  *
  * This module emits a sibling artifact `haproxy-stick-tables.cfg` containing:
  *
- *   1. One `backend st_writ_<slug>` per rate-limited endpoint with a
+ *   1. One `backend st_x_security_<slug>` per rate-limited endpoint with a
  *      `stick-table type {ip|string} size 100k expire <window> store
  *      http_req_rate(<window>)` (and optionally `http_req_rate(1s)` when
  *      `burst` is declared).
@@ -30,8 +30,8 @@
  *   - **Peer replication** (W13-D): stick-tables are in-memory per HAProxy
  *     process. Multi-instance HA fleets must opt in via the `peers` option
  *     (CLI: `--coraza-peers "node1:10.0.0.1:10000,node2:10.0.0.2:10000"`).
- *     When supplied we emit a `peers writ` section and attach
- *     `peers writ` to every stick-table block so HAProxy replicates
+ *     When supplied we emit a `peers x-security` section and attach
+ *     `peers x-security` to every stick-table block so HAProxy replicates
  *     the counters between the named instances. When omitted the artifact
  *     is byte-identical to the single-instance W11 emission.
  *
@@ -41,14 +41,14 @@
  *     in the generated comment block.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { RateLimit, RateLimitIdentifier } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { RateLimit, RateLimitIdentifier } from '@x-security/schema';
 import { parseDurationSec } from '../rules.js';
 import type { CorazaEngineName, EngineWarning } from '../profiles.js';
 
 /** HAProxy stick-table window strings (must be one of HAProxy's units). */
 function durationToHaproxy(window: string): string {
-  // HAProxy understands `s`, `m`, `h`, `d`. Writ Duration uses the same
+  // HAProxy understands `s`, `m`, `h`, `d`. x-security Duration uses the same
   // units, so a trim is enough; we just validate the string parses.
   const secs = parseDurationSec(window);
   if (!Number.isFinite(secs) || secs <= 0) return '1m';
@@ -176,7 +176,7 @@ export interface HaproxyPeer {
 }
 
 /** HAProxy peer-group name used in the emitted `peers <name>` section. */
-const PEER_GROUP = 'writ';
+const PEER_GROUP = 'x-security';
 
 /**
  * Parse the `--coraza-peers` CLI string. Format:
@@ -303,7 +303,7 @@ export function buildHaproxyStickTables(
       if (key.warning) warnings.push(key.warning);
 
       const slug = slugify(ep.method, ep.path) + (rls.length > 1 ? `_${idx}` : '');
-      const backendName = `st_writ_${slug}`;
+      const backendName = `st_x_security_${slug}`;
       if (seenBackends.has(backendName)) return;
       seenBackends.add(backendName);
 
@@ -374,7 +374,7 @@ export function buildHaproxyStickTables(
   if (emissions.length === 0) return null;
 
   const out: string[] = [];
-  out.push('# Writ → HAProxy stick-tables — auto-generated. DO NOT EDIT BY HAND.');
+  out.push('# x-security → HAProxy stick-tables — auto-generated. DO NOT EDIT BY HAND.');
   out.push(`# engine:    ${engine}`);
   out.push(`# source:    ${spec.info.title} ${spec.info.version}`);
   out.push('#');
@@ -385,7 +385,7 @@ export function buildHaproxyStickTables(
   out.push('#');
   out.push('# How to integrate into an EXISTING haproxy.cfg:');
   out.push('#');
-  out.push('#   1. Append every `backend st_writ_*` block below to your');
+  out.push('#   1. Append every `backend st_x_security_*` block below to your');
   out.push('#      haproxy.cfg (they are self-contained — no listener needed).');
   out.push('#   2. Inside your existing `frontend` block, paste the ACL/track/deny');
   out.push('#      snippet from the "WRIT FRONTEND SNIPPET" section.');
@@ -396,7 +396,7 @@ export function buildHaproxyStickTables(
   if (peers.length > 0) {
     out.push('# ════════════════════════════════════════════════════════════════');
     out.push(`# Peer replication (group: ${PEER_GROUP}) — ${peers.length} instance(s)`);
-    out.push('# Each stick-table below references `peers writ` so HAProxy');
+    out.push('# Each stick-table below references `peers x-security` so HAProxy');
     out.push('# replicates counters between the listed nodes in near-real-time.');
     out.push('# ════════════════════════════════════════════════════════════════');
     out.push(`peers ${PEER_GROUP}`);

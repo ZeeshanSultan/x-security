@@ -35,7 +35,7 @@
  *                      not satisfy every predicate.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import { ALLOW_LITERAL, paramSplitIndex, type BranchEmitDeps } from './extauthz-rego-util.js';
 
 interface AbacPredicate {

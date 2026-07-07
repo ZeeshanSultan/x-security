@@ -4,7 +4,7 @@
 //
 // Why centralised: per-app loaders drifted. `.env.example` listed
 // `OAUTH_ENC_KEY` but the api read `WRIT_ENCRYPTION_KEY`; the
-// github-app accepted hex OR base64 keys while @writ/crypto accepted
+// github-app accepted hex OR base64 keys while @x-security/crypto accepted
 // only base64 (silent data corruption when both apps wrote to the same
 // encrypted column). The audit's Wave-1 plan calls for one loader that
 // (a) names every secret it touches, (b) refuses dev defaults in prod, and

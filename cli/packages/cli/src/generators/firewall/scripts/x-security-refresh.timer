@@ -1,6 +1,6 @@
 [Unit]
-Description=Writ firewall refresh timer (every 5 minutes)
-Documentation=https://github.com/writ/writ
+Description=XSecurity firewall refresh timer (every 5 minutes)
+Documentation=https://github.com/x-security/x-security
 
 [Timer]
 # Run shortly after boot, then every 5 minutes thereafter. AccuracySec
@@ -9,7 +9,7 @@ OnBootSec=30s
 OnUnitActiveSec=5min
 AccuracySec=30s
 Persistent=true
-Unit=writ-refresh.service
+Unit=x-security-refresh.service
 
 [Install]
 WantedBy=timers.target

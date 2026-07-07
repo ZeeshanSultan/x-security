@@ -1,7 +1,7 @@
 {
-  "name": "@writ/detect-core",
+  "name": "@x-security/detect-core",
   "version": "0.1.0",
-  "description": "Writ deterministic correctness core — LLM-free route extraction, V1–V7 verifiers, cite byte-match, policy compile + canonicalization. The single source of truth for 'is this policy real and valid'.",
+  "description": "x-security deterministic correctness core — LLM-free route extraction, V1–V7 verifiers, cite byte-match, policy compile + canonicalization. The single source of truth for 'is this policy real and valid'.",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,12 +16,12 @@
     "dist"
   ],
   "scripts": {
-    "build": "pnpm --filter @writ/schema build && tsc -p tsconfig.json",
+    "build": "pnpm --filter @x-security/schema build && tsc -p tsconfig.json",
     "test": "node --test --import tsx 'test/**/*.test.ts'",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@writ/schema": "workspace:*",
+    "@x-security/schema": "workspace:*",
     "js-yaml": "^4.1.0",
     "zod": "^3.23.0"
   },

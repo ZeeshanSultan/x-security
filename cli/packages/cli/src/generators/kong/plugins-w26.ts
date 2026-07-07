@@ -12,7 +12,7 @@
 // add/remove operations — it cannot inspect body JSON. We use post-function
 // for anything that needs body inspection or conditional rewrites.
 
-import type { RequestPolicy, ResponsePolicy, RateLimit, BotProtection } from '@writ/schema';
+import type { RequestPolicy, ResponsePolicy, RateLimit, BotProtection } from '@x-security/schema';
 import type { KongPlugin } from './types.js';
 
 // ---------- shared helpers ----------
@@ -26,7 +26,7 @@ function luaStr(s: string): string {
 // the allowlist keys. Post-function parses JSON body and drops keys not in the
 // schema-derived allowlist. Re-encodes with cjson.
 
-export const SS_RESPONSE_STRIP_UNKNOWN_TAG = 'writ-response-strip-unknown';
+export const SS_RESPONSE_STRIP_UNKNOWN_TAG = 'x-security-response-strip-unknown';
 
 export function buildResponseStripUnknownPlugins(
   resp: ResponsePolicy | undefined,
@@ -38,7 +38,7 @@ export function buildResponseStripUnknownPlugins(
 
   const luaAllowTable = '{' + schemaKeys.map((k) => `[${luaStr(k)}]=true`).join(', ') + '}';
   const lua = [
-    `-- Writ W26 response strip-unknown-fields for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity W26 response strip-unknown-fields for endpoint=${ctx.endpoint ?? '?'}`,
     `local cjson = require("cjson.safe")`,
     `local ss_allow = ${luaAllowTable}`,
     `local raw = kong.response.get_raw_body()`,
@@ -69,7 +69,7 @@ export function buildResponseStripUnknownPlugins(
 // Gate: `response.errorScrubbing.stripStackTraces === true`. Body-filter regex
 // scrubs common stack-trace markers from response bodies on 4xx/5xx.
 
-export const SS_RESPONSE_STRIP_TRACES_TAG = 'writ-response-strip-traces';
+export const SS_RESPONSE_STRIP_TRACES_TAG = 'x-security-response-strip-traces';
 
 // Lua patterns covering the common stack-trace shapes. Conservative — only
 // strips the trace lines, leaves surrounding message intact.
@@ -93,7 +93,7 @@ export function buildResponseStripTracesPlugins(
     .join('\n');
 
   const lua = [
-    `-- Writ W26 response strip-stack-traces for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity W26 response strip-stack-traces for endpoint=${ctx.endpoint ?? '?'}`,
     `local status = kong.response.get_status()`,
     `if status >= 400 then`,
     `  local body = kong.response.get_raw_body()`,
@@ -120,7 +120,7 @@ export function buildResponseStripTracesPlugins(
 // body to a fixed generic JSON envelope. 4xx is preserved (operator/client
 // error messages are usually intentional).
 
-export const SS_RESPONSE_GENERIC_ERROR_TAG = 'writ-response-generic-error';
+export const SS_RESPONSE_GENERIC_ERROR_TAG = 'x-security-response-generic-error';
 
 export function buildResponseGenericErrorPlugins(
   resp: ResponsePolicy | undefined,
@@ -129,7 +129,7 @@ export function buildResponseGenericErrorPlugins(
   if (!resp?.errorScrubbing?.genericMessages) return [];
 
   const lua = [
-    `-- Writ W26 response generic-error-message for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity W26 response generic-error-message for endpoint=${ctx.endpoint ?? '?'}`,
     `local status = kong.response.get_status()`,
     `if status >= 500 then`,
     `  kong.log.warn("[${SS_RESPONSE_GENERIC_ERROR_TAG}] rewrote 5xx body to generic message")`,
@@ -154,7 +154,7 @@ export function buildResponseGenericErrorPlugins(
 // `kong.response.exit()` errors in header_filter, so we set status in
 // header_filter and replace the body in body_filter.
 
-export const SS_RESPONSE_CONTENT_TYPE_TAG = 'writ-response-contenttype';
+export const SS_RESPONSE_CONTENT_TYPE_TAG = 'x-security-response-contenttype';
 
 export function buildResponseContentTypeAssertPlugins(
   resp: ResponsePolicy | undefined,
@@ -168,7 +168,7 @@ export function buildResponseContentTypeAssertPlugins(
     .join(', ');
 
   const headerFilter = [
-    `-- Writ response Content-Type assertion endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity response Content-Type assertion endpoint=${ctx.endpoint ?? '?'}`,
     `local allowed = { ${luaSet} }`,
     `local status = kong.response.get_status()`,
     `if status >= 200 and status < 300 then`,
@@ -230,7 +230,7 @@ export function buildResponseContentTypeAssertPlugins(
 //     level): PASS THROUGH untouched — no top-level fields to validate, and we
 //     never crash the body_filter or fabricate a verdict.
 
-export const SS_RESPONSE_SCHEMA_TAG = 'writ-response-schema';
+export const SS_RESPONSE_SCHEMA_TAG = 'x-security-response-schema';
 // Back-compat alias: maxLength enforcement now lives inside the full validator.
 export const SS_RESPONSE_MAXLENGTH_TAG = SS_RESPONSE_SCHEMA_TAG;
 
@@ -377,7 +377,7 @@ export function buildResponseMaxLengthPlugins(
   const validators = rules.flatMap((r) => fieldValidatorLua(r));
 
   const lua = [
-    `-- Writ W26 response typed-schema validation for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity W26 response typed-schema validation for endpoint=${ctx.endpoint ?? '?'}`,
     `-- Validates the cjson-DECODED value (canonical: immune to pretty-printing,`,
     `-- escaped quotes, key order, numeric formatting). Never matches raw body bytes.`,
     `local cjson = require("cjson.safe")`,
@@ -408,15 +408,15 @@ export function buildResponseMaxLengthPlugins(
 // ---------- rateLimit: fingerprint identifier ----------
 // Gate: any rateLimit entry with identifier === 'fingerprint' OR identifier
 // includes 'fingerprint' (composite). Emits a pre-function that builds a
-// composite key (ip + ua-hash) and sticks it on `kong.ctx.shared.writ_fp`
-// AND on the X-Writ-Fingerprint header — both useful as the limit key.
+// composite key (ip + ua-hash) and sticks it on `kong.ctx.shared.x_security_fp`
+// AND on the X-XSecurity-Fingerprint header — both useful as the limit key.
 //
 // Honest scope: Kong OSS rate-limiting plugin can `limit_by: header` which we
 // already wire elsewhere. The marker proves the fingerprint pre-function fired.
 // Operators wanting a fully custom bucket can swap in lua-resty-limit-req via
 // targetOverrides; the pre-function here is the composite-key building block.
 
-export const SS_RATE_LIMIT_FINGERPRINT_TAG = 'writ-rate-limit-fingerprint';
+export const SS_RATE_LIMIT_FINGERPRINT_TAG = 'x-security-rate-limit-fingerprint';
 
 function rateLimitsUseFingerprint(rl: RateLimit | RateLimit[] | undefined): boolean {
   if (!rl) return false;
@@ -440,9 +440,9 @@ export function buildRateLimitFingerprintPlugins(
   if (!rateLimitsUseFingerprint(rl)) return [];
 
   const lua = [
-    `-- Writ W26 rate-limit fingerprint pre-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity W26 rate-limit fingerprint pre-function for endpoint=${ctx.endpoint ?? '?'}`,
     `-- Composite key = client_ip + sha1(user-agent). Stored on ctx.shared and`,
-    `-- mirrored to X-Writ-Fingerprint so rate-limiting limit_by=header picks it up.`,
+    `-- mirrored to X-XSecurity-Fingerprint so rate-limiting limit_by=header picks it up.`,
     `local sha1 = require("resty.sha1"):new()`,
     `local ip = kong.client.get_forwarded_ip() or kong.client.get_ip() or "0.0.0.0"`,
     `local ua = kong.request.get_header("user-agent") or ""`,
@@ -454,8 +454,8 @@ export function buildRateLimitFingerprintPlugins(
     `  for i = 1, #digest do hex = hex .. string.format("%02x", string.byte(digest, i)) end`,
     `  fp = ip .. ":" .. hex:sub(1, 16)`,
     `end`,
-    `kong.ctx.shared.writ_fp = fp`,
-    `kong.service.request.set_header("X-Writ-Fingerprint", fp)`,
+    `kong.ctx.shared.x_security_fp = fp`,
+    `kong.service.request.set_header("X-XSecurity-Fingerprint", fp)`,
     `kong.log.warn("[${SS_RATE_LIMIT_FINGERPRINT_TAG}] fp=" .. fp)`
   ].join('\n');
 
@@ -473,7 +473,7 @@ export function buildRateLimitFingerprintPlugins(
 // (Turnstile/reCAPTCHA/hCaptcha verification) is provider-side and requires
 // secret-key handling — this is the heuristic gate that runs in-Kong.
 
-export const SS_BOT_DETECTED_TAG = 'writ-bot-detected';
+export const SS_BOT_DETECTED_TAG = 'x-security-bot-detected';
 
 // Conservative bot signatures. We deliberately don't try to fingerprint legit
 // crawlers (Googlebot, Bingbot) — operators can extend via targetOverrides.
@@ -509,7 +509,7 @@ export function buildBotProtectionPlugins(
   const blockLua = enforce
     ? [
         `    return kong.response.exit(403, {`,
-        `      message = "Writ: bot detected",`,
+        `      message = "XSecurity: bot detected",`,
         `      tag = "${SS_BOT_DETECTED_TAG}",`,
         `      provider = "${provider}",`,
         `      rule = hit`,
@@ -518,7 +518,7 @@ export function buildBotProtectionPlugins(
     : `    -- observe mode: log but pass through`;
 
   const lua = [
-    `-- Writ W26 botProtection pre-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity W26 botProtection pre-function for endpoint=${ctx.endpoint ?? '?'}`,
     `-- provider=${provider} mode=${bot.mode}`,
     `local ua = kong.request.get_header("user-agent") or ""`,
     `local hit = (function()`,
@@ -536,7 +536,7 @@ export function buildBotProtectionPlugins(
           `if not challenge:match("ss_bot_challenge=") then`,
           `  kong.log.warn("[${SS_BOT_DETECTED_TAG}] missing js-challenge cookie")`,
           `  return kong.response.exit(403, {`,
-          `    message = "Writ: bot challenge required",`,
+          `    message = "XSecurity: bot challenge required",`,
           `    tag = "${SS_BOT_DETECTED_TAG}",`,
           `    provider = "${provider}"`,
           `  })`,

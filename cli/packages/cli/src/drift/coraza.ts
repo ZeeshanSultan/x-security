@@ -12,11 +12,11 @@
  *     category). This makes block identification robust to whitespace and
  *     comment drift.
  *  4. Diff the two directive blocks line-by-line per endpoint, classifying
- *     each delta by Writ's standard severity rules.
+ *     each delta by x-security's standard severity rules.
  */
 import { readFile } from 'node:fs/promises';
 import yaml from 'js-yaml';
-import type { SpecIR, EndpointIR } from '@writ/core';
+import type { SpecIR, EndpointIR } from '@x-security/core';
 import type { DriftIssue, DriftReport, DriftSeverity } from '../reporters/types.js';
 import { corazaGenerator } from '../generators/coraza/index.js';
 import { ruleBase, SLOT, parseByteSize } from '../generators/coraza/rules.js';
@@ -109,16 +109,16 @@ function fieldForSlot(slot: number): { field: string; severity: DriftSeverity } 
  * Extract the numeric rate-limit threshold from the `@gt N` check rule.
  *
  * Matches legacy (`IP:RATE_<op>`), wave-5 (`IP:rl_<op>` / `USER:rl_<op>` /
- * `TX:rl_<op>`), and W10-7 (`IP:writ_rl_<op>`) emissions. Burst counters
+ * `TX:rl_<op>`), and W10-7 (`IP:x_security_rl_<op>`) emissions. Burst counters
  * use a `_burst` suffix and are intentionally ignored here — drift detection
  * compares against the primary window threshold (`rl.requests`), not the burst cap.
  */
 function extractRateLimitThreshold(block: RuleBlock): number | null {
   for (const l of block.lines) {
     // W10-7: identifier=ip on coraza-go/spoa now uses the IP persistent
-    // collection with a `writ_rl_` variable prefix.
+    // collection with a `x_security_rl_` variable prefix.
     const m =
-      /SecRule\s+(?:IP|USER|GLOBAL|TX):(?:RATE_|writ_rl_|rl_)([A-Za-z0-9_]+?)(?:_burst)?\s+"@gt\s+(\d+)"/.exec(l);
+      /SecRule\s+(?:IP|USER|GLOBAL|TX):(?:RATE_|x_security_rl_|rl_)([A-Za-z0-9_]+?)(?:_burst)?\s+"@gt\s+(\d+)"/.exec(l);
     if (m && m[2] && !l.includes('_burst')) return Number(m[2]);
   }
   return null;
@@ -238,7 +238,7 @@ function diffEndpoint(
     }
   }
 
-  // Detect unknown writ-tagged rules that aren't in our expected set —
+  // Detect unknown x-security-tagged rules that aren't in our expected set —
   // LOW severity.
   for (const [slot, actBlock] of actualBlocks.entries()) {
     if (expectedBlocks.has(slot)) continue;
@@ -248,7 +248,7 @@ function diffEndpoint(
       severity: 'LOW',
       expected: 'absent',
       actual: actBlock.ruleId,
-      message: `Unknown Writ rule slot ${slot} (id=${actBlock.ruleId}) on deployed config`
+      message: `Unknown x-security rule slot ${slot} (id=${actBlock.ruleId}) on deployed config`
     });
   }
 

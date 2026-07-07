@@ -2,7 +2,7 @@
 // identifier → characteristics mapping is non-trivial; keep this logic in its
 // own file so the main compile.ts stays under the 500-line policy.
 
-import type { RateLimit } from '@writ/schema';
+import type { RateLimit } from '@x-security/schema';
 import { and, hasHeader, missingHeader } from './expressions.js';
 import { parseDurationSeconds } from './expressions.js';
 import type { CompiledRule, Confidence, RuleAction } from './types.js';

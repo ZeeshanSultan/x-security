@@ -13,7 +13,7 @@
  *     typed-constraint evaluation on the parsed value.
  *
  * HONESTY (Rule D-1 — the crux for envoy):
- *   Writ does NOT ship an ext_proc ExternalProcessor binary, and the
+ *   x-security does NOT ship an ext_proc ExternalProcessor binary, and the
  *   `openpolicyagent/opa:latest-envoy` sidecar this generator wires only speaks
  *   the ext_authz gRPC API (request path) — its ext_proc support is an
  *   unmerged upstream PR and would need a second port + a different image.
@@ -28,14 +28,14 @@
  *   to regex to claim a higher status.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { ParamSchema } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { ParamSchema } from '@x-security/schema';
 import { pathToRegoRegex } from './extauthz-rego-util.js';
 
-export const EXT_PROC_CLUSTER = 'writ_ext_proc';
+export const EXT_PROC_CLUSTER = 'x_security_ext_proc';
 export const EXT_PROC_PORT = 9292;
 /** Default host of the operator-supplied processor (override at deploy time). */
-export const EXT_PROC_HOST = 'writ-respval';
+export const EXT_PROC_HOST = 'x-security-respval';
 
 export interface ResponseSchemaEndpoint {
   endpoint: EndpointIR;
@@ -81,7 +81,7 @@ export function needsExtProc(spec: SpecIR): boolean {
 
 /**
  * One field's typed constraints, normalized to exactly the keys a JSON-parsing
- * processor evaluates against the parsed value. Only constraints Writ can
+ * processor evaluates against the parsed value. Only constraints x-security can
  * express are emitted; absent keys mean "unconstrained".
  */
 interface FieldRule {
@@ -135,7 +135,7 @@ interface ResponseSchemaConfig {
 
 /**
  * Build the `ext_proc/response-schema.json` data file. This is the contract
- * between Writ (which knows the schema) and the operator's processor
+ * between x-security (which knows the schema) and the operator's processor
  * (which parses the body and enforces). Byte-stable: keys/routes sorted.
  */
 export function buildResponseSchemaConfig(
@@ -167,13 +167,13 @@ export function buildResponseSchemaConfig(
 
   const cfg: ResponseSchemaConfig = {
     $comment:
-      'Writ → Envoy ext_proc response-schema contract. Auto-generated. ' +
+      'x-security → Envoy ext_proc response-schema contract. Auto-generated. ' +
       'DO NOT EDIT BY HAND. Consumed by an operator-supplied ext_proc gRPC ' +
       'ExternalProcessor that parses the response body as JSON and enforces ' +
-      'these per-field typed constraints on the parsed value. Writ does ' +
+      'these per-field typed constraints on the parsed value. x-security does ' +
       'NOT ship that processor; this file + the envoy.yaml ext_proc filter are ' +
       'scaffolding. No regex over raw bytes — the processor MUST JSON.parse.',
-    generator: 'writ-envoy/ext_proc',
+    generator: 'x-security-envoy/ext_proc',
     source: `${specTitle} ${specVersion}`,
     enforcement: {
       status: 'override-only',
@@ -183,7 +183,7 @@ export function buildResponseSchemaConfig(
       operatorMustSupply:
         'A gRPC service implementing envoy.service.ext_proc.v3.ExternalProcessor ' +
         'that JSON-parses the response body and evaluates the rules below. ' +
-        'Writ does not bundle it; the OPA sidecar (opa_grpc) is ext_authz-only.',
+        'x-security does not bundle it; the OPA sidecar (opa_grpc) is ext_authz-only.',
       dataPath:
         'Envoy ext_proc filter streams the response body (processing_mode: ' +
         'response_body_mode=BUFFERED) to the processor, which returns an ' +
@@ -208,7 +208,7 @@ export function buildResponseSchemaConfig(
 export function emitExtProcFilter(lines: string[]): void {
   lines.push('  # response.schema validation (override-only): real JSON parse happens in the');
   lines.push('  # operator-supplied ext_proc processor; this filter only delivers the body.');
-  lines.push('  # Writ does NOT ship the processor — see ext_proc/response-schema.json.');
+  lines.push('  # x-security does NOT ship the processor — see ext_proc/response-schema.json.');
   lines.push('  - name: envoy.filters.http.ext_proc');
   lines.push('    typed_config:');
   lines.push('      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor');
@@ -228,7 +228,7 @@ export function emitExtProcFilter(lines: string[]): void {
 /**
  * Emit the ext_proc processing cluster. STRICT_DNS + HTTP/2 (gRPC), same shape
  * as the opa_grpc cluster. The host defaults to a name the operator wires to
- * their processor; nothing in the Writ-shipped compose resolves it.
+ * their processor; nothing in the x-security-shipped compose resolves it.
  */
 export function emitExtProcCluster(lines: string[], host = EXT_PROC_HOST, port = EXT_PROC_PORT): void {
   lines.push(`  - name: ${EXT_PROC_CLUSTER}`);

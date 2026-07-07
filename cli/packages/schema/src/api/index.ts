@@ -1,5 +1,5 @@
 // Barrel for dashboard API contracts. Page builders import from
-// `@writ/schema/api`.
+// `@x-security/schema/api`.
 export * from './primitives.js';
 export * from './rule.js';
 export * from './deploy.js';

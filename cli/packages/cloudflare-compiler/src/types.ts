@@ -47,7 +47,7 @@ export interface RuleActionParameters {
 }
 
 export interface CompiledRule {
-  /** Stable ID: `writ-<observe|enforce>-<endpoint-hash>-<rule-type>[-<n>]` */
+  /** Stable ID: `x-security-<observe|enforce>-<endpoint-hash>-<rule-type>[-<n>]` */
   id: string;
   /** Auditor-facing description tracing back to `x-security` field */
   description: string;
@@ -59,8 +59,8 @@ export interface CompiledRule {
   enabled: boolean;
   /** Effective mode for this rule. In observe mode blocking rules emit `log`. */
   mode: DeployMode;
-  /** Writ metadata — round-tripped to/from CF via `ref` field on read */
-  writ: {
+  /** x-security metadata — round-tripped to/from CF via `ref` field on read */
+  xSecurity: {
     endpoint_id: string;
     rule_type: string;
     source_field: string;
@@ -70,7 +70,7 @@ export interface CompiledRule {
 }
 
 export interface CompiledRuleset {
-  /** Cloudflare ruleset name, e.g. "writ-shadow-v1" */
+  /** Cloudflare ruleset name, e.g. "x-security-shadow-v1" */
   name: string;
   description: string;
   kind: 'zone';
@@ -230,7 +230,7 @@ export interface CompileOptions {
    * In observe mode every blocking rule's action is replaced with `log`.
    */
   mode?: DeployMode;
-  /** Ruleset name prefix — default `writ-observe` for observe/shadow, `writ` for enforce. */
+  /** Ruleset name prefix — default `x-security-observe` for observe/shadow, `x-security` for enforce. */
   namePrefix?: string;
   /** Ruleset version number (the `v{N}`); defaults to 1. */
   version?: number;

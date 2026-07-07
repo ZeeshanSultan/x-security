@@ -53,7 +53,7 @@ export function decryptFromBytes(blob: Buffer, key: Buffer): string {
  * Throws if missing or wrong length. Call once at boot and cache.
  */
 export function loadEncryptionKey(env: NodeJS.ProcessEnv = process.env): Buffer {
-  const raw = env.WRIT_ENCRYPTION_KEY;
+  const raw = env.X_SECURITY_ENCRYPTION_KEY ?? env.WRIT_ENCRYPTION_KEY;
   if (!raw || raw.length === 0) {
     throw new Error(
       "WRIT_ENCRYPTION_KEY not set; required for at-rest secret encryption. " +

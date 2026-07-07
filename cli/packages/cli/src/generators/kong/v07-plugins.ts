@@ -15,7 +15,7 @@
 //                        response; a bare top-level array → 502.
 //   - idempotencyKey   → PARTIAL. OSS has no native idempotency; a pre-function
 //                        shared_dict dedupe is best-effort and races. Emitted
-//                        as a best-effort gate + a _writ_warnings note.
+//                        as a best-effort gate + a _x_security_warnings note.
 //   - accountLockout   → PARTIAL. OSS has no native per-credential lockout;
 //                        rate-limiting keyed on the credential header is the
 //                        closest, but it throttles rather than locks. Emitted as
@@ -28,8 +28,8 @@ import type {
   ResponsePolicy,
   RequestPolicy,
   XSecurityPolicy
-} from '@writ/schema';
-import type { KongPlugin, WritWarning } from './types.js';
+} from '@x-security/schema';
+import type { KongPlugin, XSecurityWarning } from './types.js';
 import type { WarningSink } from './plugins.js';
 
 // Lua string literal — matches the escaping used across plugins.ts / plugins-w26.ts.
@@ -49,21 +49,21 @@ function durationSeconds(window: string): number {
 // ---------- logging (SSEC-AUDIT) — FULL via native Kong log plugins ----------
 //
 // Kong OSS ships four native log plugins, one per sink:
-//   stdout         → file-log writing to /dev/stdout
-//   file           → file-log writing to a host path
+//   stdout         → file-log x-securitying to /dev/stdout
+//   file           → file-log x-securitying to a host path
 //   syslog         → syslog
 //   http-collector → http-log POSTing to sinkRef
 //
 // Each carries a `custom_fields_by_lua` map so the serialized log entry
-// declares the Writ audit contract: the requested events list and a
+// declares the XSecurity audit contract: the requested events list and a
 // per-request `ss_audit_event` classification derived from the response status
 // + plugin tags already present on the route (auth-failure ⇐ 401/403,
-// authz-deny ⇐ writ-rule-* tags, rate-limit-trip ⇐ 429, injection-block
-// ⇐ writ-sqli/ssrf tags). piiRedaction drops the declared pii fields from
+// authz-deny ⇐ x-security-rule-* tags, rate-limit-trip ⇐ 429, injection-block
+// ⇐ x-security-sqli/ssrf tags). piiRedaction drops the declared pii fields from
 // the emitted entry via a `custom_fields_by_lua` nil-set (Kong omits a field
 // whose lua function returns nil), so the sink never receives the pii values.
 
-export const SS_AUDIT_TAG = 'writ-audit-log';
+export const SS_AUDIT_TAG = 'x-security-audit-log';
 
 const LOGGING_SINK_PLUGIN: Record<string, string> = {
   stdout: 'file-log',
@@ -90,7 +90,7 @@ function auditEventLua(events: LoggingEvent[]): string {
     branches.push(`  if status == 403 then return "authz-deny" end`);
   }
   if (want.has('injection-block')) {
-    // SQLi/SSRF/mass-assign pre-functions exit 403 with a writ tag; the
+    // SQLi/SSRF/mass-assign pre-functions exit 403 with a x-security tag; the
     // body marker isn't readable here, so a 403 with no auth context is the
     // best reflective signal. Kept after auth-failure so explicit auth wins.
     branches.push(`  if status == 422 then return "injection-block" end`);
@@ -222,9 +222,9 @@ export function buildLoggingPlugins(
 // symbol) + blocklist, and exits 422 on the first violation. This genuinely
 // enforces at the edge (the request never reaches the upstream), so → full.
 //
-// The password body field is `password` by default. Marker: writ-password-policy-422.
+// The password body field is `password` by default. Marker: x-security-password-policy-422.
 
-export const SS_PASSWORD_POLICY_TAG = 'writ-password-policy-422';
+export const SS_PASSWORD_POLICY_TAG = 'x-security-password-policy-422';
 
 export function buildPasswordPolicyPlugins(
   auth: Authentication | undefined,
@@ -288,7 +288,7 @@ export function buildPasswordPolicyPlugins(
   }
 
   const lua = [
-    `-- Writ v0.7 password-policy pre-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity v0.7 password-policy pre-function for endpoint=${ctx.endpoint ?? '?'}`,
     `local body = kong.request.get_body()`,
     `if type(body) == "table" and type(body.password) == "string" then`,
     `  local pw = body.password`,
@@ -299,7 +299,7 @@ export function buildPasswordPolicyPlugins(
     `  if violation ~= nil then`,
     `    kong.log.warn("[${SS_PASSWORD_POLICY_TAG}] password rejected: " .. violation)`,
     `    return kong.response.exit(422, {`,
-    `      message = "Writ: password does not meet policy",`,
+    `      message = "XSecurity: password does not meet policy",`,
     `      tag = "${SS_PASSWORD_POLICY_TAG}",`,
     `      violation = violation`,
     `    })`,
@@ -323,7 +323,7 @@ export function buildPasswordPolicyPlugins(
 // plugins-w26.ts. `kong.response.exit()` is illegal in body_filter, so we set
 // the status in body_filter via kong.response.set_status + set_raw_body.
 
-export const SS_FORBID_ARRAY_ROOT_TAG = 'writ-forbid-array-root-502';
+export const SS_FORBID_ARRAY_ROOT_TAG = 'x-security-forbid-array-root-502';
 
 export function buildForbidArrayRootPlugins(
   resp: ResponsePolicy | undefined,
@@ -336,7 +336,7 @@ export function buildForbidArrayRootPlugins(
   // array decodes to cjson.empty_array (still array-rooted) — we treat any
   // array root as a violation, including [].
   const lua = [
-    `-- Writ v0.7 forbidArrayRoot post-function for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- XSecurity v0.7 forbidArrayRoot post-function for endpoint=${ctx.endpoint ?? '?'}`,
     `local cjson = require("cjson.safe")`,
     `local raw = kong.response.get_raw_body()`,
     `if raw and #raw > 0 then`,
@@ -352,7 +352,7 @@ export function buildForbidArrayRootPlugins(
     `      kong.log.warn("[${SS_FORBID_ARRAY_ROOT_TAG}] bare top-level array response blocked (JSON hijacking)")`,
     `      kong.response.set_status(502)`,
     `      kong.response.set_header("Content-Type", "application/json")`,
-    `      kong.response.set_raw_body('{"message":"Writ: bare top-level array response forbidden","tag":"${SS_FORBID_ARRAY_ROOT_TAG}"}')`,
+    `      kong.response.set_raw_body('{"message":"XSecurity: bare top-level array response forbidden","tag":"${SS_FORBID_ARRAY_ROOT_TAG}"}')`,
     `    end`,
     `  end`,
     `end`
@@ -373,12 +373,12 @@ export function buildForbidArrayRootPlugins(
 // upstream roundtrip — two concurrent first-requests both miss the dict before
 // either records, so a true race still double-executes. This is best-effort
 // replay suppression, NOT idempotency. We emit it as a partial gate and record
-// the limitation in _writ_warnings. capability: 'partial'.
+// the limitation in _x_security_warnings. capability: 'partial'.
 //
-// Marker: writ-idempotency-replay-409.
+// Marker: x-security-idempotency-replay-409.
 
-export const SS_IDEMPOTENCY_TAG = 'writ-idempotency-replay-409';
-export const SS_IDEMPOTENCY_CACHE_DICT = 'writ_idempotency_cache';
+export const SS_IDEMPOTENCY_TAG = 'x-security-idempotency-replay-409';
+export const SS_IDEMPOTENCY_CACHE_DICT = 'x_security_idempotency_cache';
 export const SS_IDEMPOTENCY_CACHE_DICT_SIZE = '10m';
 
 export function buildIdempotencyKeyPlugins(
@@ -408,8 +408,8 @@ export function buildIdempotencyKeyPlugins(
   }
 
   const lua = [
-    `-- Writ v0.7 idempotencyKey pre-function (PARTIAL) for endpoint=${ctx.endpoint ?? '?'}`,
-    `-- Best-effort replay suppression only — NOT atomic idempotency. See _writ_warnings.`,
+    `-- XSecurity v0.7 idempotencyKey pre-function (PARTIAL) for endpoint=${ctx.endpoint ?? '?'}`,
+    `-- Best-effort replay suppression only — NOT atomic idempotency. See _x_security_warnings.`,
     `local key = kong.request.get_header(${luaStr(idem.header)})`,
     `if key ~= nil and key ~= "" then`,
     `  local cache = ngx.shared.${SS_IDEMPOTENCY_CACHE_DICT}`,
@@ -418,7 +418,7 @@ export function buildIdempotencyKeyPlugins(
     `    if seen then`,
     `      kong.log.warn("[${SS_IDEMPOTENCY_TAG}] replayed idempotency key '" .. tostring(key) .. "' within ttl")`,
     `      return kong.response.exit(409, {`,
-    `        message = "Writ: idempotency key replay rejected",`,
+    `        message = "XSecurity: idempotency key replay rejected",`,
     `        tag = "${SS_IDEMPOTENCY_TAG}"`,
     `      })`,
     `    end`,
@@ -450,9 +450,9 @@ export function buildIdempotencyKeyPlugins(
 // docs). request.body.<field> forms can't be keyed by the rate-limiting plugin
 // (it keys on headers/ip/consumer), so those degrade to a warning + no plugin.
 //
-// Marker tag: writ-account-lockout (per-credential throttle).
+// Marker tag: x-security-account-lockout (per-credential throttle).
 
-export const SS_ACCOUNT_LOCKOUT_TAG = 'writ-account-lockout';
+export const SS_ACCOUNT_LOCKOUT_TAG = 'x-security-account-lockout';
 
 function lockoutBucket(seconds: number): 'second' | 'minute' | 'hour' | 'day' {
   if (seconds <= 1) return 'second';

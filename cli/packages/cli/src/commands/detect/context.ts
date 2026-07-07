@@ -35,7 +35,7 @@ import {
   type EvidencePack,
   type ExtractedRoute,
   type RouteInventoryEntry,
-} from '@writ/detect-core';
+} from '@x-security/detect-core';
 import { createTools } from './fs-tools.js';
 
 export interface ContextInput {

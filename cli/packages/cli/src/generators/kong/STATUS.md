@@ -263,10 +263,10 @@ Still unsupported:
    `policy: local` for `redis`), a deep-merge mode is needed.
 
 ## Verification
-- `pnpm --filter @writ/cli test -- --test-name-pattern='kong generator'` → 7 / 7 pass
+- `pnpm --filter @x-security/cli test -- --test-name-pattern='kong generator'` → 7 / 7 pass
 - Snapshot test: `fixtures/configs/kong/example.expected.yml` matches generator output (parsed YAML deep-equal)
 - Isolated typecheck of `src/generators/kong/**` under strict + `exactOptionalPropertyTypes` passes clean
-- **Note:** workspace-level `pnpm --filter @writ/cli build` currently fails
-  due to a pre-existing missing `Timeout` re-export in `@writ/schema`
+- **Note:** workspace-level `pnpm --filter @x-security/cli build` currently fails
+  due to a pre-existing missing `Timeout` re-export in `@x-security/schema`
   referenced by `src/generators/bunkerweb/settings.ts`. Out of scope for this
   task; fix is one line in `packages/schema/src/index.ts`.

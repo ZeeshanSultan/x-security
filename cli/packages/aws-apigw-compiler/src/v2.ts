@@ -5,7 +5,7 @@ import type {
   RateLimit,
   RequestPolicy,
   XSecurityPolicy
-} from '@writ/schema';
+} from '@x-security/schema';
 import {
   and,
   bodySizeGt,
@@ -126,7 +126,7 @@ function compileIpPolicy(b: V2Builder, ip: IpPolicy | undefined, baseMatch: WafS
     });
     pushRule(b, {
       kind: 'ip-allow',
-      statement: and(baseMatch, not({ IPSetReferenceStatement: { ARN: `arn:writ:ipset:${setName}` } })),
+      statement: and(baseMatch, not({ IPSetReferenceStatement: { ARN: `arn:x-security:ipset:${setName}` } })),
       actionKind: 'Block',
       sourceField: 'ipPolicy.allow',
       confidence: 'HIGH'
@@ -151,7 +151,7 @@ function compileIpPolicy(b: V2Builder, ip: IpPolicy | undefined, baseMatch: WafS
     });
     pushRule(b, {
       kind: 'ip-deny',
-      statement: and(baseMatch, { IPSetReferenceStatement: { ARN: `arn:writ:ipset:${setName}` } }),
+      statement: and(baseMatch, { IPSetReferenceStatement: { ARN: `arn:x-security:ipset:${setName}` } }),
       actionKind: 'Block',
       sourceField: 'ipPolicy.deny',
       confidence: 'HIGH'
@@ -302,7 +302,7 @@ function emitRateLimit(b: V2Builder, r: RateLimit, baseMatch: WafStatement, idx:
       Quota: seconds <= 86_400
         ? { Limit: r.requests, Period: 'DAY' }
         : { Limit: r.requests, Period: 'MONTH' },
-      writ: { endpoint_id: b.eid, source_field: `rateLimit[${idx}]` }
+      xSecurity: { endpoint_id: b.eid, source_field: `rateLimit[${idx}]` }
     });
     return;
   }

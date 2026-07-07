@@ -18,6 +18,7 @@ import {
   runPush,
   PushError,
   resolveApiUrl,
+  resolveToken,
   normalizeRemoteUrl,
   DEFAULT_API_URL,
   type Poster,
@@ -101,6 +102,23 @@ test('resolveApiUrl: accepts localhost for dev', () => {
   assert.equal(resolveApiUrl({ WRIT_API_URL: 'http://localhost:3004' }), 'http://localhost:3004');
 });
 
+test('resolveApiUrl: accepts canonical X_SECURITY_API_URL', () => {
+  assert.equal(resolveApiUrl({ X_SECURITY_API_URL: 'https://lazy.chain305.com' }), 'https://lazy.chain305.com');
+});
+
+test('resolveApiUrl: X_SECURITY_API_URL takes precedence over legacy WRIT_API_URL', () => {
+  assert.equal(
+    resolveApiUrl({ X_SECURITY_API_URL: 'https://lazy.chain305.com', WRIT_API_URL: 'http://localhost:3004' }),
+    'https://lazy.chain305.com',
+  );
+});
+
+test('resolveToken: reads canonical then falls back to legacy WRIT_API_TOKEN', () => {
+  assert.equal(resolveToken({ X_SECURITY_API_TOKEN: 'new' }), 'new');
+  assert.equal(resolveToken({ WRIT_API_TOKEN: 'legacy' }), 'legacy');
+  assert.equal(resolveToken({ X_SECURITY_API_TOKEN: 'new', WRIT_API_TOKEN: 'legacy' }), 'new');
+});
+
 test('resolveApiUrl: rejects non-https for a remote host', () => {
   assert.throws(
     () => resolveApiUrl({ WRIT_API_URL: 'http://lazy.chain305.com' }),
@@ -127,7 +145,7 @@ test('normalizeRemoteUrl: scp + https forms collapse to canonical https', () => 
 
 test('runPush ABORTS when the local audit is not cite-backed (D-1)', async () => {
   // Tamper the sidecar so the cite no longer byte-matches → citeBacked:false.
-  const sidecar = path.join(dir, '.writ', 'policies', 'POST__api__ping.cites.json');
+  const sidecar = path.join(dir, '.x-security', 'policies', 'POST__api__ping.cites.json');
   const original = await fs.readFile(sidecar, 'utf8');
   const j = JSON.parse(original) as { cites: Array<{ quote: string }> };
   j.cites[0]!.quote = 'this string was never in the source';

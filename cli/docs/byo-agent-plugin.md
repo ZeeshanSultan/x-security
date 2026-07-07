@@ -16,7 +16,7 @@ optional, separate upsell; the plugin is fully complete on its own.
 host agent (your Opus / GPT / Cursor model)  ──drives──►  detection loop (shared skills)
         │                                                        │
         │ calls for every deterministic step                     ▼
-        └────────────────────────────────────────────►  @writ/cli  (free, no LLM)
+        └────────────────────────────────────────────►  @x-security/cli  (free, no LLM)
                                                           validate · verify V1–V7 ·
                                                           cite byte-match · compile ·
                                                           WAF · report · CI
@@ -34,9 +34,9 @@ The detection logic lives in exactly one place per concern:
 - **Skills** (`packages/claude-plugin/skills/`) — inventory / detect /
   compile-emit prompts, in the open Agent Skills `SKILL.md` standard. Claude Code
   and Codex both read this format directly; the Cursor rule references them.
-- **CLI** (`@writ/cli`) — every deterministic step (schema, V1–V7 verify,
+- **CLI** (`@x-security/cli`) — every deterministic step (schema, V1–V7 verify,
   cite byte-match, compile, WAF/report/CI emit, audit).
-- **MCP** (`@writ/mcp`) — one agent-neutral server wrapping the CLI as
+- **MCP** (`@x-security/mcp`) — one agent-neutral server wrapping the CLI as
   tools; all three host adapters consume this single server.
 
 The per-agent adapters are **thin orchestrators** that point each host at that
@@ -93,7 +93,7 @@ Run from your project root:
 /lazy-scan ./services/api   # or a specific directory
 ```
 
-The CLI is invoked through `npx @writ/cli`, so there is no build step.
+The CLI is invoked through `npx @x-security/cli`, so there is no build step.
 
 ### Codex
 
@@ -101,7 +101,7 @@ Adapter: `packages/codex-adapter/` (see its `INSTALL.md`).
 
 ```bash
 # 1. register the MCP server
-codex mcp add writ -- npx -y @writ/mcp
+codex mcp add writ -- npx -y @x-security/mcp
 
 # 2. install the shared skills (symlink the canonical SKILL.md files)
 #    SKILLS_DIR = packages/claude-plugin/skills in your checkout
@@ -128,10 +128,10 @@ cp -r packages/cursor-adapter/.cursor ./.cursor
 ```
 
 This gives you `.cursor/rules/lazy-scan.mdc` (the orchestrator rule) and
-`.cursor/mcp.json` (registers `@writ/mcp`). Reload Cursor, then ask it to
+`.cursor/mcp.json` (registers `@x-security/mcp`). Reload Cursor, then ask it to
 "run a Writ scan on this repo."
 
-> Cursor's adapter points at the **agent-neutral `@writ/mcp`** server — not
+> Cursor's adapter points at the **agent-neutral `@x-security/mcp`** server — not
 > the older `packages/cursor-mcp`, which is a separate code-gen-time annotation
 > helper that talks to the SaaS API. See `packages/cursor-adapter/README.md` for
 > the full rationale.

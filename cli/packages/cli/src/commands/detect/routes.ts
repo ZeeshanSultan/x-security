@@ -7,7 +7,7 @@
 //
 // Contract: stdout {"routes":[{method,path,file,line}], "seed"?: string}.
 
-import { extractRoutes, renderSeedTable, type ExtractedRoute } from '@writ/detect-core';
+import { extractRoutes, renderSeedTable, type ExtractedRoute } from '@x-security/detect-core';
 
 export interface RoutesOptions {
   seed?: boolean;

@@ -9,7 +9,7 @@
  * ID range: 276000..276999 (hash-keyed per endpoint).
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import { CORAZA_GO_PROFILE, type CorazaEngineProfile } from './profiles.js';
 import { endpointHash, pathRegex } from './rules.js';
 
@@ -34,7 +34,7 @@ export function buildResponseContentTypeRules(
   const resp = endpoint.policy.response;
   if (!resp || !Array.isArray(resp.contentType) || resp.contentType.length === 0) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const pathRx = pathRegex(endpoint.path);
   const term = chainTerm(profile);
   const slot = endpointHash(endpoint.method, endpoint.path) % 1000;
@@ -51,9 +51,9 @@ export function buildResponseContentTypeRules(
       header(
         `response.contentType allowlist for ${endpoint.method} ${endpoint.path}\n` +
           `phase:3 — deny when RESPONSE_HEADERS:Content-Type not in allowlist.\n` +
-          `msg carries 'id:276' substring (writ-response-ct).`
+          `msg carries 'id:276' substring (x-security-response-ct).`
       ),
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:3,deny,status:500,msg:'Writ id:276 response content-type not allowed',tag:'${esc(tag)}',tag:'writ-response-ct',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:3,deny,status:500,msg:'x-security id:276 response content-type not allowed',tag:'${esc(tag)}',tag:'x-security-response-ct',chain"`,
       `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
       `    SecRule RESPONSE_HEADERS:Content-Type "!@rx ${esc(allowRx)}"${term}`,
     ].join('\n'),

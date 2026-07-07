@@ -13,7 +13,7 @@ import type { VerifyReport, VerifyRow } from './index.js';
 export function renderTable(r: VerifyReport): string {
   const lines: string[] = [];
   const targetLabel = r.engine ? `${r.target}/${r.engine}` : r.target;
-  lines.push(`Writ verify — target=${targetLabel} — gateway=${r.gateway}`);
+  lines.push(`x-security verify — target=${targetLabel} — gateway=${r.gateway}`);
   lines.push('');
 
   if (r.diagnostics.length > 0) {
@@ -108,7 +108,7 @@ export function renderSarif(r: VerifyReport): string {
       {
         tool: {
           driver: {
-            name: 'writ-verify',
+            name: 'x-security-verify',
             informationUri: 'https://github.com/writ/writ',
             rules: [
               {

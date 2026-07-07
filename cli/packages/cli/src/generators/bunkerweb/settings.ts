@@ -7,7 +7,7 @@
  * settings support indexed suffixes (`_1`, `_2`, …) for per-URL variants — we
  * use those to attach per-endpoint policies under a single service. The
  * generator surfaces these as commented hints at the bottom of
- * `configs/modsec/writ.conf` (the only file BunkerWeb actually loads
+ * `configs/modsec/x-security.conf` (the only file BunkerWeb actually loads
  * via libmodsec is the SecRule block at the top).
  *
  * R2.3 mapping (see api-security-toolkit-prd.md):
@@ -27,11 +27,11 @@ import type {
   RateLimit,
   RequestPolicy,
   XSecurityPolicy
-} from '@writ/schema';
+} from '@x-security/schema';
 
 import { buildJwtNativeSettings } from './jwt.js';
 
-/** XSecurityPolicy.timeout — re-declared because @writ/schema does not re-export Timeout. */
+/** XSecurityPolicy.timeout — re-declared because @x-security/schema does not re-export Timeout. */
 export interface Timeout {
   connect?: number;
   read?: number;
@@ -120,11 +120,11 @@ export function buildRateLimitSettings(
       const zoneName = `lazy_user_${n}`;
       const rate = rateLimitToBunkerRate(r);
       out[`CUSTOM_CONF_HTTP_LIMIT_REQ_USER_${n}`] =
-        `# Writ: per-user-id rate limit for ${url} (drift closure)\n` +
+        `# x-security: per-user-id rate limit for ${url} (drift closure)\n` +
         `limit_req_zone $http_x_forwarded_user zone=${zoneName}:10m rate=${rate};\n`;
       // Marker the operator can grep for to wire the matching `limit_req`
       // directive into the per-location server block.
-      out[`WRIT_USER_RL_ZONE_${n}`] = `${zoneName}@${url}`;
+      out[`X_SECURITY_USER_RL_ZONE_${n}`] = `${zoneName}@${url}`;
     }
   });
   return out;
@@ -202,7 +202,7 @@ function escMsec(s: string): string {
  */
 export function buildAuthModSecRules(auth: Authentication): string {
   const lines: string[] = [
-    `# Writ-generated authentication rules (${auth.type})`,
+    `# x-security-generated authentication rules (${auth.type})`,
     // initcol is for ip/global/resource collections; tx is request-scoped and
     // does not need initcol. We just zero the relevant TX var directly.
     `SecAction "id:990000,phase:1,nolog,pass,setvar:tx.jwt_invalid=0"`
@@ -218,7 +218,7 @@ export function buildAuthModSecRules(auth: Authentication): string {
         `SecRule REQUEST_HEADERS:${escMsec(header)} "@rx ^Bearer (.+)$" ` +
           `"id:990010,phase:1,nolog,pass,capture,setvar:tx.bearer_token=%{TX.1}"`,
         `SecRule &TX:bearer_token "@eq 0" ` +
-          `"id:990011,phase:1,deny,status:401,log,msg:'Writ: missing bearer token (signature NOT verified — external auth layer required)'"`
+          `"id:990011,phase:1,deny,status:401,log,msg:'x-security: missing bearer token (signature NOT verified — external auth layer required)'"`
       );
       if (auth.type === 'oauth2' && auth.scopes?.length) {
         lines.push(`# oauth2 required scopes (NOT enforced here — needs external auth): ${auth.scopes.join(' ')}`);
@@ -230,14 +230,14 @@ export function buildAuthModSecRules(auth: Authentication): string {
         `SecRule REQUEST_HEADERS:${escMsec(header)} "@rx ^.+$" ` +
           `"id:990020,phase:1,nolog,pass,setvar:tx.api_key_present=1"`,
         `SecRule &TX:api_key_present "@eq 0" ` +
-          `"id:990021,phase:1,deny,status:401,log,msg:'Writ: missing API key (${escMsec(header)})'"`
+          `"id:990021,phase:1,deny,status:401,log,msg:'x-security: missing API key (${escMsec(header)})'"`
       );
       break;
     }
     case 'basic': {
       lines.push(
         `SecRule REQUEST_HEADERS:Authorization "!@rx ^Basic [A-Za-z0-9+/=]+$" ` +
-          `"id:990030,phase:1,deny,status:401,log,msg:'Writ: missing/invalid Basic credentials'"`
+          `"id:990030,phase:1,deny,status:401,log,msg:'x-security: missing/invalid Basic credentials'"`
       );
       break;
     }
@@ -266,13 +266,13 @@ export function buildAuthSettings(auth: Authentication | undefined): SettingMap 
       out.USE_MODSECURITY = 'yes';
       out.CUSTOM_CONF_MODSEC_1 = buildAuthModSecRules(auth);
       // Markers consumed by the Lua verifier via os.getenv().
-      out.WRIT_AUTH_HEADER = header;
-      out.WRIT_AUTH_TYPE = auth.type;
-      if (auth.jwksUri) out.WRIT_JWKS_URI = String(auth.jwksUri);
-      if (auth.issuer) out.WRIT_AUTH_ISSUER = String(auth.issuer);
-      if (auth.audience) out.WRIT_AUTH_AUDIENCE = String(auth.audience);
+      out.X_SECURITY_AUTH_HEADER = header;
+      out.X_SECURITY_AUTH_TYPE = auth.type;
+      if (auth.jwksUri) out.X_SECURITY_JWKS_URI = String(auth.jwksUri);
+      if (auth.issuer) out.X_SECURITY_AUTH_ISSUER = String(auth.issuer);
+      if (auth.audience) out.X_SECURITY_AUTH_AUDIENCE = String(auth.audience);
       if (auth.type === 'oauth2' && auth.scopes?.length) {
-        out.WRIT_AUTH_SCOPES = auth.scopes.join(' ');
+        out.X_SECURITY_AUTH_SCOPES = auth.scopes.join(' ');
       }
       // Drift closure: BW 1.6+ ships nginx_jwt_module. When jwksUri is
       // present, layer the native USE_AUTH_JWT chain on top of the

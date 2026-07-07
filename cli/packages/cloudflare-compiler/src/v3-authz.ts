@@ -6,12 +6,12 @@ import type {
   AuthorizationRule,
   RuleRef,
   XSecurityPolicy
-} from '@writ/schema';
+} from '@x-security/schema';
 import { and } from './expressions.js';
 import { escapeStr } from './endpoint.js';
 import { decorate, emitWorker, getOverride, noteProvenance, type V3Builder } from './v3-shared.js';
 
-const RESOURCE_LOOKUP_WORKER_TEMPLATE = `// Writ: resource lookup + BOLA check (v0.3 authorization.resourceLookup)
+const RESOURCE_LOOKUP_WORKER_TEMPLATE = `// x-security: resource lookup + BOLA check (v0.3 authorization.resourceLookup)
 export default {
   async fetch(req, env) {
     const id = extractIdentifier(req, PARAMS.identifierFrom);

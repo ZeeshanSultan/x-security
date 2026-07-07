@@ -7,7 +7,7 @@
 //     allowedMethods in different order, same key order) collapses to a
 //     single representation.
 
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 import type {
   AgentOutput,
   PolicyEmission,

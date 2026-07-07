@@ -2,7 +2,7 @@
  * B1: Identity-aware authorization SecRules (BOLA / BFLA).
  *
  * Lifts the W13-C hand-crafted rules at
- * `e2e/fixtures/chain-coraza-spoa-vapi/haproxy/writ-identity.conf`
+ * `e2e/fixtures/chain-coraza-spoa-vapi/haproxy/x-security-identity.conf`
  * into generator emission, gated on `x-security.authorization` primitives.
  *
  * Trust contract (set upstream by HAProxy / API gateway):
@@ -26,8 +26,8 @@
  *   +21    BFLA-non-role (role route, X-Forwarded-User != allowed role)
  */
 
-import type { EndpointIR } from '@writ/core';
-import type { Authorization, AuthorizationRule, RuleRef } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { Authorization, AuthorizationRule, RuleRef } from '@x-security/schema';
 import { CORAZA_GO_PROFILE, type CorazaEngineProfile } from './profiles.js';
 import { endpointHash } from './rules.js';
 
@@ -160,7 +160,7 @@ function buildBolaRule(
     .join('/');
   const captureRx = `^(?:/[^/]+)?/${rebuilt}(?:[/?]|$)`;
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const term = profile.legalCollections.has('user') ? '' : ' "t:none"';
 
   return [
@@ -169,7 +169,7 @@ function buildBolaRule(
         `lifted from W13-C identity-conf; emitted because authorization.rules\n` +
         `declares request.params.${param} equals principal.id (BOLA defense).`
     ),
-    `SecRule REQUEST_METHOD "@streq ${method}" "id:${ruleId},phase:1,deny,status:403,log,auditlog,msg:'Writ B1: BOLA-${kind} denied (path-${param} != ${TRUSTED_PRINCIPAL_HEADER})',tag:'${esc(tag)}',tag:'writ/b1/bola-${kind}',chain"`,
+    `SecRule REQUEST_METHOD "@streq ${method}" "id:${ruleId},phase:1,deny,status:403,log,auditlog,msg:'x-security B1: BOLA-${kind} denied (path-${param} != ${TRUSTED_PRINCIPAL_HEADER})',tag:'${esc(tag)}',tag:'x-security/b1/bola-${kind}',chain"`,
     `  SecRule REQUEST_URI "@rx ${escRx(captureRx)}" "capture,chain"`,
     `    SecRule TX:1 "!@streq %{REQUEST_HEADERS.${TRUSTED_PRINCIPAL_HEADER}}"${term}`,
   ].join('\n');
@@ -192,7 +192,7 @@ function buildBflaRules(
   baseId: number,
   profile: CorazaEngineProfile
 ): string[] {
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const term = profile.legalCollections.has('user') ? '' : ' "t:none"';
 
   const escapedPath = endpoint.path.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
@@ -209,7 +209,7 @@ function buildBflaRules(
           `case (a): no authenticated principal. Upstream gate should have\n` +
           `returned 401, but we deny defensively in case the gate is bypassed.`
       ),
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idMissing},phase:1,deny,status:403,log,auditlog,msg:'Writ B1: BFLA denied (${role}-only route, no authenticated principal)',tag:'${esc(tag)}',tag:'writ/b1/bfla',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idMissing},phase:1,deny,status:403,log,auditlog,msg:'x-security B1: BFLA denied (${role}-only route, no authenticated principal)',tag:'${esc(tag)}',tag:'x-security/b1/bfla',chain"`,
       `  SecRule REQUEST_URI "@rx ${escRx(pathRx)}" "chain"`,
       `    SecRule &REQUEST_HEADERS:${TRUSTED_PRINCIPAL_HEADER} "@eq 0"${term}`,
     ].join('\n'),
@@ -218,7 +218,7 @@ function buildBflaRules(
         `B1: BFLA — ${endpoint.method} ${endpoint.path}\n` +
           `case (b): authenticated but ${TRUSTED_PRINCIPAL_HEADER} != '${role}'.`
       ),
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idNonRole},phase:1,deny,status:403,log,auditlog,msg:'Writ B1: BFLA denied (${role}-only route, non-${role} principal)',tag:'${esc(tag)}',tag:'writ/b1/bfla',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${idNonRole},phase:1,deny,status:403,log,auditlog,msg:'x-security B1: BFLA denied (${role}-only route, non-${role} principal)',tag:'${esc(tag)}',tag:'x-security/b1/bfla',chain"`,
       `  SecRule REQUEST_URI "@rx ${escRx(pathRx)}" "chain"`,
       `    SecRule REQUEST_HEADERS:${TRUSTED_PRINCIPAL_HEADER} "!@streq ${role}" "t:none"`,
     ].join('\n'),

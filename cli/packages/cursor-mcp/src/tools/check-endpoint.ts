@@ -59,10 +59,10 @@ export async function checkEndpoint(
   input: CheckEndpointInput,
   fetcher: Fetcher = defaultFetcher
 ): Promise<CheckEndpointResult> {
-  const apiKey = input.apiKey ?? process.env.WRIT_API_KEY;
+  const apiKey = input.apiKey ?? process.env.X_SECURITY_API_KEY ?? process.env.WRIT_API_KEY;
   // apiUrl is pinned to env / default (Slice 5 Medium). Caller-supplied
   // override removed to prevent token capture via attacker-controlled URL.
-  const apiUrl = process.env.WRIT_API_URL ?? DEFAULT_API_URL;
+  const apiUrl = process.env.X_SECURITY_API_URL ?? process.env.WRIT_API_URL ?? DEFAULT_API_URL;
 
   if (!apiKey) {
     return {
@@ -87,7 +87,7 @@ export async function checkEndpoint(
     const res = await fetcher(url, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': '@writ/cursor-mcp/0.1.0',
+        'User-Agent': '@x-security/cursor-mcp/0.1.0',
         Accept: 'application/json'
       }
     });

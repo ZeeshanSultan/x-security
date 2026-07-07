@@ -76,8 +76,8 @@ export interface KongDeclarativeConfig {
   // NOTE: spec→runtime divergences (HS256 downgrade, hmac-auth header
   // overrides, etc.) are NOT embedded here — Kong rejects unknown top-
   // level keys. The kong generator emits them as a YAML-commented
-  // `# _writ_warnings:` block in the file header instead, so
-  // `grep _writ_warnings kong.yml` and `grep '^# WARNING' kong.yml`
+  // `# _x_security_warnings:` block in the file header instead, so
+  // `grep _x_security_warnings kong.yml` and `grep '^# WARNING' kong.yml`
   // both surface them without breaking Kong's parser.
   services: KongService[];
   plugins?: KongPlugin[];
@@ -89,9 +89,9 @@ export interface KongDeclarativeConfig {
 }
 
 // Structured spec→runtime divergence record. Lives in the generated
-// kong.yml under `_writ_warnings:` so operators have a single grep
-// target for "what did Writ silently drop or downgrade?".
-export interface WritWarning {
+// kong.yml under `_x_security_warnings:` so operators have a single grep
+// target for "what did XSecurity silently drop or downgrade?".
+export interface XSecurityWarning {
   field: string;       // e.g. "authentication.allowedAlgorithms"
   endpoint?: string;   // operationId (omit for spec-wide warnings)
   declared: string;    // what the spec asked for

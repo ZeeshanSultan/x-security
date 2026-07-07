@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Binary entry. Cursor invokes this via `npx -y @writ/cli mcp`, which
+// Binary entry. Cursor invokes this via `npx -y @x-security/cli mcp`, which
 // in turn dynamic-imports and calls main(). We also expose main() as the
 // default export so the CLI wrapper can run us in-process without forking.
 
