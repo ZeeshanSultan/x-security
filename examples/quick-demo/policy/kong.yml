@@ -1,0 +1,2032 @@
+# x-security Kong generator — deployment=with-coraza edition=oss
+# 20 spec→runtime divergence(s) recorded below.
+# WARNING: request.denyUnknownFields (endpoint=api1-create-user): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: authorization.rule-based.cache (endpoint=api1-get-user-by-id): declared="shared_dict required for W10-11 cache" emitted="KONG_NGINX_HTTP_LUA_SHARED_DICT="x_security_bola_cache 10m"" — declarative kong.yml cannot configure nginx-level directives. Set the env var on the Kong container so the shared_dict exists; the Lua is nil-safe and falls back to per-request HTTP lookup when the dict is missing (correctness preserved, perf regresses). Cache TTL=60s — owner changes propagate within that window.
+# WARNING: rateLimit.policy (endpoint=api1-get-user-by-id): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# WARNING: authorization.rule-based.cache (endpoint=api1-update-user-by-id): declared="shared_dict required for W10-11 cache" emitted="KONG_NGINX_HTTP_LUA_SHARED_DICT="x_security_bola_cache 10m"" — declarative kong.yml cannot configure nginx-level directives. Set the env var on the Kong container so the shared_dict exists; the Lua is nil-safe and falls back to per-request HTTP lookup when the dict is missing (correctness preserved, perf regresses). Cache TTL=60s — owner changes propagate within that window.
+# WARNING: rateLimit.policy (endpoint=api1-update-user-by-id): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# WARNING: request.denyUnknownFields (endpoint=api1-update-user-by-id): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: request.denyUnknownFields (endpoint=api2-user-login): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: rateLimit.policy (endpoint=api2-user-details): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# WARNING: request.denyUnknownFields (endpoint=api3-user-login): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: rateLimit.policy (endpoint=api4-get-user): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# WARNING: request.denyUnknownFields (endpoint=api5-create-user): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: authorization.rule-based.cache (endpoint=api5-get-user-by-id): declared="shared_dict required for W10-11 cache" emitted="KONG_NGINX_HTTP_LUA_SHARED_DICT="x_security_bola_cache 10m"" — declarative kong.yml cannot configure nginx-level directives. Set the env var on the Kong container so the shared_dict exists; the Lua is nil-safe and falls back to per-request HTTP lookup when the dict is missing (correctness preserved, perf regresses). Cache TTL=60s — owner changes propagate within that window.
+# WARNING: request.denyUnknownFields (endpoint=api7-create-user): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: request.denyUnknownFields (endpoint=api9-v1-user-login): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: request.denyUnknownFields (endpoint=api9-v2-user-login): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: request.signature.headerName (endpoint=api10-user-flag): declared="X-Upstream-Signature" emitted="Authorization" — Kong OSS hmac-auth uses the "Authorization: hmac ..." scheme; custom header names are not honored
+# WARNING: request.denyUnknownFields (endpoint=jwt-create-user): declared="true" emitted="(none)" — denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted.
+# WARNING: rateLimit.policy (endpoint=serversurfer-ssrf): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# WARNING: rateLimit.policy (endpoint=dashboard-flag): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# WARNING: authentication.allowedAlgorithms: declared="RS256" emitted="HS256" — Kong OSS cannot fetch JWKS at runtime; asymmetric-key validation is unavailable. jwt_secrets emitted with a per-role shared secret. Use --kong-edition=enterprise (openid-connect plugin) for real RS256/ES256 + JWKS.
+# _x_security_warnings:
+#   - field: request.denyUnknownFields
+#     endpoint: api1-create-user
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: authorization.rule-based.cache
+#     endpoint: api1-get-user-by-id
+#     declared: shared_dict required for W10-11 cache
+#     emitted: "KONG_NGINX_HTTP_LUA_SHARED_DICT=\"x_security_bola_cache 10m\""
+#     reason: "declarative kong.yml cannot configure nginx-level directives. Set the env var on the Kong container so the shared_dict exists; the Lua is nil-safe and falls back to per-request HTTP lookup when the dict is missing (correctness preserved, perf regresses). Cache TTL=60s — owner changes propagate within that window."
+#   - field: rateLimit.policy
+#     endpoint: api1-get-user-by-id
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+#   - field: authorization.rule-based.cache
+#     endpoint: api1-update-user-by-id
+#     declared: shared_dict required for W10-11 cache
+#     emitted: "KONG_NGINX_HTTP_LUA_SHARED_DICT=\"x_security_bola_cache 10m\""
+#     reason: "declarative kong.yml cannot configure nginx-level directives. Set the env var on the Kong container so the shared_dict exists; the Lua is nil-safe and falls back to per-request HTTP lookup when the dict is missing (correctness preserved, perf regresses). Cache TTL=60s — owner changes propagate within that window."
+#   - field: rateLimit.policy
+#     endpoint: api1-update-user-by-id
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+#   - field: request.denyUnknownFields
+#     endpoint: api1-update-user-by-id
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: request.denyUnknownFields
+#     endpoint: api2-user-login
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: rateLimit.policy
+#     endpoint: api2-user-details
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+#   - field: request.denyUnknownFields
+#     endpoint: api3-user-login
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: rateLimit.policy
+#     endpoint: api4-get-user
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+#   - field: request.denyUnknownFields
+#     endpoint: api5-create-user
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: authorization.rule-based.cache
+#     endpoint: api5-get-user-by-id
+#     declared: shared_dict required for W10-11 cache
+#     emitted: "KONG_NGINX_HTTP_LUA_SHARED_DICT=\"x_security_bola_cache 10m\""
+#     reason: "declarative kong.yml cannot configure nginx-level directives. Set the env var on the Kong container so the shared_dict exists; the Lua is nil-safe and falls back to per-request HTTP lookup when the dict is missing (correctness preserved, perf regresses). Cache TTL=60s — owner changes propagate within that window."
+#   - field: request.denyUnknownFields
+#     endpoint: api7-create-user
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: request.denyUnknownFields
+#     endpoint: api9-v1-user-login
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: request.denyUnknownFields
+#     endpoint: api9-v2-user-login
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: request.signature.headerName
+#     endpoint: api10-user-flag
+#     declared: X-Upstream-Signature
+#     emitted: Authorization
+#     reason: "Kong OSS hmac-auth uses the \"Authorization: hmac ...\" scheme; custom header names are not honored"
+#   - field: request.denyUnknownFields
+#     endpoint: jwt-create-user
+#     declared: true
+#     emitted: "(none)"
+#     reason: "denyUnknownFields=true requires either request.schema (top-level keys become the allowlist) or request.allowedFields. Neither is set; pre-function not emitted."
+#   - field: rateLimit.policy
+#     endpoint: serversurfer-ssrf
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+#   - field: rateLimit.policy
+#     endpoint: dashboard-flag
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+#   - field: authentication.allowedAlgorithms
+#     declared: RS256
+#     emitted: HS256
+#     reason: "Kong OSS cannot fetch JWKS at runtime; asymmetric-key validation is unavailable. jwt_secrets emitted with a per-role shared secret. Use --kong-edition=enterprise (openid-connect plugin) for real RS256/ES256 + JWKS."
+_format_version: '3.0'
+_transform: true
+services:
+  - name: svc_api1_create_user
+    url: http://coraza:8080
+    routes:
+      - name: route_api1_create_user
+        paths:
+          - /vapi/api1/user
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api1-create-user
+            id: 7671ea7b-cd62-5f9d-a763-3eb92d88f9ec
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: c4618cb4-b018-5fd7-864e-72421c02a3c4
+  - name: svc_api1_get_user_by_id
+    url: http://coraza:8080
+    routes:
+      - name: route_api1_get_user_by_id
+        paths:
+          - ~/vapi/api1/user/[^/]+
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+              header_names:
+                - Authorization-Token
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: ce5a70c0-7878-5e28-92c4-a6a1058d7bc5
+          - name: pre-function
+            config:
+              access:
+                - >
+                  -- x-security K-1 BOLA pre-function for endpoint=api1-get-user-by-id
+
+                  local cjson = require("cjson.safe")
+
+                  local principal = (kong.ctx.shared.authenticated_credential and
+                  kong.ctx.shared.authenticated_credential.username) or (kong.ctx.shared.authenticated_jwt_token and
+                  kong.ctx.shared.authenticated_jwt_token.sub)
+
+                  if not principal then
+                    kong.log.warn("[x-security-rule-bola-403] no authenticated principal; denying")
+                    return kong.response.exit(401, {message = "x-security: no authenticated principal", tag = "x-security-rule-bola-403"})
+                  end
+
+
+                  -- W10-11: shared_dict cache (key=principal:resource_id, TTL=60s)
+
+                  local ss_cache = ngx.shared.x_security_bola_cache
+
+                  local ss_resource_id = tostring(kong.request.get_path_arg("id") or "")
+
+                  local ss_cache_key = tostring(principal) .. ":" .. ss_resource_id
+
+                  local ss_cached_owner = ss_cache and ss_cache:get(ss_cache_key) or nil
+
+                  local ss_resource = nil
+
+                  if ss_cached_owner ~= nil then
+                    kong.log.warn("[x-security-bola] cache_hit key=" .. ss_cache_key .. " owner=" .. tostring(ss_cached_owner))
+                    ss_resource = { ownerId = ss_cached_owner, _ss_cached = true }
+                  else
+                    -- resource lookup: /users/{id} (identifier from request.params.id)
+                    kong.log.warn("[x-security-bola] cache_miss key=" .. ss_cache_key)
+                    local ok_req, http = pcall(require, "resty.http")
+                    if not ok_req then
+                      kong.log.warn("[x-security-rule-bola-403] resty.http not available; failing closed")
+                      return kong.response.exit(403, {message = "x-security: resource access denied", tag = "x-security-rule-bola-403", reason = "resty_http_missing"})
+                    end
+                    local httpc = http.new()
+                    httpc:set_timeout(2000)
+                    local lookup_url = "/users/" .. tostring(kong.request.get_path_arg("id") or "")
+                    local ok_call, res = pcall(function()
+                      return httpc:request_uri(lookup_url, {
+                        method = "GET",
+                        headers = {
+                          ["Authorization"] = kong.request.get_header("Authorization"),
+                          ["X-x-security-Internal"] = "rule-lookup"
+                        },
+                        ssl_verify = false
+                      })
+                    end)
+                    if not ok_call or not res or res.status ~= 200 then
+                      kong.log.warn("[x-security-bola] resource lookup failed status=" .. tostring(res and res.status or "no_response"))
+                      return kong.response.exit(403, {message = "x-security: resource access denied", tag = "x-security-rule-bola-403", reason = "lookup_failed"})
+                    end
+                    local ok_decode, body = pcall(cjson.decode, res.body or "{}")
+                    if not ok_decode or type(body) ~= "table" then
+                      kong.log.warn("[x-security-bola] decode failed for " .. lookup_url)
+                      return kong.response.exit(403, {message = "x-security: invalid resource response", tag = "x-security-rule-bola-403", reason = "decode_failed"})
+                    end
+                    ss_resource = body
+                    if ss_cache and body.ownerId ~= nil then
+                      ss_cache:set(ss_cache_key, tostring(body.ownerId), 60)
+                    end
+                  end
+
+                    -- rule 1: resource.ownerId equals ${jwt.sub}
+                    if tostring((ss_resource and ss_resource["ownerId"])) ~= tostring((kong.ctx.shared.authenticated_credential and kong.ctx.shared.authenticated_credential.username) or (kong.ctx.shared.authenticated_jwt_token and kong.ctx.shared.authenticated_jwt_token.sub)) then
+                      kong.log.warn("[x-security-rule-bola-403] rule 1 (resource.ownerId equals) denied")
+                      return kong.response.exit(403, {
+                        message = "x-security: BOLA denied",
+                        tag = "x-security-rule-bola-403",
+                        rule = 1
+                      })
+                    end
+            tags:
+              - x-security-rule-bola-403
+            id: 4cf33311-0667-546f-813f-95262afe78d7
+          - name: rate-limiting
+            config:
+              minute: 180
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api1-get-user-by-id
+            id: 842a023b-a3aa-551a-8273-b58899ee4323
+  - name: svc_api1_update_user_by_id
+    url: http://coraza:8080
+    routes:
+      - name: route_api1_update_user_by_id
+        paths:
+          - ~/vapi/api1/user/[^/]+
+        methods:
+          - PUT
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+              header_names:
+                - Authorization-Token
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 97919b82-6e23-56cb-8eeb-75047a217233
+          - name: pre-function
+            config:
+              access:
+                - >
+                  -- x-security K-1 BOLA pre-function for endpoint=api1-update-user-by-id
+
+                  local cjson = require("cjson.safe")
+
+                  local principal = (kong.ctx.shared.authenticated_credential and
+                  kong.ctx.shared.authenticated_credential.username) or (kong.ctx.shared.authenticated_jwt_token and
+                  kong.ctx.shared.authenticated_jwt_token.sub)
+
+                  if not principal then
+                    kong.log.warn("[x-security-rule-bola-403] no authenticated principal; denying")
+                    return kong.response.exit(401, {message = "x-security: no authenticated principal", tag = "x-security-rule-bola-403"})
+                  end
+
+
+                  -- W10-11: shared_dict cache (key=principal:resource_id, TTL=60s)
+
+                  local ss_cache = ngx.shared.x_security_bola_cache
+
+                  local ss_resource_id = tostring(kong.request.get_path_arg("id") or "")
+
+                  local ss_cache_key = tostring(principal) .. ":" .. ss_resource_id
+
+                  local ss_cached_owner = ss_cache and ss_cache:get(ss_cache_key) or nil
+
+                  local ss_resource = nil
+
+                  if ss_cached_owner ~= nil then
+                    kong.log.warn("[x-security-bola] cache_hit key=" .. ss_cache_key .. " owner=" .. tostring(ss_cached_owner))
+                    ss_resource = { ownerId = ss_cached_owner, _ss_cached = true }
+                  else
+                    -- resource lookup: /users/{id} (identifier from request.params.id)
+                    kong.log.warn("[x-security-bola] cache_miss key=" .. ss_cache_key)
+                    local ok_req, http = pcall(require, "resty.http")
+                    if not ok_req then
+                      kong.log.warn("[x-security-rule-bola-403] resty.http not available; failing closed")
+                      return kong.response.exit(403, {message = "x-security: resource access denied", tag = "x-security-rule-bola-403", reason = "resty_http_missing"})
+                    end
+                    local httpc = http.new()
+                    httpc:set_timeout(2000)
+                    local lookup_url = "/users/" .. tostring(kong.request.get_path_arg("id") or "")
+                    local ok_call, res = pcall(function()
+                      return httpc:request_uri(lookup_url, {
+                        method = "GET",
+                        headers = {
+                          ["Authorization"] = kong.request.get_header("Authorization"),
+                          ["X-x-security-Internal"] = "rule-lookup"
+                        },
+                        ssl_verify = false
+                      })
+                    end)
+                    if not ok_call or not res or res.status ~= 200 then
+                      kong.log.warn("[x-security-bola] resource lookup failed status=" .. tostring(res and res.status or "no_response"))
+                      return kong.response.exit(403, {message = "x-security: resource access denied", tag = "x-security-rule-bola-403", reason = "lookup_failed"})
+                    end
+                    local ok_decode, body = pcall(cjson.decode, res.body or "{}")
+                    if not ok_decode or type(body) ~= "table" then
+                      kong.log.warn("[x-security-bola] decode failed for " .. lookup_url)
+                      return kong.response.exit(403, {message = "x-security: invalid resource response", tag = "x-security-rule-bola-403", reason = "decode_failed"})
+                    end
+                    ss_resource = body
+                    if ss_cache and body.ownerId ~= nil then
+                      ss_cache:set(ss_cache_key, tostring(body.ownerId), 60)
+                    end
+                  end
+
+                    -- rule 1: resource.ownerId equals ${jwt.sub}
+                    if tostring((ss_resource and ss_resource["ownerId"])) ~= tostring((kong.ctx.shared.authenticated_credential and kong.ctx.shared.authenticated_credential.username) or (kong.ctx.shared.authenticated_jwt_token and kong.ctx.shared.authenticated_jwt_token.sub)) then
+                      kong.log.warn("[x-security-rule-bola-403] rule 1 (resource.ownerId equals) denied")
+                      return kong.response.exit(403, {
+                        message = "x-security: BOLA denied",
+                        tag = "x-security-rule-bola-403",
+                        rule = 1
+                      })
+                    end
+            tags:
+              - x-security-rule-bola-403
+            id: cc61c28e-fccb-5843-9152-973998bd9115
+          - name: rate-limiting
+            config:
+              minute: 90
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api1-update-user-by-id
+            id: fa9a6c60-3b8f-5258-9651-39fc832a7613
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 2954a38e-2c67-54c7-a63a-a4c1b0600ed9
+  - name: svc_api2_user_login
+    url: http://coraza:8080
+    routes:
+      - name: route_api2_user_login
+        paths:
+          - /vapi/api2/user/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api2-user-login
+            id: 8ed6aaf1-430e-534e-b058-05094fb96421
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: d0c3fa86-d498-51de-977a-7036ef6b6a4f
+  - name: svc_api2_user_details
+    url: http://coraza:8080
+    routes:
+      - name: route_api2_user_details
+        paths:
+          - /vapi/api2/user/details
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: d156867b-ed5f-56a1-a8d9-e906e26eeb30
+          - name: rate-limiting
+            config:
+              minute: 180
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api2-user-details
+            id: 6f43ba78-b6a2-5bfc-991b-42bbe55d1b8d
+  - name: svc_api3_create_user
+    url: http://coraza:8080
+    routes:
+      - name: route_api3_create_user
+        paths:
+          - /vapi/api3/user
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 91ea05d8-0852-5481-a5a0-d65404c632ab
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-3 mass-assignment pre-function for endpoint=api3-create-user
+                  -- Allowlist sourced from request.schema top-level keys.
+                  local ss_allow = {["username"]=true, ["password"]=true, ["email"]=true}
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    for k, _ in pairs(body) do
+                      if not ss_allow[k] then
+                        kong.log.warn("[x-security-mass-assign-403] unknown field '" .. tostring(k) .. "' rejected")
+                        return kong.response.exit(403, {
+                          message = "x-security: unknown field rejected",
+                          tag = "x-security-mass-assign-403",
+                          field = tostring(k)
+                        })
+                      end
+                    end
+                  end
+            tags:
+              - x-security-mass-assign-403
+            id: 58a3d7ca-1bd2-5206-bb1f-edefecf87905
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=api3-create-user
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: 1492c575-bc92-5624-8f7b-35497ee85bf1
+  - name: svc_api3_user_login
+    url: http://coraza:8080
+    routes:
+      - name: route_api3_user_login
+        paths:
+          - /vapi/api3/user/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api3-user-login
+            id: 28f65a1d-7d02-5354-8c59-974bc7fcc5af
+  - name: svc_api3_list_comments
+    url: http://coraza:8080
+    routes:
+      - name: route_api3_list_comments
+        paths:
+          - /vapi/api3/comment
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: b882bbc6-49c6-5394-9cb2-62653a6a1468
+          - name: post-function
+            config:
+              body_filter:
+                - |-
+                  -- x-security W26 response typed-schema validation for endpoint=api3-list-comments
+                  -- Validates the cjson-DECODED value (canonical: immune to pretty-printing,
+                  -- escaped quotes, key order, numeric formatting). Never matches raw body bytes.
+                  local cjson = require("cjson.safe")
+                  local raw = kong.response.get_raw_body()
+                  if raw and #raw > 0 then
+                    local obj = cjson.decode(raw)
+                    -- Pass-through when body is undecodable or not a JSON object (no fields to check).
+                    if type(obj) == "table" then
+                      local dropped = 0
+                      local truncated = 0
+                    do
+                      local v = obj["id"]
+                      if v ~= nil then
+                        local ok_type = (function(v) return type(v)=="number" and v == math.floor(v) end)(v)
+                        if not ok_type then
+                          obj["id"] = nil; dropped = dropped + 1
+                          kong.log.warn("[x-security-response-schema] dropped field id: type/format mismatch (expected integer)")
+                        end
+                        v = obj["id"]
+                        if v ~= nil then
+                        end
+                      end
+                    end
+                    do
+                      local v = obj["author"]
+                      if v ~= nil then
+                        local ok_type = (function(v) return type(v)=="string" end)(v)
+                        if not ok_type then
+                          obj["author"] = nil; dropped = dropped + 1
+                          kong.log.warn("[x-security-response-schema] dropped field author: type/format mismatch (expected name)")
+                        end
+                        v = obj["author"]
+                        if v ~= nil then
+                        end
+                      end
+                    end
+                    do
+                      local v = obj["body"]
+                      if v ~= nil then
+                        local ok_type = (function(v) return type(v)=="string" end)(v)
+                        if not ok_type then
+                          obj["body"] = nil; dropped = dropped + 1
+                          kong.log.warn("[x-security-response-schema] dropped field body: type/format mismatch (expected free-text)")
+                        end
+                        v = obj["body"]
+                        if v ~= nil then
+                          if type(v) == "string" and #v > 4000 then
+                            obj["body"] = v:sub(1, 4000); v = obj["body"]; truncated = truncated + 1
+                            kong.log.warn("[x-security-response-schema] truncated field body to maxLength 4000")
+                          end
+                        end
+                      end
+                    end
+                    do
+                      local v = obj["createdAt"]
+                      if v ~= nil then
+                        local ok_type = (function(v) return type(v)=="string" and v:match("^%d%d%d%d%-%d%d%-%d%dT%d%d:%d%d:%d%d") ~= nil end)(v)
+                        if not ok_type then
+                          obj["createdAt"] = nil; dropped = dropped + 1
+                          kong.log.warn("[x-security-response-schema] dropped field createdAt: type/format mismatch (expected datetime)")
+                        end
+                        v = obj["createdAt"]
+                        if v ~= nil then
+                        end
+                      end
+                    end
+                      if dropped > 0 or truncated > 0 then
+                        kong.log.warn("[x-security-response-schema] enforced response.schema: dropped " .. tostring(dropped) .. " field(s), truncated " .. tostring(truncated))
+                        local encoded = cjson.encode(obj)
+                        if encoded then kong.response.set_raw_body(encoded) end
+                      end
+                    end
+                  end
+            tags:
+              - x-security-response-schema
+            id: 40d5a3b6-baf2-55eb-9fdc-6a9c44226629
+          - name: post-function
+            config:
+              body_filter:
+                - |-
+                  -- x-security W26 response strip-unknown-fields for endpoint=api3-list-comments
+                  local cjson = require("cjson.safe")
+                  local ss_allow = {["id"]=true, ["author"]=true, ["body"]=true, ["createdAt"]=true}
+                  local raw = kong.response.get_raw_body()
+                  if raw and #raw > 0 then
+                    local obj = cjson.decode(raw)
+                    if type(obj) == "table" then
+                      local dropped = 0
+                      for k, _ in pairs(obj) do
+                        if not ss_allow[k] then obj[k] = nil; dropped = dropped + 1 end
+                      end
+                      if dropped > 0 then
+                        kong.log.warn("[x-security-response-strip-unknown] dropped " .. tostring(dropped) .. " unknown response field(s)")
+                        local encoded = cjson.encode(obj)
+                        if encoded then kong.response.set_raw_body(encoded) end
+                      end
+                    end
+                  end
+            tags:
+              - x-security-response-strip-unknown
+            id: 34badd0d-522a-5a9c-adc4-bbece266dcbd
+  - name: svc_api3_create_comment
+    url: http://coraza:8080
+    routes:
+      - name: route_api3_create_comment
+        paths:
+          - /vapi/api3/comment
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 0c5a8b5b-7b74-588d-8b00-09a8d6e18f19
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 6aec450e-addd-5258-bb47-4d4a97017692
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-3 mass-assignment pre-function for endpoint=api3-create-comment
+                  -- Allowlist sourced from request.schema top-level keys.
+                  local ss_allow = {["body"]=true}
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    for k, _ in pairs(body) do
+                      if not ss_allow[k] then
+                        kong.log.warn("[x-security-mass-assign-403] unknown field '" .. tostring(k) .. "' rejected")
+                        return kong.response.exit(403, {
+                          message = "x-security: unknown field rejected",
+                          tag = "x-security-mass-assign-403",
+                          field = tostring(k)
+                        })
+                      end
+                    end
+                  end
+            tags:
+              - x-security-mass-assign-403
+            id: 6472f5b0-16a6-5f61-b581-8300bcd66e82
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=api3-create-comment
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: e4d18cd0-a85a-5b11-a7fc-399e8e30046c
+  - name: svc_api4_mobile_login
+    url: http://coraza:8080
+    routes:
+      - name: route_api4_mobile_login
+        paths:
+          - /vapi/api4/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 25
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api4-mobile-login
+            id: 38730b65-a70c-51f2-b618-819e3c76e5e6
+          - name: rate-limiting
+            config:
+              hour: 60
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api4-mobile-login
+            id: 30fe4330-8b1b-5d04-b9d3-3cb474214016
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 7513990a-1050-5181-b7be-f77a5b33c3b2
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-3 mass-assignment pre-function for endpoint=api4-mobile-login
+                  -- Allowlist sourced from request.schema top-level keys.
+                  local ss_allow = {["mobile"]=true}
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    for k, _ in pairs(body) do
+                      if not ss_allow[k] then
+                        kong.log.warn("[x-security-mass-assign-403] unknown field '" .. tostring(k) .. "' rejected")
+                        return kong.response.exit(403, {
+                          message = "x-security: unknown field rejected",
+                          tag = "x-security-mass-assign-403",
+                          field = tostring(k)
+                        })
+                      end
+                    end
+                  end
+            tags:
+              - x-security-mass-assign-403
+            id: 1651a0f5-d3db-5563-bfa1-f903272bbc9b
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=api4-mobile-login
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: aea0f2b8-c781-5512-8e17-1d57e82663ea
+  - name: svc_api4_otp_verify
+    url: http://coraza:8080
+    routes:
+      - name: route_api4_otp_verify
+        paths:
+          - /vapi/api4/otp/verify
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 25
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api4-otp-verify
+            id: 8d6ea866-087b-5fb5-a4e1-d9f36baef333
+          - name: rate-limiting
+            config:
+              hour: 30
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api4-otp-verify
+            id: 0f3429c2-4ba0-5d75-a62d-51be4649fb7f
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: bb4d1977-8d13-5fc5-a509-9aba42be94ec
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security W26 botProtection pre-function for endpoint=api4-otp-verify
+                  -- provider=turnstile mode=enforce
+                  local ua = kong.request.get_header("user-agent") or ""
+                  local hit = (function()
+                    if ua:match("[Cc]url/") then return 1 end
+                    if ua:match("[Pp]ython%-requests/") then return 2 end
+                    if ua:match("[Ww]get/") then return 3 end
+                    if ua:match("[Gg]o%-http%-client") then return 4 end
+                    if ua:match("[Jj]ava/[%d%.]+") then return 5 end
+                    if ua:match("[Aa]pache%-[Hh]ttp[Cc]lient") then return 6 end
+                    if ua:match("[Hh]eadless[Cc]hrome") then return 7 end
+                    if ua:match("[Pp]hantom[Jj][Ss]") then return 8 end
+                    if ua:match("[Pp]uppeteer") then return 9 end
+                    if ua:match("[Ss]elenium") then return 10 end
+                    if ua:match("[Ss]crapy") then return 11 end
+                    if ua:match("[Bb]urp[Ss]uite") then return 12 end
+                    if ua:match("[Nn]ikto") then return 13 end
+                    if ua:match("[Ss]qlmap") then return 14 end
+                    return nil
+                  end)()
+                  if hit ~= nil then
+                    kong.log.warn("[x-security-bot-detected] ua-rule " .. tostring(hit) .. " ua=" .. ua)
+                      return kong.response.exit(403, {
+                        message = "x-security: bot detected",
+                        tag = "x-security-bot-detected",
+                        provider = "turnstile",
+                        rule = hit
+                      })
+                  end
+                  -- JS-challenge cookie check (issued by provider's client SDK)
+                  local challenge = kong.request.get_header("cookie") or ""
+                  if not challenge:match("ss_bot_challenge=") then
+                    kong.log.warn("[x-security-bot-detected] missing js-challenge cookie")
+                    return kong.response.exit(403, {
+                      message = "x-security: bot challenge required",
+                      tag = "x-security-bot-detected",
+                      provider = "turnstile"
+                    })
+                  end
+            tags:
+              - x-security-bot-detected
+            id: 8b2e95df-82c4-5d1d-9f36-fb96a70656c7
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-3 mass-assignment pre-function for endpoint=api4-otp-verify
+                  -- Allowlist sourced from request.schema top-level keys.
+                  local ss_allow = {["mobile"]=true, ["otp"]=true}
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    for k, _ in pairs(body) do
+                      if not ss_allow[k] then
+                        kong.log.warn("[x-security-mass-assign-403] unknown field '" .. tostring(k) .. "' rejected")
+                        return kong.response.exit(403, {
+                          message = "x-security: unknown field rejected",
+                          tag = "x-security-mass-assign-403",
+                          field = tostring(k)
+                        })
+                      end
+                    end
+                  end
+            tags:
+              - x-security-mass-assign-403
+            id: eba74056-9d47-5905-808c-7a460ff64df2
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=api4-otp-verify
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: 335ba625-9afd-5113-857c-64e3483c00fc
+  - name: svc_api4_get_user
+    url: http://coraza:8080
+    routes:
+      - name: route_api4_get_user
+        paths:
+          - /vapi/api4/user
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 331e8a9b-84be-5dee-a70a-4bd4b0d6c6a3
+          - name: rate-limiting
+            config:
+              minute: 180
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api4-get-user
+            id: 688756fc-9952-513d-9cdf-526e0c6e3bb3
+  - name: svc_api5_create_user
+    url: http://coraza:8080
+    routes:
+      - name: route_api5_create_user
+        paths:
+          - /vapi/api5/user
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: acl
+            config:
+              allow:
+                - admin
+              hide_groups_header: true
+            id: db49ea6a-4584-54d5-893c-67b3467ee394
+          - name: rate-limiting
+            config:
+              minute: 30
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api5-create-user
+            id: 7b13f2f1-3973-5f7e-9264-8bcbd262429a
+  - name: svc_api5_get_user_by_id
+    url: http://coraza:8080
+    routes:
+      - name: route_api5_get_user_by_id
+        paths:
+          - ~/vapi/api5/user/[^/]+
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 9ec5464a-0f0a-5c97-a62e-97d2b0e6d702
+          - name: pre-function
+            config:
+              access:
+                - >
+                  -- x-security K-1 BOLA pre-function for endpoint=api5-get-user-by-id
+
+                  local cjson = require("cjson.safe")
+
+                  local principal = (kong.ctx.shared.authenticated_credential and
+                  kong.ctx.shared.authenticated_credential.username) or (kong.ctx.shared.authenticated_jwt_token and
+                  kong.ctx.shared.authenticated_jwt_token.sub)
+
+                  if not principal then
+                    kong.log.warn("[x-security-rule-bola-403] no authenticated principal; denying")
+                    return kong.response.exit(401, {message = "x-security: no authenticated principal", tag = "x-security-rule-bola-403"})
+                  end
+
+
+                  -- W10-11: shared_dict cache (key=principal:resource_id, TTL=60s)
+
+                  local ss_cache = ngx.shared.x_security_bola_cache
+
+                  local ss_resource_id = tostring(kong.request.get_path_arg("id") or "")
+
+                  local ss_cache_key = tostring(principal) .. ":" .. ss_resource_id
+
+                  local ss_cached_owner = ss_cache and ss_cache:get(ss_cache_key) or nil
+
+                  local ss_resource = nil
+
+                  if ss_cached_owner ~= nil then
+                    kong.log.warn("[x-security-bola] cache_hit key=" .. ss_cache_key .. " owner=" .. tostring(ss_cached_owner))
+                    ss_resource = { ownerId = ss_cached_owner, _ss_cached = true }
+                  else
+                    -- resource lookup: /users/{id} (identifier from request.params.id)
+                    kong.log.warn("[x-security-bola] cache_miss key=" .. ss_cache_key)
+                    local ok_req, http = pcall(require, "resty.http")
+                    if not ok_req then
+                      kong.log.warn("[x-security-rule-bola-403] resty.http not available; failing closed")
+                      return kong.response.exit(403, {message = "x-security: resource access denied", tag = "x-security-rule-bola-403", reason = "resty_http_missing"})
+                    end
+                    local httpc = http.new()
+                    httpc:set_timeout(2000)
+                    local lookup_url = "/users/" .. tostring(kong.request.get_path_arg("id") or "")
+                    local ok_call, res = pcall(function()
+                      return httpc:request_uri(lookup_url, {
+                        method = "GET",
+                        headers = {
+                          ["Authorization"] = kong.request.get_header("Authorization"),
+                          ["X-x-security-Internal"] = "rule-lookup"
+                        },
+                        ssl_verify = false
+                      })
+                    end)
+                    if not ok_call or not res or res.status ~= 200 then
+                      kong.log.warn("[x-security-bola] resource lookup failed status=" .. tostring(res and res.status or "no_response"))
+                      return kong.response.exit(403, {message = "x-security: resource access denied", tag = "x-security-rule-bola-403", reason = "lookup_failed"})
+                    end
+                    local ok_decode, body = pcall(cjson.decode, res.body or "{}")
+                    if not ok_decode or type(body) ~= "table" then
+                      kong.log.warn("[x-security-bola] decode failed for " .. lookup_url)
+                      return kong.response.exit(403, {message = "x-security: invalid resource response", tag = "x-security-rule-bola-403", reason = "decode_failed"})
+                    end
+                    ss_resource = body
+                    if ss_cache and body.ownerId ~= nil then
+                      ss_cache:set(ss_cache_key, tostring(body.ownerId), 60)
+                    end
+                  end
+
+                    -- rule 1: resource.ownerId equals ${jwt.sub}
+                    if tostring((ss_resource and ss_resource["ownerId"])) ~= tostring((kong.ctx.shared.authenticated_credential and kong.ctx.shared.authenticated_credential.username) or (kong.ctx.shared.authenticated_jwt_token and kong.ctx.shared.authenticated_jwt_token.sub)) then
+                      kong.log.warn("[x-security-rule-bola-403] rule 1 (resource.ownerId equals) denied")
+                      return kong.response.exit(403, {
+                        message = "x-security: BOLA denied",
+                        tag = "x-security-rule-bola-403",
+                        rule = 1
+                      })
+                    end
+            tags:
+              - x-security-rule-bola-403
+            id: 42d37a81-d104-58f5-b7dd-2ac7834c3847
+  - name: svc_api5_list_users_admin
+    url: http://coraza:8080
+    routes:
+      - name: route_api5_list_users_admin
+        paths:
+          - /vapi/api5/users
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 4dfb71cf-94f1-5aec-b890-7063793013f1
+          - name: acl
+            config:
+              allow:
+                - admin
+              hide_groups_header: true
+            id: 6a49da46-0698-591b-871c-2d972a4d07f4
+  - name: svc_api6_create_user
+    url: http://coraza:8080
+    routes:
+      - name: route_api6_create_user
+        paths:
+          - /vapi/api6/user
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api6-create-user
+            id: e3ab2196-7939-56ec-9b88-9ed12866e8f2
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: b4705f83-bb43-581f-b81a-d1b9a892100a
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-3 mass-assignment pre-function for endpoint=api6-create-user
+                  -- Allowlist sourced from request.schema top-level keys.
+                  local ss_allow = {["username"]=true, ["password"]=true, ["email"]=true}
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    for k, _ in pairs(body) do
+                      if not ss_allow[k] then
+                        kong.log.warn("[x-security-mass-assign-403] unknown field '" .. tostring(k) .. "' rejected")
+                        return kong.response.exit(403, {
+                          message = "x-security: unknown field rejected",
+                          tag = "x-security-mass-assign-403",
+                          field = tostring(k)
+                        })
+                      end
+                    end
+                  end
+            tags:
+              - x-security-mass-assign-403
+            id: af88dd4a-d073-5733-be56-bb2c56e37f5a
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=api6-create-user
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: ff42d596-071f-574b-8eeb-8feaf62d6464
+  - name: svc_api6_user_me
+    url: http://coraza:8080
+    routes:
+      - name: route_api6_user_me
+        paths:
+          - /vapi/api6/user/me
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: fcde0279-fb10-5ffd-b58a-70eef12ef7fa
+  - name: svc_api7_create_user
+    url: http://coraza:8080
+    routes:
+      - name: route_api7_create_user
+        paths:
+          - /vapi/api7/user
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: cors
+            config:
+              origins:
+                - https://vapi.local
+              methods:
+                - POST
+              headers:
+                - Content-Type
+                - Authorization
+              credentials: false
+              preflight_continue: false
+            id: f93ffa9e-571c-5a7c-9b94-02d2a6d9d4ee
+  - name: svc_api7_user_login_get
+    url: http://coraza:8080
+    routes:
+      - name: route_api7_user_login_get
+        paths:
+          - /vapi/api7/user/login
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 25
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api7-user-login-get
+            id: 8d45e05c-acd4-520f-9de7-5caf3321ad4f
+          - name: cors
+            config:
+              origins:
+                - https://vapi.local
+              methods:
+                - POST
+              credentials: false
+              preflight_continue: false
+            id: 86e189c9-2de5-573d-aa6a-f7d3952f24ef
+          - name: response-transformer
+            config:
+              add:
+                headers:
+                  - Cache-Control:no-store
+                  - Pragma:no-cache
+            id: 2964ede7-6bc5-53b4-ba54-0fa16b6154f5
+  - name: svc_api7_user_key
+    url: http://coraza:8080
+    routes:
+      - name: route_api7_user_key
+        paths:
+          - /vapi/api7/user/key
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 574458cb-64c8-51da-852a-bfdccf0ad256
+          - name: cors
+            config:
+              origins:
+                - https://vapi.local
+              methods:
+                - GET
+              credentials: false
+              preflight_continue: false
+            id: c7604022-9e74-5405-adf6-1856bb5cddde
+          - name: response-transformer
+            config:
+              add:
+                headers:
+                  - Cache-Control:no-store
+                  - Pragma:no-cache
+            id: bf2344b2-a133-50ed-9ed0-28c8d5fa4ee8
+  - name: svc_api7_user_logout
+    url: http://coraza:8080
+    routes:
+      - name: route_api7_user_logout
+        paths:
+          - /vapi/api7/user/logout
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 332d302f-028c-569b-9205-c73b560f2e8d
+          - name: cors
+            config:
+              origins:
+                - https://vapi.local
+              methods:
+                - GET
+              credentials: false
+              preflight_continue: false
+            id: 975bb51e-423e-59a0-881a-28bed6774f59
+  - name: svc_api8_user_login
+    url: http://coraza:8080
+    routes:
+      - name: route_api8_user_login
+        paths:
+          - /vapi/api8/user/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 25
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api8-user-login
+            id: 01512c71-76a1-543a-8dbb-d2e5e4bdb928
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 3fc50a6e-519e-5b48-8980-ddf7e08079df
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-3 mass-assignment pre-function for endpoint=api8-user-login
+                  -- Allowlist sourced from request.schema top-level keys.
+                  local ss_allow = {["username"]=true, ["password"]=true}
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    for k, _ in pairs(body) do
+                      if not ss_allow[k] then
+                        kong.log.warn("[x-security-mass-assign-403] unknown field '" .. tostring(k) .. "' rejected")
+                        return kong.response.exit(403, {
+                          message = "x-security: unknown field rejected",
+                          tag = "x-security-mass-assign-403",
+                          field = tostring(k)
+                        })
+                      end
+                    end
+                  end
+            tags:
+              - x-security-mass-assign-403
+            id: 0f320201-3ee3-516e-a116-c5b02a4c04bd
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=api8-user-login
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: 430e06f1-2f24-52be-bb8d-bf1ec3756ef1
+  - name: svc_api8_user_secret
+    url: http://coraza:8080
+    routes:
+      - name: route_api8_user_secret
+        paths:
+          - /vapi/api8/user/secret
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: ed22fe16-bec0-5b15-b385-3022c3d59707
+  - name: svc_api9_v1_user_login
+    url: http://coraza:8080
+    routes:
+      - name: route_api9_v1_user_login
+        paths:
+          - /vapi/api9/v1/user/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-5 deprecated-endpoint block for endpoint=api9-v1-user-login
+                  kong.log.warn("[x-security-deprecated-endpoint-block] request to deprecated endpoint blocked")
+                  return kong.response.exit(410, {
+                    message = "x-security: endpoint is deprecated",
+                    tag = "x-security-deprecated-endpoint-block",
+                    sunset = "2024-01-01",
+                    replacement = "/vapi/api9/v2/user/login"
+                  }, {
+                    ["Deprecation"] = "true",
+                    ["Sunset"] = "2024-01-01"
+                  })
+            tags:
+              - x-security-deprecated-endpoint-block
+            id: 7785f018-b1b6-5560-a72a-d74d373fa409
+          - name: rate-limiting
+            config:
+              minute: 25
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api9-v1-user-login
+            id: 8b4b33a2-0709-5a20-9267-f5ef548d222f
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 33be85f2-4423-55ca-a5d8-15860164f4aa
+  - name: svc_api9_v2_user_login
+    url: http://coraza:8080
+    routes:
+      - name: route_api9_v2_user_login
+        paths:
+          - /vapi/api9/v2/user/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: effb9524-c480-52b0-9a9f-be780bec1142
+          - name: rate-limiting
+            config:
+              minute: 25
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_api9-v2-user-login
+            id: e43806dd-1ef6-51d5-8a31-22ab8818db82
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 1ba9e81f-5959-53e4-874c-18187955c92b
+  - name: svc_dashboard_list
+    url: http://coraza:8080
+    routes:
+      - name: route_dashboard_list
+        paths:
+          - /vapi/dashboard/list
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 38be6dca-7ecf-5c1b-9c37-b785b9b43242
+          - name: acl
+            config:
+              allow:
+                - user
+                - admin
+              hide_groups_header: true
+            id: b90f3e64-17d3-5b52-8e33-86123737a325
+  - name: svc_api10_user_flag
+    url: http://coraza:8080
+    routes:
+      - name: route_api10_user_flag
+        paths:
+          - /vapi/api10/user/flag
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 74427203-6b5d-5513-ae5c-d8a50804bf07
+          - name: hmac-auth
+            config:
+              algorithms:
+                - hmac-sha256
+              hide_credentials: true
+              validate_request_body: true
+              enforce_headers:
+                - date
+                - X-Upstream-Timestamp
+              clock_skew: 300
+            tags:
+              - signature-header-override=X-Upstream-Signature
+            id: ab61e3f5-313f-5849-a01c-67f39815cf4f
+    connect_timeout: 2000
+    read_timeout: 5000
+    write_timeout: 5000
+  - name: svc_jwt_get_user
+    url: http://coraza:8080
+    routes:
+      - name: route_jwt_get_user
+        paths:
+          - /vapi/jwt/user
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+              - issuer=https___idp.example.com
+              - audience=vapi
+            id: e688c0e9-a3a0-5828-a30d-d700c852386a
+  - name: svc_jwt_create_user
+    url: http://coraza:8080
+    routes:
+      - name: route_jwt_create_user
+        paths:
+          - /vapi/jwt/user
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 30
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_jwt-create-user
+            id: f26ef009-005a-5a3a-8b72-8a0d4781c8e0
+  - name: svc_serversurfer_ssrf
+    url: http://coraza:8080
+    routes:
+      - name: route_serversurfer_ssrf
+        paths:
+          - /vapi/serversurfer
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 963dddbd-f414-569c-b76b-1453b643f75d
+          - name: rate-limiting
+            config:
+              minute: 90
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_serversurfer-ssrf
+            id: ea7af442-e3e1-53ab-8126-f401bb73a21e
+          - name: pre-function
+            config:
+              access:
+                - |
+                  -- x-security W19-A SSRF url-allowlist pre-function for endpoint=serversurfer-ssrf
+                  -- W21-C: pure Kong PDK + Lua stdlib (no external module loads). Hardened
+                  -- OSS deployments restrict the untrusted_lua sandbox; this snippet runs there.
+
+                  local function ss_host(u)
+                    if type(u) ~= "string" or u == "" then return nil end
+                    local after = u:match("^[%a][%w+.-]*://(.*)$") or u
+                    local hostport = after:match("^([^/?#]*)") or ""
+                    local host = hostport:match("^([^:]+)") or hostport
+                    return host:lower()
+                  end
+
+                  local function ss_is_private(h)
+                    if not h then return false end
+                    if h:match("^10%.") then return true end
+                    if h:match("^127%.") then return true end
+                    if h:match("^169%.254%.") then return true end
+                    if h:match("^192%.168%.") then return true end
+                    if h:match("^172%.1[6-9]%.") then return true end
+                    if h:match("^172%.2%d%.") then return true end
+                    if h:match("^172%.3[01]%.") then return true end
+                    if h:match("^0%.0%.0%.0") then return true end
+                    if h:match("^localhost$") then return true end
+                    if h:match("^localhost:") then return true end
+                    if h:match("^internal%-only") then return true end
+                    if h:match("^%[::1") then return true end
+                    if h:match("^%[fc") then return true end
+                    if h:match("^%[fd") then return true end
+                    if h:match("^%[fe80") then return true end
+                    return false
+                  end
+
+                  -- field=url source=query
+                  do
+                    local raw = kong.request.get_query_arg("url")
+                    if raw ~= nil and raw ~= "" then
+                      local host = ss_host(tostring(raw))
+                      local ss_allow = {["roottusk.com"]=true, ["api.example.com"]=true}
+                      if not host or not ss_allow[host] then
+                        kong.log.warn("[x-security-rule-ssrf-403] host '" .. tostring(host) .. "' not in domainAllowlist for url")
+                        return kong.response.exit(403, {message = "x-security: SSRF url not in domainAllowlist", tag = "x-security-rule-ssrf-403", field = "url"})
+                      end
+                      if ss_is_private(host) then
+                        kong.log.warn("[x-security-rule-ssrf-private-403] private-range host '" .. tostring(host) .. "' on url")
+                        return kong.response.exit(403, {message = "x-security: SSRF blocked private/loopback host", tag = "x-security-rule-ssrf-private-403", field = "url"})
+                      end
+                    end
+                  end
+            tags:
+              - x-security-rule-ssrf-403
+            id: bf6d6c9f-7614-5952-bdb2-601d2ba76262
+    connect_timeout: 2000
+    read_timeout: 4000
+    write_timeout: 4000
+  - name: svc_stickynotes_list
+    url: http://coraza:8080
+    routes:
+      - name: route_stickynotes_list
+        paths:
+          - /vapi/stickynotes
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 510de717-70c7-54d4-85f7-c83ee4ae461f
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=stickynotes-list
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: 2b2dfd88-15b6-59e7-9836-43db062f9bd6
+          - name: post-function
+            config:
+              header_filter:
+                - |-
+                  -- x-security response Content-Type assertion endpoint=stickynotes-list
+                  local allowed = { ["application/json"]=true }
+                  local status = kong.response.get_status()
+                  if status >= 200 and status < 300 then
+                    local ct = kong.response.get_header("Content-Type")
+                    if ct then
+                      local base = ct:match("^[^;]+")
+                      base = base and base:gsub("%s+$", ""):gsub("^%s+", ""):lower() or nil
+                      if base and not allowed[base] then
+                        kong.ctx.plugin.ss_ct_block = true
+                        kong.response.set_status(502)
+                        kong.response.set_header("Content-Type", "application/json")
+                        kong.log.warn("[x-security-response-contenttype] response Content-Type '" .. tostring(ct) .. "' not in allowlist; blocked")
+                      end
+                    end
+                  end
+              body_filter:
+                - |-
+                  if kong.ctx.plugin.ss_ct_block then
+                    kong.response.set_raw_body('{"message":"Upstream returned a disallowed Content-Type","tag":"x-security-response-contenttype"}')
+                  end
+            tags:
+              - x-security-response-contenttype
+            id: 07a7d7d5-f1d3-56af-ae40-50103a7b2c69
+  - name: svc_stickynotes_create
+    url: http://coraza:8080
+    routes:
+      - name: route_stickynotes_create
+        paths:
+          - /vapi/stickynotes
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 31bceae9-97f5-5eea-ae93-bbf2464618b6
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: fb9ce91b-ceba-5ac5-a88a-96a59f016944
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-3 mass-assignment pre-function for endpoint=stickynotes-create
+                  -- Allowlist sourced from request.schema top-level keys.
+                  local ss_allow = {["title"]=true, ["body"]=true}
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    for k, _ in pairs(body) do
+                      if not ss_allow[k] then
+                        kong.log.warn("[x-security-mass-assign-403] unknown field '" .. tostring(k) .. "' rejected")
+                        return kong.response.exit(403, {
+                          message = "x-security: unknown field rejected",
+                          tag = "x-security-mass-assign-403",
+                          field = tostring(k)
+                        })
+                      end
+                    end
+                  end
+            tags:
+              - x-security-mass-assign-403
+            id: 86bf8d1f-0a13-50cd-938a-24991effd095
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- x-security K-4 SQLi heuristic pre-function for endpoint=stickynotes-create
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "x-security: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: 5456ad90-2905-54b6-afe5-48f4f0baf355
+  - name: svc_dashboard_flag
+    url: http://coraza:8080
+    routes:
+      - name: route_dashboard_flag
+        paths:
+          - /vapi/dashboard/flag
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___idp.example.com_.well-known_jwks.json
+            id: 6cec8f44-8bef-5bb8-9012-1eee1686c6a4
+          - name: acl
+            config:
+              allow:
+                - admin
+              hide_groups_header: true
+            id: 0152622e-6726-5879-b83d-56f115e9ac59
+          - name: rate-limiting
+            config:
+              minute: 90
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_dashboard-flag
+            id: b45b42a8-f8d4-5d7e-9e75-11071e332669
+consumers:
+  - username: role_admin
+    tags:
+      - x_security_role=admin
+  - username: role_user
+    tags:
+      - x_security_role=user
+jwt_secrets:
+  - consumer: role_admin
+    key: https://idp.example.com#admin
+    algorithm: HS256
+    secret: admin_jwt_secret_9f70ec62c7a16872
+  - consumer: role_user
+    key: https://idp.example.com#user
+    algorithm: HS256
+    secret: user_jwt_secret_3adfb80547a03563
+hmacauth_credentials:
+  - consumer: role_admin
+    username: admin
+    secret: admin_hmac_secret_0e4ac351cb64e180
+  - consumer: role_user
+    username: user
+    secret: user_hmac_secret_13ecc4eb2ff1c01b
+acls:
+  - consumer: role_admin
+    group: admin
+  - consumer: role_user
+    group: user

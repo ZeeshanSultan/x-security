@@ -96,20 +96,20 @@ Full CLI walkthrough — install, `init`, `test`, `verify`, drift gating — in
 
 How much of each class a target can **enforce natively**. 🟢 full · 🟡 partial · 🔴 gap · ⚪ not yet measured. Authorization cells show **stateless → with a JWT identity wired**.
 
-| OWASP API class | Cloudflare | AWS API GW | BunkerWeb |
-| --- | :--: | :--: | :--: |
-| API1 · Broken Object Level Auth (BOLA) | 🔴→🟡 | 🔴→🟢 | 🔴 |
-| API2 · Broken Authentication | 🟡 | 🟡 | 🟡 |
-| API3 · Broken Object Property Auth (BOPLA) | 🟡 | 🟡 | 🟡 |
-| API4 · Unrestricted Resource Consumption | 🟢 | 🟡 | 🟡 |
-| API5 · Broken Function Level Auth (BFLA) | 🟡 | 🟡→🟢 | 🟡 |
-| API6 · Unrestricted Access to Business Flows | 🟡 | 🟡 | 🟡 |
-| API7 · Server-Side Request Forgery (SSRF) | 🔴 | 🔴 | 🟢 |
-| API8 · Security Misconfiguration | 🟡 | 🟡 | 🟡 |
-| API9 · Improper Inventory Management | 🔴 | 🔴 | 🟡 |
-| API10 · Unsafe Consumption of APIs | 🟡 | 🟡 | 🟡 |
+| OWASP API class | Cloudflare | AWS API GW | BunkerWeb | Kong |
+| --- | :--: | :--: | :--: | :--: |
+| API1 · Broken Object Level Auth (BOLA) | 🔴→🟡 | 🔴→🟢 | 🔴 | 🔴→🟢 |
+| API2 · Broken Authentication | 🟡 | 🟡 | 🟡 | ⚪ |
+| API3 · Broken Object Property Auth (BOPLA) | 🟡 | 🟡 | 🟡 | 🟢 |
+| API4 · Unrestricted Resource Consumption | 🟢 | 🟡 | 🟡 | ⚪ |
+| API5 · Broken Function Level Auth (BFLA) | 🟡 | 🟡→🟢 | 🟡 | 🔴→🟢 |
+| API6 · Unrestricted Access to Business Flows | 🟡 | 🟡 | 🟡 | ⚪ |
+| API7 · Server-Side Request Forgery (SSRF) | 🔴 | 🔴 | 🟢 | 🟢 |
+| API8 · Security Misconfiguration | 🟡 | 🟡 | 🟡 | ⚪ |
+| API9 · Improper Inventory Management | 🔴 | 🔴 | 🟡 | 🟢 |
+| API10 · Unsafe Consumption of APIs | 🟡 | 🟡 | 🟡 | ⚪ |
 
-Only these three targets are independently **measured** today; Kong, Coraza, NGINX, Envoy and OpenAppSec compile the same policy but aren't yet published with a per-class measurement (⚪). Cells like **🔴→🟢** are the same control stateless vs. with a JWT identity wired — ownership checks (BOLA/BFLA) need to know who the caller is, so a stateless WAF can't enforce them. A **🟡** means the target enforces most of the class natively, not all. Full per-field matrix (incl. the x-security-native injection / prompt-injection / audit classes): **[usewaf.com/coverage](https://usewaf.com/coverage)**.
+Cloudflare, AWS API GW and BunkerWeb are independently measured, and **Kong is now measured too** via the reproducible before/after demo in [`examples/quick-demo`](examples/quick-demo) — a live vulnerable API (vAPI) behind a Kong → Coraza chain, 8 of the 10 classes exercised end-to-end (see [EXPECTED.md](examples/quick-demo/EXPECTED.md)). Kong cells left **⚪** are not yet cleanly attributable to the intended control: API2's forged token is blocked by hmac-auth rather than by algorithm enforcement, API8's CORS case doesn't manifest without a gateway (n/a-direct), and API4/API6/API10 aren't exercised by the demo yet. Coraza, NGINX, Envoy and OpenAppSec compile the same policy but aren't yet published with a per-class measurement (⚪). Cells like **🔴→🟢** are the same control stateless vs. with a JWT identity wired — ownership checks (BOLA/BFLA) need to know who the caller is, so a stateless WAF can't enforce them. A **🟡** means the target enforces most of the class natively, not all. Full per-field matrix (incl. the x-security-native injection / prompt-injection / audit classes): **[usewaf.com/coverage](https://usewaf.com/coverage)**.
 
 ## Contents
 
