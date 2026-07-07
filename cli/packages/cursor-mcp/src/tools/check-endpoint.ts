@@ -1,4 +1,4 @@
-// Look up an existing endpoint analysis from the Writ API. Requires an
+// Look up an existing endpoint analysis from the x-security API. Requires an
 // API key — if neither the input nor the WRIT_API_KEY env var carries
 // one, the tool returns a soft hint instead of failing, so zero-config installs
 // still work for the local-only tools.
@@ -98,9 +98,9 @@ export async function checkEndpoint(
 }
 
 export const checkEndpointTool: McpTool = {
-  name: 'writ/check-endpoint',
+  name: 'x-security/check-endpoint',
   description:
-    'Look up an endpoint in the Writ scan history. Returns existing analysis ' +
+    'Look up an endpoint in the x-security scan history. Returns existing analysis ' +
     '(annotations, OWASP coverage, prior findings) if WRIT_API_KEY is configured.',
   inputSchema,
   handler: async (raw) => {

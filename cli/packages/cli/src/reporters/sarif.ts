@@ -36,7 +36,7 @@ function buildLog(toolName: string, rules: SarifRule[], results: SarifResult[]):
         tool: {
           driver: {
             name: toolName,
-            informationUri: 'https://github.com/writ/writ',
+            informationUri: 'https://github.com/ZeeshanSultan/x-security',
             rules
           }
         },

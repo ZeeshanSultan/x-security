@@ -109,7 +109,7 @@ export function renderSarif(r: VerifyReport): string {
         tool: {
           driver: {
             name: 'x-security-verify',
-            informationUri: 'https://github.com/writ/writ',
+            informationUri: 'https://github.com/ZeeshanSultan/x-security',
             rules: [
               {
                 id: 'writ.verify.load-failure',

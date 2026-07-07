@@ -86,9 +86,9 @@ export function lint(input: LintInput): LintResult {
 }
 
 export const lintAnnotationTool: McpTool = {
-  name: 'writ/lint-annotation',
+  name: 'x-security/lint-annotation',
   description:
-    'Validate an x-security block against the Writ schema and return a ' +
+    'Validate an x-security block against the x-security schema and return a ' +
     'LOW/MEDIUM/HIGH confidence verdict plus structural warnings.',
   inputSchema,
   handler: (raw) => {

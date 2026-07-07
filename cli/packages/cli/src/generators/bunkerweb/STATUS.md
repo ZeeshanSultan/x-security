@@ -174,8 +174,8 @@ Currently emitted:
 
 ### Static
 ```
-pnpm --filter @x-security/cli build   # exit 0
-pnpm --filter @x-security/cli test    # all bunkerweb tests pass (24/24 in v6)
+pnpm --filter @writ/cli build   # exit 0
+pnpm --filter @writ/cli test    # all bunkerweb tests pass (24/24 in v6)
 ```
 
 ### Generator output on `e2e/fixtures/chain-vapi/openapi.yaml`

@@ -19,7 +19,7 @@ export default main;
 const isDirectRun =
   import.meta.url === `file://${process.argv[1] ?? ''}` ||
   process.argv[1]?.endsWith('cursor-mcp/dist/index.js') === true ||
-  process.argv[1]?.endsWith('writ-cursor-mcp') === true;
+  process.argv[1]?.endsWith('x-security-cursor-mcp') === true;
 
 if (isDirectRun) {
   main().catch((e: unknown) => {

@@ -124,7 +124,7 @@ export function propose(input: ProposeInput): Proposal {
 }
 
 export const proposeAnnotationTool: McpTool = {
-  name: 'writ/propose-annotation',
+  name: 'x-security/propose-annotation',
   description:
     'Propose an x-security block for a route signature. Pure heuristic; no network calls. ' +
     'Returns YAML the agent can paste under the operation in its OpenAPI spec.',
