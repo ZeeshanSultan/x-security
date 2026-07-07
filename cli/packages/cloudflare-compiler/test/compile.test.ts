@@ -42,9 +42,9 @@ test('shadow mode forces every rule action to log', () => {
   assert.ok(all.length > 0, 'expected at least one rule');
   for (const r of all) {
     // Transform "rewrite" rules are allowed even in shadow (they don't block traffic).
-    if (r.writ.rule_type.startsWith('cors-headers') ||
-        r.writ.rule_type === 'security-headers' ||
-        r.writ.rule_type === 'strip-server-headers') {
+    if (r.xSecurity.rule_type.startsWith('cors-headers') ||
+        r.xSecurity.rule_type === 'security-headers' ||
+        r.xSecurity.rule_type === 'strip-server-headers') {
       assert.equal(r.action, 'rewrite');
     } else {
       assert.equal(r.action, 'log', `${r.id} should be log in shadow mode (got ${r.action})`);
@@ -61,10 +61,10 @@ test('enforce mode uses the intended action', () => {
     })
   ]);
   const result = compile(spec, { mode: 'enforce' });
-  const auth = result.rulesets[0]!.rules.find(r => r.writ.rule_type === 'auth');
+  const auth = result.rulesets[0]!.rules.find(r => r.xSecurity.rule_type === 'auth');
   assert.ok(auth);
   assert.equal(auth!.action, 'block');
-  assert.match(auth!.id, /^writ-enforce-/);
+  assert.match(auth!.id, /^x-security-enforce-/);
 });
 
 test('rule IDs are stable across compilations and endpoints sort deterministically', () => {
@@ -107,9 +107,9 @@ test('IDOR tripwire emits a LOW-confidence log rule for ownership-scoped resourc
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const trip = r.rulesets[0]!.rules.find(x => x.writ.rule_type === 'idor-tripwire');
+  const trip = r.rulesets[0]!.rules.find(x => x.xSecurity.rule_type === 'idor-tripwire');
   assert.ok(trip, 'expected idor-tripwire rule');
-  assert.equal(trip!.writ.confidence, 'LOW');
+  assert.equal(trip!.xSecurity.confidence, 'LOW');
   assert.equal(trip!.action, 'log'); // forceLog
 });
 
@@ -132,7 +132,7 @@ test('byte size parser handles KB/MB/GB', () => {
     makeEndpoint({ method: 'POST', path: '/upload', policy: { request: { maxBodySize: '5MB' } } })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const bodyRule = r.rulesets[0]!.rules.find(x => x.writ.rule_type === 'body-size');
+  const bodyRule = r.rulesets[0]!.rules.find(x => x.xSecurity.rule_type === 'body-size');
   assert.ok(bodyRule);
   assert.match(bodyRule!.expression, /http\.request\.body\.size > 5242880/);
 });
@@ -148,8 +148,8 @@ test('cors: blocks disallowed origin, transforms response headers for allowed me
   const r = compile(spec, { mode: 'enforce' });
   const custom = r.rulesets.find(rs => rs.phase === 'http_request_firewall_custom');
   const trans = r.rulesets.find(rs => rs.phase === 'http_response_headers_transform');
-  assert.ok(custom!.rules.find(x => x.writ.rule_type === 'cors-origin'));
-  assert.ok(trans!.rules.find(x => x.writ.rule_type === 'cors-headers'));
+  assert.ok(custom!.rules.find(x => x.xSecurity.rule_type === 'cors-origin'));
+  assert.ok(trans!.rules.find(x => x.xSecurity.rule_type === 'cors-headers'));
 });
 
 test('empty spec produces empty rulesets but still returns content hash', () => {
@@ -203,7 +203,7 @@ test('planTier=free warns when >1 rate-limit rule is compiled', () => {
 test('botProtection emits rule on business+ but warns on free', () => {
   // botProtection lives on the raw policy bag (see compileBotProtection in
   // compile.ts) — not yet in the typed surface. Cast through unknown.
-  const policy = { botProtection: true } as unknown as import('@writ/schema').XSecurityPolicy;
+  const policy = { botProtection: true } as unknown as import('@x-security/schema').XSecurityPolicy;
   const ep = (tier: 'free' | 'business') =>
     compile(
       makeSpec([makeEndpoint({ method: 'GET', path: '/api/x', policy })]),
@@ -214,9 +214,9 @@ test('botProtection emits rule on business+ but warns on free', () => {
   const biz = ep('business');
   const freeCustom = free.rulesets.find(rs => rs.phase === 'http_request_firewall_custom');
   const bizCustom = biz.rulesets.find(rs => rs.phase === 'http_request_firewall_custom');
-  assert.ok(!freeCustom?.rules.some(r => r.writ.rule_type === 'bot-protection'));
+  assert.ok(!freeCustom?.rules.some(r => r.xSecurity.rule_type === 'bot-protection'));
   assert.ok(free.warnings.some(w => w.field === 'botProtection'));
-  assert.ok(bizCustom?.rules.some(r => r.writ.rule_type === 'bot-protection'));
+  assert.ok(bizCustom?.rules.some(r => r.xSecurity.rule_type === 'bot-protection'));
 });
 
 test('snapshot: full canonical compile output is stable', () => {
@@ -239,8 +239,8 @@ test('snapshot: full canonical compile output is stable', () => {
   // Ensure the IDs follow the documented naming scheme.
   for (const rs of r.rulesets) {
     for (const rule of rs.rules) {
-      assert.match(rule.id, /^writ-shadow-[0-9a-f]{12}-[a-z0-9-]+$/);
-      assert.ok(rule.description.startsWith('[writ] '));
+      assert.match(rule.id, /^x-security-shadow-[0-9a-f]{12}-[a-z0-9-]+$/);
+      assert.ok(rule.description.startsWith('[x-security] '));
     }
   }
 });

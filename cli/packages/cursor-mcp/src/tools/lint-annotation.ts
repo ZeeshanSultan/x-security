@@ -1,9 +1,9 @@
-// Lint a proposed x-security block. Runs the @writ/schema validator and
+// Lint a proposed x-security block. Runs the @x-security/schema validator and
 // layers a confidence verdict (LOW/MEDIUM/HIGH) on top of structural validity.
 // The agent uses the verdict + warnings to decide whether to ship as-is or ask
 // the human.
 
-import { validateXSecurity } from '@writ/schema';
+import { validateXSecurity } from '@x-security/schema';
 import type { McpTool } from '../server.js';
 
 export interface LintInput {
@@ -86,9 +86,9 @@ export function lint(input: LintInput): LintResult {
 }
 
 export const lintAnnotationTool: McpTool = {
-  name: 'writ/lint-annotation',
+  name: 'x-security/lint-annotation',
   description:
-    'Validate an x-security block against the Writ schema and return a ' +
+    'Validate an x-security block against the x-security schema and return a ' +
     'LOW/MEDIUM/HIGH confidence verdict plus structural warnings.',
   inputSchema,
   handler: (raw) => {

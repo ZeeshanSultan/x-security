@@ -13,7 +13,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import type { Citation, XSecurityPolicy } from '@writ/detect-core';
+import type { Citation, XSecurityPolicy } from '@x-security/detect-core';
 
 export const POLICIES_DIR = 'policies';
 export const WAF_DIR = 'waf';
@@ -35,12 +35,41 @@ export function endpointToFileId(method: string, routePath: string): string {
   return `${method.toUpperCase()}__${safePath || 'root'}`;
 }
 
-export function writDir(repoDir: string): string {
+/** Canonical artifact dir (writes go here). */
+export function xSecurityDir(repoDir: string): string {
+  return path.join(repoDir, '.x-security');
+}
+
+/** Legacy artifact dir (pre-rebrand). Reads fall back to it for back-compat. */
+export function legacyWritDir(repoDir: string): string {
   return path.join(repoDir, '.writ');
 }
 
+/**
+ * Resolve the artifact dir to READ from: prefer the canonical `.x-security/`,
+ * fall back to a pre-existing legacy `.writ/` (emitting a one-line deprecation
+ * warning), else default to canonical. Writers always use {@link xSecurityDir}.
+ */
+export async function resolveArtifactDir(repoDir: string): Promise<string> {
+  const canonical = xSecurityDir(repoDir);
+  try { await fs.access(canonical); return canonical; } catch { /* fall through */ }
+  const legacy = legacyWritDir(repoDir);
+  try {
+    await fs.access(legacy);
+    console.warn('[x-security] reading legacy .writ/ artifact dir; run a compile to migrate to .x-security/');
+    return legacy;
+  } catch { /* fall through */ }
+  return canonical;
+}
+
+/** Policies dir under the canonical artifact dir (write path). */
 export function policiesDir(repoDir: string): string {
-  return path.join(writDir(repoDir), POLICIES_DIR);
+  return path.join(xSecurityDir(repoDir), POLICIES_DIR);
+}
+
+/** Policies dir to READ from, honoring the legacy `.writ/` fallback. */
+export async function resolvePoliciesDir(repoDir: string): Promise<string> {
+  return path.join(await resolveArtifactDir(repoDir), POLICIES_DIR);
 }
 
 /** Persist a compiled policy + its cite sidecar under .writ/policies/.

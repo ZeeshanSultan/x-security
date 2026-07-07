@@ -5,4 +5,4 @@ export type {
   ConfigArtifact,
   SpecIR,
   EndpointIR
-} from '@writ/core';
+} from '@x-security/core';

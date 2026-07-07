@@ -1,8 +1,8 @@
 // `lazy verify-bundle <tarball> [--public-key <pem-path>]`
 //
-// Verifies a Writ release bundle:
+// Verifies a x-security release bundle:
 //
-//   writ-bundle-<target>-<specHash>.tar.gz
+//   x-security-bundle-<target>-<specHash>.tar.gz
 //     manifest.json   { target, specHash, generatorVersion, timestamp, files: { "<rel>": "sha256:<hex>" } }
 //     config/         generator output (one or more files)
 //     README.md
@@ -20,7 +20,7 @@ import { createHash } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { verifyEd25519 } from '@writ/crypto';
+import { verifyEd25519 } from '@x-security/crypto';
 import { BUNDLE_VERIFY_PUBLIC_KEY } from './verify-bundle-pubkey.js';
 
 export interface VerifyBundleOptions {
@@ -51,7 +51,7 @@ const MANIFEST = 'manifest.json';
 const SIG = 'writ.sig';
 
 /**
- * Verify a Writ release bundle. Library-style entrypoint: never throws
+ * Verify a x-security release bundle. Library-style entrypoint: never throws
  * on verification failure — returns a `VerifyBundleResult` with an exit code
  * the CLI wrapper can pass to `process.exit`.
  */
@@ -83,7 +83,7 @@ export async function runVerifyBundle(
   // Extract to a private tmp dir. We use `tar -xzf` rather than adding a
   // dependency; bsdtar (macOS) and GNU tar (Linux) both accept these flags
   // and both auto-detect gzip.
-  const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'writ-verify-'));
+  const tmpdir = fs.mkdtempSync(path.join(os.tmpdir(), 'x-security-verify-'));
   try {
     await extractTarball(tarballPath, tmpdir);
 

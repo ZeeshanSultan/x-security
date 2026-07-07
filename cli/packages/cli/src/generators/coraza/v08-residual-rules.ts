@@ -41,14 +41,14 @@
  * Self-contained helpers (esc/header/chainTerm) mirror csrf-rules.ts so this
  * module does not depend on rules.ts internals.
  *
- * ID range: 286000..289999 (disjoint from every other Writ range:
+ * ID range: 286000..289999 (disjoint from every other x-security range:
  * per-endpoint primary 100000-369999, body-allowlist 400000-408999,
  * response-inspect 420000-428999, SQLi 430000+, SSRF 980000+, CSRF 272000-274999,
  * lifecycle/HPP/response-ctype 269000-276000).
  */
 
-import type { EndpointIR } from '@writ/core';
-import type { GraphqlPolicy, SerializeBy } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { GraphqlPolicy, SerializeBy } from '@x-security/schema';
 import {
   CORAZA_GO_PROFILE,
   type CorazaEngineProfile,
@@ -183,10 +183,10 @@ export function buildSerializeByRules(
           `NOT an in-handler mutex. Does NOT provide transaction atomicity.`
       ),
       // 1. open + increment the same-key counter for a 1s edge window.
-      `SecRule REQUEST_URI "@rx ${pathRx}" "id:${initId},phase:1,pass,nolog,tag:'writ-serialize',initcol:${initcolArg},setvar:${col}.${varName}=+1,expirevar:${col}.${varName}=1,chain"`,
+      `SecRule REQUEST_URI "@rx ${pathRx}" "id:${initId},phase:1,pass,nolog,tag:'x-security-serialize',initcol:${initcolArg},setvar:${col}.${varName}=+1,expirevar:${col}.${varName}=1,chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${term}`,
       // 2. deny when the same-key in-window count exceeds the concurrency cap.
-      `SecRule REQUEST_URI "@rx ${pathRx}" "id:${checkId},phase:1,deny,status:429,msg:'Writ: serializeBy concurrency cap (${limit}) exceeded (edge serialization, not in-handler atomicity)',tag:'writ-serialize',log,chain"`,
+      `SecRule REQUEST_URI "@rx ${pathRx}" "id:${checkId},phase:1,deny,status:429,msg:'x-security: serializeBy concurrency cap (${limit}) exceeded (edge serialization, not in-handler atomicity)',tag:'x-security-serialize',log,chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule ${col.toUpperCase()}:${varName} "@gt ${limit}"${term}`,
     ].join('\n'),
@@ -227,7 +227,7 @@ export function buildGraphqlStaticLimitRules(
             `validate GraphQL semantics, but the introspection token check is\n` +
             `genuinely enforcing at the byte level.`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'Writ: GraphQL introspection disabled',tag:'writ-graphql',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'x-security: GraphQL introspection disabled',tag:'x-security-graphql',chain"`,
         `  SecRule REQUEST_URI "@rx ${pathRx}" "chain"`,
         `    SecRule REQUEST_BODY|ARGS "@rx (?i)__(?:schema|type)\\b"${term}`,
       ].join('\n')
@@ -249,7 +249,7 @@ export function buildGraphqlStaticLimitRules(
             `PARTIAL — crude non-parsing alias-token count (heuristic): deny when\n` +
             `>${g.maxAliases} alias-shaped '<ident>:' tokens appear in the body.`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'Writ: GraphQL alias cap (${g.maxAliases}) exceeded',tag:'writ-graphql',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'x-security: GraphQL alias cap (${g.maxAliases}) exceeded',tag:'x-security-graphql',chain"`,
         `  SecRule REQUEST_URI "@rx ${pathRx}" "chain"`,
         `    SecRule REQUEST_BODY "@rx (?s)(?:[A-Za-z_][A-Za-z0-9_]*\\s*:\\s*[A-Za-z_][A-Za-z0-9_]*[^:]*){${min},}"${term}`,
       ].join('\n')
@@ -275,9 +275,9 @@ export function buildGraphqlStaticLimitRules(
             `PARTIAL — crude non-parsing batch count: deny when >${g.batchLimit}\n` +
             `'"query"' members appear (batched array of operations).`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'Writ: GraphQL batch cap (${g.batchLimit}) exceeded',tag:'writ-graphql',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'x-security: GraphQL batch cap (${g.batchLimit}) exceeded',tag:'x-security-graphql',chain"`,
         `  SecRule REQUEST_URI "@rx ${pathRx}" "chain"`,
-        `    SecRule REQUEST_BODY "@rx (?s)(?:\\"query\\"\\s*:[^:]*){${min},}"${term}`,
+        `    SecRule REQUEST_BODY "@rx (?s)(?:\\x22query\\x22\\s*:[^:]*){${min},}"${term}`,
       ].join('\n')
     );
     warnings?.push({
@@ -338,7 +338,7 @@ export function buildResidualScaffolding(endpoint: EndpointIR): string[] {
           `OVERRIDE-ONLY — SCAFFOLDING, NOT ENFORCED.\n` +
           `Per-resolver authorization requires an operator-supplied GraphQL-aware\n` +
           `processor: a WAF cannot parse the query, bind the resolved object to an\n` +
-          `identity claim, and evaluate ownership/role per operation. Writ\n` +
+          `identity claim, and evaluate ownership/role per operation. x-security\n` +
           `emits NO enforcing SecRule for these. Operator contract — wire each\n` +
           `operation's authz in your GraphQL gateway / resolver middleware:\n` +
           named

@@ -12,7 +12,7 @@
  *     parses the operation and evaluates per-field authz. libmodsec3 has no
  *     GraphQL parser and Rule D-1 bans a regex fake over the query body. We
  *     emit SCAFFOLDING ONLY: a phase:2 tagged marker rule that routes the
- *     /graphql POST to an operator processor sidecar (X-Writ-GraphQL-*
+ *     /graphql POST to an operator processor sidecar (X-x-security-GraphQL-*
  *     headers) plus a self-describing contract block listing the per-operation
  *     authz the processor must enforce. Enforcement DEPENDS ON that processor.
  *     Status: override-only, NOT full, NOT partial.
@@ -43,8 +43,8 @@
  * libmodsec3 capability source: coraza/profiles.ts MODSEC_NGINX_PROFILE.
  */
 
-import type { EndpointIR } from '@writ/core';
-import type { GraphqlOperation } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { GraphqlOperation } from '@x-security/schema';
 import { endpointHash, pathRegex } from '../coraza/rules.js';
 
 function esc(s: string): string {
@@ -66,7 +66,7 @@ const CHAIN_TERM = ' "t:none"';
 // ---------------------------------------------------------------------------
 // graphql.operations[].authz (API1:2023 BOLA + API5:2023 BFLA). OVERRIDE-ONLY.
 //
-// Scaffolding mirrors the response-schema ext_proc handoff: Writ does NOT
+// Scaffolding mirrors the response-schema ext_proc handoff: x-security does NOT
 // ship a GraphQL-aware processor, so we emit the route-marker rule + a contract
 // block describing the per-operation authz the operator's processor must
 // enforce. Until the operator supplies that processor, NOTHING evaluates
@@ -84,7 +84,7 @@ function operationsWithAuthz(ops: GraphqlOperation[] | undefined): GraphqlOperat
 export function buildGraphqlOperationAuthzRules(endpoint: EndpointIR): string[] {
   const ops = operationsWithAuthz(endpoint.policy.graphql?.operations);
   if (ops.length === 0) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seed = endpointHash(`${endpoint.method}|${endpoint.path}|gqlops`, '');
   const id = GRAPHQL_OPS_BASE_ID + (seed % 999);
@@ -112,7 +112,7 @@ export function buildGraphqlOperationAuthzRules(endpoint: EndpointIR): string[] 
       // Route marker: pass-through (NOT a deny) so we never claim enforcement
       // we don't have. The tag lets a downstream ext-filter / sidecar pick up
       // the request; on its own it changes nothing about the response.
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:2,pass,nolog,msg:'Writ: graphql per-operation authz handoff (override-only)',tag:'${esc(tag)}',tag:'writ-graphql-ops-authz',tag:'writ-override-only',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:2,pass,nolog,msg:'x-security: graphql per-operation authz handoff (override-only)',tag:'${esc(tag)}',tag:'x-security-graphql-ops-authz',tag:'x-security-override-only',chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${CHAIN_TERM}`,
     ].join('\n'),
   ];
@@ -138,7 +138,7 @@ const GRAPHQL_STATIC_BASE_ID = 422000;
 export function buildGraphqlStaticLimitRules(endpoint: EndpointIR): string[] {
   const g = endpoint.policy.graphql;
   if (!g) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seed = endpointHash(`${endpoint.method}|${endpoint.path}|gqlstatic`, '');
   const base = GRAPHQL_STATIC_BASE_ID + ((seed % 498) * 2);
@@ -159,7 +159,7 @@ export function buildGraphqlStaticLimitRules(endpoint: EndpointIR): string[] {
             `an introspection query MUST contain those meta-fields, so this is a real,\n` +
             `non-parsing block (not a heuristic guess).`
         ),
-        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:2,deny,status:403,log,msg:'Writ: GraphQL introspection disabled (graphql.disableIntrospection)',tag:'${esc(tag)}',tag:'writ-rule-graphql-introspection',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:2,deny,status:403,log,msg:'x-security: GraphQL introspection disabled (graphql.disableIntrospection)',tag:'${esc(tag)}',tag:'x-security-rule-graphql-introspection',chain"`,
         `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
         `    SecRule REQUEST_BODY "@rx (?i)__(?:schema|type)\\b"${CHAIN_TERM}`,
       ].join('\n')
@@ -176,7 +176,7 @@ export function buildGraphqlStaticLimitRules(endpoint: EndpointIR): string[] {
             `[{...},{...}]). This caps batching at "none" — stricter than the numeric\n` +
             `limit, not the exact semantics, hence partial.`
         ),
-        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 1},phase:2,deny,status:403,log,msg:'Writ: GraphQL request batching rejected (graphql.batchLimit)',tag:'${esc(tag)}',tag:'writ-rule-graphql-batch',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 1},phase:2,deny,status:403,log,msg:'x-security: GraphQL request batching rejected (graphql.batchLimit)',tag:'${esc(tag)}',tag:'x-security-rule-graphql-batch',chain"`,
         `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
         `    SecRule REQUEST_BODY "@rx ^[\\s]*\\[" "t:none"`,
       ].join('\n')
@@ -191,7 +191,7 @@ export function buildGraphqlStaticLimitRules(endpoint: EndpointIR): string[] {
           `counting, which is NOT regular-language-expressible — libmodsec3 cannot\n` +
           `enforce it without a parser. Wire a GraphQL-aware processor (the same\n` +
           `sidecar the graphql.operations.authz scaffolding routes to) to enforce\n` +
-          `these. Writ does NOT fake them with regex (Rule D-1).`
+          `these. x-security does NOT fake them with regex (Rule D-1).`
       )
     );
   }
@@ -246,7 +246,7 @@ export function buildSerializeByHttpSnippet(
   const conc = typeof limit === 'number' && limit >= 1 ? limit : 1;
   const scope = ser.scope ?? 'per-identifier';
   const keyVar =
-    scope === 'global' ? `"writ_serial_global"` : serializeKeyToNginxVar(ser.key);
+    scope === 'global' ? `"x_security_serial_global"` : serializeKeyToNginxVar(ser.key);
   const zoneName = `ss_serial_${index}`;
 
   const snippet =
@@ -280,7 +280,7 @@ export function buildDataAtRestRules(endpoint: EndpointIR): string[] {
         `ADVISORY-ONLY — NOT gateway-enforced. fields=[${dar.fields.join(', ')}] must be\n` +
         `'${dar.protection}' at rest, but the WAF never sees the datastore write, so this\n` +
         `compiles to NOTHING enforcing. Implement at-rest ${dar.protection} in the app's\n` +
-        `persistence layer. Writ surfaces this as an out-of-band SSEC-STORAGE\n` +
+        `persistence layer. x-security surfaces this as an out-of-band SSEC-STORAGE\n` +
         `finding, not a control (Rule D-1: no fake 'full' for an unenforceable field).`
     ),
   ];

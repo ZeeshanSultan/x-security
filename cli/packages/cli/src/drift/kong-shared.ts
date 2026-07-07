@@ -8,7 +8,7 @@
 // compare nested objects to avoid false positives from Kong's defaults.
 // Drift is reported only for fields the spec explicitly sets.
 
-import type { SpecIR, EndpointIR } from '@writ/core';
+import type { SpecIR, EndpointIR } from '@x-security/core';
 import {
   buildAuthPlugins,
   buildAuthzPlugins,

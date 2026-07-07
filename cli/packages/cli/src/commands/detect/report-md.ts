@@ -15,7 +15,7 @@ export interface ReportRoute {
 export function renderReport(audit: AuditResult, routes: ReportRoute[]): string {
   const pct = (audit.coverage * 100).toFixed(1);
   const lines: string[] = [];
-  lines.push('# Writ report');
+  lines.push('# x-security report');
   lines.push('');
   lines.push(`- Routes with a compiled policy: **${audit.routes}**`);
   lines.push(`- Enforced controls: **${audit.controls}**`);

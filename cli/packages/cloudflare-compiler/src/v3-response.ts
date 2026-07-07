@@ -1,7 +1,7 @@
 // v0.3 response-side lowering: response.headers (all sub-fields),
 // response.cookies.defaults, cacheable.unkeyedHeadersStrip.
 
-import type { CookieDefaults, Hsts, ResponseHeaders, XSecurityPolicy } from '@writ/schema';
+import type { CookieDefaults, Hsts, ResponseHeaders, XSecurityPolicy } from '@x-security/schema';
 import type { RewriteParameters } from './types.js';
 import { decorate, getOverride, isObserveMode, noteObserveMode, noteProvenance, type V3Builder } from './v3-shared.js';
 

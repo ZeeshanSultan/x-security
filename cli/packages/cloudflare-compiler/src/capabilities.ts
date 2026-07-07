@@ -3,7 +3,7 @@
 // Single source of truth for "how well does Cloudflare support this v0.3
 // x-security field?" — referenced by the compiler when it decides whether
 // to emit a native ruleset rule, a Worker artifact, or just a provenance
-// note. Also consumed by `capabilities()` for the @writ/core
+// note. Also consumed by `capabilities()` for the @x-security/core
 // `Generator` contract.
 //
 // Decisions follow `packages/schema/docs/v0.3-additions.md`:
@@ -13,7 +13,7 @@
 //                     `targetOverrides.cloudflare.<field>` OR accept a Worker stub
 //   - unsupported   → Cloudflare cannot express this; compiler surfaces and stops
 
-import type { CapabilityMatrix } from '@writ/core';
+import type { CapabilityMatrix } from '@x-security/core';
 import type { CfCapability, ShadowModeSupportEntry } from './types.js';
 
 /**

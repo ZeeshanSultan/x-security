@@ -22,7 +22,7 @@
 //     public reads. We surface them as evidence for the model, not a verdict.
 
 import type { EvidencePack, ObjectIdSurface } from './evidence-pack.js';
-import type { XSecurityPolicy, ParamSchema } from '@writ/schema';
+import type { XSecurityPolicy, ParamSchema } from '@x-security/schema';
 
 export type DepthGapKind =
   | 'stub-policy'

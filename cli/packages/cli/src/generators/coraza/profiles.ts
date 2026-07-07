@@ -1,7 +1,7 @@
 /**
  * Coraza engine profiles.
  *
- * Writ's Coraza generator targets four distinct runtimes that all speak
+ * x-security's Coraza generator targets four distinct runtimes that all speak
  * a ModSecurity-compatible directive syntax but differ in *which subset* of
  * that syntax they accept and *how* the rules are loaded:
  *

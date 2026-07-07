@@ -6,11 +6,11 @@
 //   - a Worker artifact (override-only).
 //
 // Imported types are intentionally minimal — fixtures use the same
-// XSecurityPolicy shape exposed by @writ/schema.
+// XSecurityPolicy shape exposed by @x-security/schema.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 import { compile, CompileError, capabilities } from '../src/index.js';
 import { makeEndpoint, makeSpec } from './fixtures.js';
 
@@ -49,7 +49,7 @@ test('v0.3 #1 RuleRef (request.headers.*) lowers to a Wirefilter rule', () => {
     { mode: 'enforce' }
   );
   const custom = r.rulesets.find(rs => rs.phase === 'http_request_firewall_custom')!;
-  const ref = custom.rules.find(x => x.writ.rule_type.startsWith('authz-ref-'));
+  const ref = custom.rules.find(x => x.xSecurity.rule_type.startsWith('authz-ref-'));
   assert.ok(ref, 'expected wirefilter rule for request.headers ref');
   assert.match(ref!.expression, /http\.request\.headers\["x-tenant-id"\]\[0\] eq http\.request\.headers\["x-actual-tenant"\]\[0\]/);
 });
@@ -110,7 +110,7 @@ test('v0.3 #4 csrf.method=origin-check emits Wirefilter rule', () => {
     makeSpec([makeEndpoint({ method: 'POST', path: '/api/x', policy })]),
     { mode: 'enforce' }
   );
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type === 'csrf-origin');
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type === 'csrf-origin');
   assert.ok(rule);
   assert.match(rule!.expression, /"https:\/\/app\.example\.com"/);
 });
@@ -121,7 +121,7 @@ test('v0.3 #4 csrf.method=double-submit emits presence rule + provenance for val
     makeSpec([makeEndpoint({ method: 'POST', path: '/api/x', policy })]),
     { mode: 'enforce' }
   );
-  assert.ok(r.rulesets.flatMap(rs => rs.rules).some(x => x.writ.rule_type === 'csrf-double-submit-presence'));
+  assert.ok(r.rulesets.flatMap(rs => rs.rules).some(x => x.xSecurity.rule_type === 'csrf-double-submit-presence'));
   assert.ok(r.provenance.some(n => n.field === 'csrf.method=double-submit'));
 });
 
@@ -133,7 +133,7 @@ test('v0.3 #5 response.cookies.defaults emits Set-Cookie Transform Rule', () => 
   };
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/api/x', policy })]), { mode: 'enforce' });
   const resp = r.rulesets.find(rs => rs.phase === 'http_response_headers_transform')!;
-  const rule = resp.rules.find(x => x.writ.rule_type === 'response-cookie-defaults');
+  const rule = resp.rules.find(x => x.xSecurity.rule_type === 'response-cookie-defaults');
   assert.ok(rule);
   const params = rule!.action_parameters as { headers: Record<string, { value?: string }> };
   assert.match(params.headers['Set-Cookie']!.value!, /HttpOnly.*Secure.*SameSite=Strict/);
@@ -193,7 +193,7 @@ test('v0.3 #7 request.signature emits Worker artifact with hash + binding', () =
 test('v0.3 #8 request.allowedHosts emits http.host in {...} Wirefilter rule', () => {
   const policy: XSecurityPolicy = { request: { allowedHosts: ['api.example.com', 'api-eu.example.com'] } };
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]), { mode: 'enforce' });
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type === 'allowed-hosts');
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type === 'allowed-hosts');
   assert.ok(rule);
   assert.match(rule!.expression, /not \(http\.host in \{"api\.example\.com" "api-eu\.example\.com"\}\)/);
 });
@@ -203,7 +203,7 @@ test('v0.3 #8 request.allowedHosts emits http.host in {...} Wirefilter rule', ()
 test('v0.3 #9 duplicateParamPolicy=reject emits HPP Wirefilter rule', () => {
   const policy: XSecurityPolicy = { request: { duplicateParamPolicy: 'reject' } };
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]), { mode: 'enforce' });
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type === 'dup-param-reject');
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type === 'dup-param-reject');
   assert.ok(rule);
 });
 
@@ -218,7 +218,7 @@ test('v0.3 #9 duplicateParamPolicy=first emits partial provenance note', () => {
 test('v0.3 #10 headerInjectionGuard emits CR/LF/NUL regex rule', () => {
   const policy: XSecurityPolicy = { request: { headerInjectionGuard: true } };
   const r = compile(makeSpec([makeEndpoint({ method: 'POST', path: '/x', policy })]), { mode: 'enforce' });
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type === 'header-injection-guard');
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type === 'header-injection-guard');
   assert.ok(rule);
   assert.match(rule!.expression, /\[\\\\r\\\\n\\\\x00\]/);
 });
@@ -228,7 +228,7 @@ test('v0.3 #10 headerInjectionGuard emits CR/LF/NUL regex rule', () => {
 test('v0.3 #11 pathCanonicalization emits double-encoded-traversal guard', () => {
   const policy: XSecurityPolicy = { request: { pathCanonicalization: true } };
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/admin', policy })]), { mode: 'enforce' });
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type === 'path-canonicalization');
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type === 'path-canonicalization');
   assert.ok(rule);
   assert.match(rule!.expression, /%\(\?:25\)\+/);
 });
@@ -244,7 +244,7 @@ test('v0.3 #12 ParamSchema.extensionAllowlist emits Wirefilter rule', () => {
     }
   };
   const r = compile(makeSpec([makeEndpoint({ method: 'POST', path: '/upload', policy })]), { mode: 'enforce' });
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type.startsWith('bin-ext-'));
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type.startsWith('bin-ext-'));
   assert.ok(rule);
 });
 
@@ -253,7 +253,7 @@ test('v0.3 #12 ParamSchema.denyDoubleExtension emits Wirefilter rule', () => {
     request: { schema: { avatar: { type: 'binary', denyDoubleExtension: true } } }
   };
   const r = compile(makeSpec([makeEndpoint({ method: 'POST', path: '/upload', policy })]), { mode: 'enforce' });
-  assert.ok(r.rulesets.flatMap(rs => rs.rules).some(x => x.writ.rule_type.startsWith('bin-dbl-')));
+  assert.ok(r.rulesets.flatMap(rs => rs.rules).some(x => x.xSecurity.rule_type.startsWith('bin-dbl-')));
 });
 
 test('v0.3 #12 ParamSchema.magicByteCheck emits Worker artifact', () => {
@@ -292,7 +292,7 @@ test('v0.3 #13 response.headers emits per-field Modify-Response-Header rule', ()
   };
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]), { mode: 'enforce' });
   const resp = r.rulesets.find(rs => rs.phase === 'http_response_headers_transform')!;
-  const rule = resp.rules.find(x => x.writ.rule_type === 'response-headers-v3');
+  const rule = resp.rules.find(x => x.xSecurity.rule_type === 'response-headers-v3');
   assert.ok(rule, 'expected response-headers-v3 rule');
   const params = rule!.action_parameters as { headers: Record<string, { value?: string }> };
   assert.equal(params.headers['Content-Security-Policy']!.value, "default-src 'self'");
@@ -308,7 +308,7 @@ test('v0.3 #13 response.headers absent → legacy default-headers rule still emi
     { mode: 'enforce' }
   );
   const resp = r.rulesets.find(rs => rs.phase === 'http_response_headers_transform')!;
-  assert.ok(resp.rules.find(x => x.writ.rule_type === 'security-headers'));
+  assert.ok(resp.rules.find(x => x.xSecurity.rule_type === 'security-headers'));
 });
 
 test('v0.3 #13 response.headers present → legacy default-headers rule is suppressed', () => {
@@ -321,9 +321,9 @@ test('v0.3 #13 response.headers present → legacy default-headers rule is suppr
     { mode: 'enforce' }
   );
   const resp = r.rulesets.find(rs => rs.phase === 'http_response_headers_transform')!;
-  assert.ok(!resp.rules.some(x => x.writ.rule_type === 'security-headers'),
+  assert.ok(!resp.rules.some(x => x.xSecurity.rule_type === 'security-headers'),
     'legacy security-headers rule should NOT be emitted when policy.response.headers is set');
-  assert.ok(resp.rules.some(x => x.writ.rule_type === 'response-headers-v3'));
+  assert.ok(resp.rules.some(x => x.xSecurity.rule_type === 'response-headers-v3'));
 });
 
 // ---------- 14. cacheable.unkeyedHeadersStrip ----------
@@ -334,7 +334,7 @@ test('v0.3 #14 cacheable.unkeyedHeadersStrip emits req-transform + provenance', 
   };
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]), { mode: 'enforce' });
   const req = r.rulesets.find(rs => rs.phase === 'http_request_late_transform')!;
-  const rule = req.rules.find(x => x.writ.rule_type === 'cache-unkey-strip');
+  const rule = req.rules.find(x => x.xSecurity.rule_type === 'cache-unkey-strip');
   assert.ok(rule);
   const params = rule!.action_parameters as { headers: Record<string, { operation: string }> };
   assert.equal(params.headers['Cookie']!.operation, 'remove');
@@ -371,7 +371,7 @@ test('v0.3 #16 websocket.allowedOrigins emits handshake Wirefilter rule (full)',
     websocket: { allowedOrigins: ['https://app.example.com'] }
   };
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/ws', policy })]), { mode: 'enforce' });
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type === 'ws-origin-check');
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type === 'ws-origin-check');
   assert.ok(rule);
   assert.match(rule!.expression, /upgrade.*websocket/i);
 });
@@ -402,7 +402,7 @@ test('v0.3 #17 botProtection turnstile emits native managed_challenge rule', () 
     makeSpec([makeEndpoint({ method: 'POST', path: '/api/x', policy })]),
     { mode: 'enforce' }
   );
-  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.writ.rule_type === 'bot-turnstile');
+  const rule = r.rulesets.flatMap(rs => rs.rules).find(x => x.xSecurity.rule_type === 'bot-turnstile');
   assert.ok(rule);
   assert.equal(rule!.action, 'managed_challenge');
   assert.ok(r.provenance.some(n => n.field === 'botProtection' && n.decision === 'full'));

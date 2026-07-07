@@ -213,7 +213,7 @@ test('v0.3 outputs are part of the content hash', () => {
   assert.equal(a.contentHash, b.contentHash);
   assert.ok(a.requestValidators.length === 1);
   assert.ok(a.gatewayResponses.length >= 2);
-  assert.ok(a.webAclRules.some(r => r.writ.rule_type === 'allowed-hosts'));
+  assert.ok(a.webAclRules.some(r => r.xSecurity.rule_type === 'allowed-hosts'));
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -231,7 +231,7 @@ test('response.cookies.defaults emits integration response mapping (partial)', (
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const ir = r.integrationResponses.find(x => x.writ.source_field === 'response.cookies.defaults');
+  const ir = r.integrationResponses.find(x => x.xSecurity.source_field === 'response.cookies.defaults');
   assert.ok(ir);
   const vtl = ir.ResponseTemplates?.['application/json'] ?? '';
   assert.match(vtl, /HttpOnly/);

@@ -1,4 +1,4 @@
-// @writ/shared — cross-service types and queue/HTTP contracts.
+// @x-security/shared — cross-service types and queue/HTTP contracts.
 // See docs/ADR-003-service-topology.md.
 
 import { z } from "zod";
@@ -116,7 +116,7 @@ export type AttackJob = z.infer<typeof AttackJob>;
 
 /**
  * Endpoint summary passed into an attack run by the api/scan-worker.
- * Subset of @writ/db Endpoint, denormalised so the runner does not
+ * Subset of @x-security/db Endpoint, denormalised so the runner does not
  * need to query the scan back out of postgres on the hot path.
  */
 export const EndpointSummary = z.object({
@@ -132,7 +132,7 @@ export const EndpointSummary = z.object({
 export type EndpointSummary = z.infer<typeof EndpointSummary>;
 
 /**
- * Richer attack-run job payload used by `@writ/attack-runner`.
+ * Richer attack-run job payload used by `@x-security/attack-runner`.
  * Carries the per-endpoint expected-block map so the runner can compute
  * verdicts without round-tripping back to the api.
  */
@@ -346,7 +346,7 @@ export interface Endpoint {
  * `description / endpointPath / method / confidence` are synthesized by
  * the api's `listPoliciesForRepo` query at read time; they do NOT exist
  * as columns on `rules`. A consumer reading the raw `rules` table via
- * @writ/db will see only the fields in {@link RuleRow}.
+ * @x-security/db will see only the fields in {@link RuleRow}.
  *
  * If you want the projected shape, hit `GET /v1/repos/:id/policies` or
  * `GET /v1/deploys/:id`; if you want the raw row, query the `rules` table
@@ -368,7 +368,7 @@ export interface DeployRule {
 }
 
 /**
- * `RuleRow` mirrors the `rules` table in @writ/db. Use this when
+ * `RuleRow` mirrors the `rules` table in @x-security/db. Use this when
  * working with raw drizzle rows. For the read-API projection, see
  * {@link DeployRule}.
  *

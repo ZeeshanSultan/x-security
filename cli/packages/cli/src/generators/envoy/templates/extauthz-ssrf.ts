@@ -12,7 +12,7 @@
  * rule-based → default).
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 
 export interface SsrfPolicyEndpoint {
   endpoint: EndpointIR;

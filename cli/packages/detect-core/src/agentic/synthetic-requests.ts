@@ -18,7 +18,7 @@ import type {
   SemanticType,
   AuthorizationRule,
   AuthorizationRuleValue,
-} from '@writ/schema';
+} from '@x-security/schema';
 
 import type { SyntheticRequest } from './policy-eval.js';
 import type { RouteInventoryEntry } from './schema.js';

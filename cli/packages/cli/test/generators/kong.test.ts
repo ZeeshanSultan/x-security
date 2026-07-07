@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { load as yamlLoad } from 'js-yaml';
-import { loadSpec } from '@writ/core';
+import { loadSpec } from '@x-security/core';
 import { kongGenerator, createKongGenerator } from '../../src/generators/kong/index.ts';
 import {
   buildAuthPlugins,
@@ -280,7 +280,7 @@ test('kong C-3c: kongEditionFor reads targetOverrides.kong.edition', () => {
 });
 
 // ---------- request.signature → hmac-auth ----------
-// Closes the API10 gap where Writ's `request.signature` declared HMAC
+// Closes the API10 gap where XSecurity's `request.signature` declared HMAC
 // verification but the Kong generator emitted no plugin, leaving the upstream
 // unprotected. Kong OSS ships `hmac-auth` bundled.
 
@@ -826,7 +826,7 @@ test('kong W21-C-1: K-2 SSRF pre-function does NOT require cjson', () => {
   const [art] = createKongGenerator({ withConsumers: false }).generate(spec);
   const parsed = yamlLoad((art as any).content) as any;
   const ssrf = parsed.services[0].routes[0].plugins.find(
-    (p: any) => p.name === 'pre-function' && (p.tags ?? []).includes('writ-rule-ssrf-403')
+    (p: any) => p.name === 'pre-function' && (p.tags ?? []).includes('x-security-rule-ssrf-403')
   );
   assert.ok(ssrf, 'expected SSRF pre-function');
   const lua = ssrf.config.access[0] as string;
@@ -870,10 +870,10 @@ test('kong W21-C-2: K-2 SSRF pre-function uses kong.request.get_query_arg / get_
   const [art] = createKongGenerator({ withConsumers: false }).generate(spec);
   const parsed = yamlLoad((art as any).content) as any;
   const queryLua = parsed.services[0].routes[0].plugins.find(
-    (p: any) => p.name === 'pre-function' && (p.tags ?? []).includes('writ-rule-ssrf-403')
+    (p: any) => p.name === 'pre-function' && (p.tags ?? []).includes('x-security-rule-ssrf-403')
   ).config.access[0] as string;
   const bodyLua = parsed.services[1].routes[0].plugins.find(
-    (p: any) => p.name === 'pre-function' && (p.tags ?? []).includes('writ-rule-ssrf-403')
+    (p: any) => p.name === 'pre-function' && (p.tags ?? []).includes('x-security-rule-ssrf-403')
   ).config.access[0] as string;
   assert.match(queryLua, /kong\.request\.get_query_arg\("url"\)/);
   assert.match(bodyLua, /kong\.request\.get_body\(\)/);
@@ -916,9 +916,9 @@ test('kong W21-C-3: default policy is local for OSS (no opt-in); cluster require
   assert.equal(rlCluster.config.policy, 'cluster');
 });
 
-// ---------- C-7: _writ_warnings top-level block + comment header ----------
+// ---------- C-7: _x_security_warnings top-level block + comment header ----------
 
-test('kong C-7a: HS256 downgrade appears in _writ_warnings (not just stderr)', () => {
+test('kong C-7a: HS256 downgrade appears in _x_security_warnings (not just stderr)', () => {
   const spec: any = {
     info: { title: 'jwt-spec' },
     servers: [{ url: 'http://up' }],
@@ -942,7 +942,7 @@ test('kong C-7a: HS256 downgrade appears in _writ_warnings (not just stderr)', (
   const [art] = gen.generate(spec);
   const text = (art as any).content as string;
   assert.match(text, /^# WARNING:.*authentication\.allowedAlgorithms/m);
-  assert.match(text, /^# _writ_warnings:/m);
+  assert.match(text, /^# _x_security_warnings:/m);
   assert.ok(gen.lastStructuredWarnings.some(
     (w) => w.field === 'authentication.allowedAlgorithms' && w.emitted === 'HS256'
   ));
@@ -1090,7 +1090,7 @@ test('kong K-1a: rule-based + resourceLookup emits pre-function plugin with Lua 
   );
   assert.equal(plugins.length, 1);
   assert.equal(plugins[0]!.name, 'pre-function');
-  assert.ok(plugins[0]!.tags?.includes('writ-rule-bola-403'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-rule-bola-403'));
   const access = (plugins[0]!.config as { access: string[] }).access;
   assert.equal(access.length, 1);
   const lua = access[0]!;
@@ -1098,9 +1098,9 @@ test('kong K-1a: rule-based + resourceLookup emits pre-function plugin with Lua 
   assert.match(lua, /authenticated_credential.*username/);
   // Resource lookup URL has the path param substituted with a Lua expression
   assert.match(lua, /lookup_url = .*"\/internal\/users\/" \.\. tostring/);
-  // Comparison + 403 deny with the Writ tag
+  // Comparison + 403 deny with the XSecurity tag
   assert.match(lua, /tostring\(.*ss_resource.*ownerId.*\) ~= tostring/);
-  assert.match(lua, /tag = "writ-rule-bola-403"/);
+  assert.match(lua, /tag = "x-security-rule-bola-403"/);
   assert.match(lua, /kong\.response\.exit\(403/);
   // The cost-of-doing-business warning about resty.http availability is in
   // the snippet so operators see it even without WARNINGS.md.
@@ -1212,7 +1212,7 @@ test('kong K-1g: end-to-end — endpoint with rule-based authz emits pre-functio
   const route = parsed.services[0].routes[0];
   const pf = route.plugins.find((p: any) => p.name === 'pre-function');
   assert.ok(pf, 'pre-function plugin must be attached to the route');
-  assert.match(pf.config.access[0], /writ-rule-bola-403/);
+  assert.match(pf.config.access[0], /x-security-rule-bola-403/);
 });
 
 // ---------- W10-4 / W10-11: pcall-wrapped lookup + shared_dict cache ----------
@@ -1241,8 +1241,8 @@ test('kong W10-4a: resource lookup is pcall-wrapped and yields 403 (not 500) on 
   assert.match(lua, /reason = "lookup_failed"/);
   assert.match(lua, /reason = "decode_failed"/);
   assert.match(lua, /reason = "resty_http_missing"/);
-  // [writ-bola] log tag is present so docker logs greps work.
-  assert.match(lua, /\[writ-bola\] cache_miss/);
+  // [x-security-bola] log tag is present so docker logs greps work.
+  assert.match(lua, /\[x-security-bola\] cache_miss/);
 });
 
 test('kong W10-11a: shared_dict cache is consulted before HTTP and populated on miss', () => {
@@ -1270,7 +1270,7 @@ test('kong W10-11a: shared_dict cache is consulted before HTTP and populated on 
   // Miss path populates the cache after a successful decode.
   assert.match(lua, /ss_cache:set\(ss_cache_key, tostring\(body\.ownerId\), 60\)/);
   // Cache name matches the documented shared_dict.
-  assert.match(lua, /ngx\.shared\.writ_bola_cache/);
+  assert.match(lua, /ngx\.shared\.x_security_bola_cache/);
 });
 
 test('kong W10-11b: cache key combines principal + resource id (no cross-user leakage)', () => {
@@ -1313,7 +1313,7 @@ test('kong W10-11c: pre-function emission records a structured shared_dict warni
   assert.match(w.reason, /shared_dict/);
 });
 
-test('kong W10-11d: cache lookup is nil-safe when ngx.shared.writ_bola_cache is undeclared', () => {
+test('kong W10-11d: cache lookup is nil-safe when ngx.shared.x_security_bola_cache is undeclared', () => {
   const plugins = buildRuleBasedAuthzPlugins(
     {
       type: 'rule-based',
@@ -1413,7 +1413,7 @@ test('kong W19-A: domainAllowlist on url-typed query param emits pre-function wi
   );
   assert.equal(plugins.length, 1);
   assert.equal(plugins[0]!.name, 'pre-function');
-  assert.ok(plugins[0]!.tags?.includes('writ-rule-ssrf-403'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-rule-ssrf-403'));
   const lua = (plugins[0]!.config as { access: string[] }).access[0]!;
   // Pre-function reads the URL from the query string (not body) when the
   // param is bound to `in: query`.
@@ -1421,7 +1421,7 @@ test('kong W19-A: domainAllowlist on url-typed query param emits pre-function wi
   // Allowlist table contains the lowercased declared host.
   assert.match(lua, /\["roottusk\.com"\]=true/);
   assert.match(lua, /kong\.response\.exit\(403/);
-  assert.match(lua, /tag = "writ-rule-ssrf-403"/);
+  assert.match(lua, /tag = "x-security-rule-ssrf-403"/);
 });
 
 test('kong W19-A: blockPrivateRanges emits private-range guard with ssrf-private tag', () => {
@@ -1433,7 +1433,7 @@ test('kong W19-A: blockPrivateRanges emits private-range guard with ssrf-private
   const lua = (plugins[0]!.config as { access: string[] }).access[0]!;
   // Private-range guard fires `ss_is_private(host)` and tags the response.
   assert.match(lua, /ss_is_private\(host\)/);
-  assert.match(lua, /tag = "writ-rule-ssrf-private-403"/);
+  assert.match(lua, /tag = "x-security-rule-ssrf-private-403"/);
   // Canonical private prefixes appear in the Lua pattern set.
   assert.match(lua, /\^127%\./);
   assert.match(lua, /internal%-only/);
@@ -1449,7 +1449,7 @@ test('kong W19-A: blockPrivateRanges emits private-range guard with ssrf-private
 //
 // Fixes mirror Envoy W15-B: synthesize burst = max(requests*3, requests+20)
 // when the spec doesn't set `burst`, and tag every rate-limit plugin with a
-// `writ-per-route-ratelimit:<endpoint>` marker (sanitized by Kong's
+// `x-security-per-route-ratelimit:<endpoint>` marker (sanitized by Kong's
 // tag rules). The marker shows up in Kong access logs so attribution.py
 // can map it to per-id-rate-limit (×1.0).
 
@@ -1548,7 +1548,7 @@ test('kong W23-C1d: per-route scorer marker tag is emitted on every rate-limit p
   // Tag prefix must be present so attribution.py can match it; endpoint
   // qualifier turns it into a per-route signal.
   const marker = rl.tags.find((t: string) =>
-    t.startsWith('writ-per-route-ratelimit')
+    t.startsWith('x-security-per-route-ratelimit')
   );
   assert.ok(marker, 'marker tag missing from rate-limit plugin');
   assert.ok(
@@ -1568,11 +1568,11 @@ test('kong K-3: denyUnknownFields + schema emits mass-assign pre-function with a
   );
   assert.equal(plugins.length, 1);
   assert.equal(plugins[0]!.name, 'pre-function');
-  assert.ok(plugins[0]!.tags?.includes('writ-mass-assign-403'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-mass-assign-403'));
   const lua = (plugins[0]!.config as { access: string[] }).access[0]!;
   assert.match(lua, /\["username"\]=true/);
   assert.match(lua, /\["password"\]=true/);
-  assert.match(lua, /tag = "writ-mass-assign-403"/);
+  assert.match(lua, /tag = "x-security-mass-assign-403"/);
   assert.match(lua, /kong\.response\.exit\(403/);
 });
 
@@ -1605,9 +1605,9 @@ test('kong K-4: SQLi pre-function emits when contentType=json + schema present',
     { endpoint: 'api8-user-login' }
   );
   assert.equal(plugins.length, 1);
-  assert.ok(plugins[0]!.tags?.includes('writ-sqli-403'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-sqli-403'));
   const lua = (plugins[0]!.config as { access: string[] }).access[0]!;
-  assert.match(lua, /tag = "writ-sqli-403"/);
+  assert.match(lua, /tag = "x-security-sqli-403"/);
   // Classic OR-tautology pattern is present in the Lua matcher chain.
   assert.match(lua, /or%s\+%d\+%s\*=%s\*%d\+/);
   // Hits the body via Kong PDK, not via an external module.
@@ -1634,10 +1634,10 @@ test('kong K-5: deprecated=true emits 410 pre-function with marker + sunset + re
     { endpoint: 'api9-v1-user-login' }
   );
   assert.equal(plugins.length, 1);
-  assert.ok(plugins[0]!.tags?.includes('writ-deprecated-endpoint-block'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-deprecated-endpoint-block'));
   const lua = (plugins[0]!.config as { access: string[] }).access[0]!;
   assert.match(lua, /kong\.response\.exit\(410/);
-  assert.match(lua, /tag = "writ-deprecated-endpoint-block"/);
+  assert.match(lua, /tag = "x-security-deprecated-endpoint-block"/);
   assert.match(lua, /sunset = "2024-01-01"/);
   assert.match(lua, /replacement = "\/v2"/);
 });
@@ -1669,7 +1669,7 @@ test('kong K-5: deprecated pre-function runs BEFORE rate-limit in plugin orderin
   const [art] = createKongGenerator({ withConsumers: false }).generate(spec);
   const parsed: any = yamlLoad(art!.content);
   const plugins = parsed.services[0].routes[0].plugins;
-  const depIdx = plugins.findIndex((p: any) => (p.tags ?? []).includes('writ-deprecated-endpoint-block'));
+  const depIdx = plugins.findIndex((p: any) => (p.tags ?? []).includes('x-security-deprecated-endpoint-block'));
   const rlIdx = plugins.findIndex((p: any) => p.name === 'rate-limiting');
   assert.ok(depIdx >= 0, 'deprecated plugin must be emitted');
   assert.ok(rlIdx >= 0, 'rate-limit plugin must be emitted');
@@ -1696,12 +1696,12 @@ test('kong W26: response.stripUnknownFields emits post-function with body_filter
   );
   assert.equal(plugins.length, 1);
   assert.equal(plugins[0]!.name, 'post-function');
-  assert.ok(plugins[0]!.tags?.includes('writ-response-strip-unknown'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-response-strip-unknown'));
   const lua = (plugins[0]!.config as { body_filter: string[] }).body_filter[0]!;
   assert.match(lua, /\["token"\]=true/);
   assert.match(lua, /\["expiresIn"\]=true/);
   assert.match(lua, /kong\.response\.set_raw_body/);
-  assert.match(lua, /writ-response-strip-unknown/);
+  assert.match(lua, /x-security-response-strip-unknown/);
 });
 
 test('kong W26: stripUnknownFields=false or no schema → no plugin', () => {
@@ -1716,7 +1716,7 @@ test('kong W26: errorScrubbing.stripStackTraces emits post-function with marker'
   );
   assert.equal(plugins.length, 1);
   assert.equal(plugins[0]!.name, 'post-function');
-  assert.ok(plugins[0]!.tags?.includes('writ-response-strip-traces'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-response-strip-traces'));
   const lua = (plugins[0]!.config as { body_filter: string[] }).body_filter[0]!;
   assert.match(lua, /kong\.response\.get_status\(\)/);
   assert.match(lua, /body:gsub/);
@@ -1728,7 +1728,7 @@ test('kong W26: errorScrubbing.genericMessages emits 5xx-rewrite post-function',
     { endpoint: 'whoami' }
   );
   assert.equal(plugins.length, 1);
-  assert.ok(plugins[0]!.tags?.includes('writ-response-generic-error'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-response-generic-error'));
   const lua = (plugins[0]!.config as { body_filter: string[] }).body_filter[0]!;
   assert.match(lua, /status >= 500/);
   assert.match(lua, /Internal server error/);
@@ -1740,7 +1740,7 @@ test('kong W31: response.schema emits typed-validation post-function (cjson-deco
     { endpoint: 'login' }
   );
   assert.equal(plugins.length, 1);
-  assert.ok(plugins[0]!.tags?.includes('writ-response-schema'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-response-schema'));
   const lua = (plugins[0]!.config as { body_filter: string[] }).body_filter[0]!;
   // Validates against the cjson-DECODED value, never raw bytes.
   assert.match(lua, /cjson\.decode\(raw\)/);
@@ -1767,11 +1767,11 @@ test('kong W26: rateLimit identifier=fingerprint emits composite-key pre-functio
   );
   assert.equal(plugins.length, 1);
   assert.equal(plugins[0]!.name, 'pre-function');
-  assert.ok(plugins[0]!.tags?.includes('writ-rate-limit-fingerprint'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-rate-limit-fingerprint'));
   const lua = (plugins[0]!.config as { access: string[] }).access[0]!;
   assert.match(lua, /resty\.sha1/);
   assert.match(lua, /kong\.client\.get_ip/);
-  assert.match(lua, /X-Writ-Fingerprint/);
+  assert.match(lua, /X-XSecurity-Fingerprint/);
 });
 
 test('kong W26: rateLimit non-fingerprint identifier → no plugin', () => {
@@ -1793,7 +1793,7 @@ test('kong W26: botProtection enforce emits UA-blocklist + challenge-cookie pre-
   );
   assert.equal(plugins.length, 1);
   assert.equal(plugins[0]!.name, 'pre-function');
-  assert.ok(plugins[0]!.tags?.includes('writ-bot-detected'));
+  assert.ok(plugins[0]!.tags?.includes('x-security-bot-detected'));
   const lua = (plugins[0]!.config as { access: string[] }).access[0]!;
   assert.match(lua, /kong\.response\.exit\(403/);
   assert.match(lua, /ss_bot_challenge=/);
@@ -1840,12 +1840,12 @@ test('kong W26: wire-level — botProtection + fingerprint + response post-funct
   const [art] = createKongGenerator({ withConsumers: false }).generate(spec);
   const yml = art!.content;
   for (const marker of [
-    'writ-rate-limit-fingerprint',
-    'writ-bot-detected',
-    'writ-response-schema',
-    'writ-response-strip-unknown',
-    'writ-response-strip-traces',
-    'writ-response-generic-error'
+    'x-security-rate-limit-fingerprint',
+    'x-security-bot-detected',
+    'x-security-response-schema',
+    'x-security-response-strip-unknown',
+    'x-security-response-strip-traces',
+    'x-security-response-generic-error'
   ]) {
     assert.ok(yml.includes(marker), `missing W26 marker in kong.yml: ${marker}`);
   }

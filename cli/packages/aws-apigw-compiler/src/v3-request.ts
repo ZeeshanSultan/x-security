@@ -5,7 +5,7 @@ import type {
   ParamSchema,
   RequestPolicy,
   RequestSignature
-} from '@writ/schema';
+} from '@x-security/schema';
 import {
   and,
   headerEquals,
@@ -57,7 +57,7 @@ export function validateAuthAllowedAlgorithms(b: V3Builder, auth: Authentication
         audience: auth.audience
       }
     },
-    writ: { endpoint_id: b.eid, source_field: 'authentication.allowedAlgorithms' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'authentication.allowedAlgorithms' }
   });
   pushCapability(b, 'authentication.allowedAlgorithms', 'full', 'Lambda authorizer',
     'HTTP API JWT authorizers do not gate on alg; Lambda authorizer enforces the allowlist.',
@@ -96,7 +96,7 @@ export function compileRuleRefAuthorization(
           : null
       }
     },
-    writ: { endpoint_id: b.eid, source_field: 'authorization.rules[].value:RuleRef' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'authorization.rules[].value:RuleRef' }
   });
   pushCapability(b, 'authorization.rules[].value(RuleRef)', 'full', 'Lambda authorizer',
     'WAFv2 cannot dereference JWT claims; Lambda authorizer evaluates RuleRef and emits IAM policy.',
@@ -119,7 +119,7 @@ export function compileResourceLookup(b: V3Builder, authz: Authorization | undef
         expose: [...rl.expose]
       }
     },
-    writ: { endpoint_id: b.eid, source_field: 'authorization.resourceLookup' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'authorization.resourceLookup' }
   });
   pushCapability(b, 'authorization.resourceLookup', 'full', 'Lambda authorizer',
     'Authorizer issues sigv4 sub-call (or DynamoDB read), populates resource.* in context.',
@@ -172,7 +172,7 @@ export function compileCsrf(b: V3Builder, csrf: Csrf | undefined, baseMatch: Waf
         tokenCookie: csrf.tokenCookie
       }
     },
-    writ: { endpoint_id: b.eid, source_field: `csrf.${csrf.method}` }
+    xSecurity: { endpoint_id: b.eid, source_field: `csrf.${csrf.method}` }
   });
   pushCapability(b, 'csrf', 'partial', 'Lambda authorizer',
     `${csrf.method} requires Lambda; double-submit compares header vs cookie at the edge.`,
@@ -202,7 +202,7 @@ export function compileDenyUnknownFields(b: V3Builder, req: RequestPolicy | unde
     Name: modelName,
     ContentType: 'application/json',
     Schema: jsonSchema,
-    writ: { endpoint_id: b.eid, source_field: 'request.denyUnknownFields' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'request.denyUnknownFields' }
   };
   b.requestValidators.push({
     Name: `${b.prefix}-${b.ehash}-validator`,
@@ -210,7 +210,7 @@ export function compileDenyUnknownFields(b: V3Builder, req: RequestPolicy | unde
     ValidateRequestParameters: true,
     ModelName: modelName,
     Model: model,
-    writ: { endpoint_id: b.eid, source_field: 'request.denyUnknownFields' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'request.denyUnknownFields' }
   });
   pushCapability(b, 'request.denyUnknownFields', 'full', 'API Gateway request validator + JSON Schema model',
     'additionalProperties:false on the body model gives true field-deny at the gateway tier.',
@@ -287,7 +287,7 @@ export function compileRequestSignature(b: V3Builder, sig: RequestSignature | un
         timestampToleranceSeconds: sig.timestampToleranceSeconds
       }
     },
-    writ: { endpoint_id: b.eid, source_field: 'request.signature' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'request.signature' }
   });
   pushCapability(b, 'request.signature', 'full', 'Lambda authorizer (HMAC verify)',
     'API Gateway has no native HMAC primitive; authorizer verifies before invoking the integration.',
@@ -330,7 +330,7 @@ export function compileDuplicateParamPolicy(b: V3Builder, policy: 'first' | 'las
       kind: 'duplicate-param-policy',
       config: { policy }
     },
-    writ: { endpoint_id: b.eid, source_field: 'request.duplicateParamPolicy' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'request.duplicateParamPolicy' }
   });
   pushCapability(b, 'request.duplicateParamPolicy', 'partial', 'Lambda authorizer',
     'API Gateway has no HPP primitive; authorizer normalizes per `policy`.',
@@ -354,7 +354,7 @@ export function compileHeaderInjectionGuard(b: V3Builder, on: boolean | undefine
     kind: 'header-injection-guard',
     statement: and(baseMatch, {
       RegexPatternSetReferenceStatement: {
-        ARN: `arn:writ:regexset:${setName}`,
+        ARN: `arn:x-security:regexset:${setName}`,
         FieldToMatch: {
           Headers: {
             MatchPattern: { All: {} },
@@ -396,7 +396,7 @@ export function compilePathCanonicalization(b: V3Builder, on: boolean | undefine
     kind: 'path-canonicalization',
     statement: {
       RegexPatternSetReferenceStatement: {
-        ARN: `arn:writ:regexset:${setName}`,
+        ARN: `arn:x-security:regexset:${setName}`,
         FieldToMatch: { UriPath: {} },
         TextTransformations: NO_TRANSFORM
       }
@@ -449,7 +449,7 @@ export function compileBinaryParamHardening(b: V3Builder, req: RequestPolicy | u
           denyDoubleExtension: !!ps.denyDoubleExtension
         }
       },
-      writ: { endpoint_id: b.eid, source_field: `request.schema.${name}` }
+      xSecurity: { endpoint_id: b.eid, source_field: `request.schema.${name}` }
     });
     if (ps.maxSize) {
       try {

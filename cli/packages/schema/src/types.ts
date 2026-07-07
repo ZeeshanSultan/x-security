@@ -6,7 +6,7 @@ export type OwaspId =
   | 'API6:2023' | 'API7:2023' | 'API8:2023' | 'API9:2023' | 'API10:2023';
 
 /**
- * v0.6 W19: Writ-native security category id for classes OWASP-API-2023
+ * v0.6 W19: x-security-native security category id for classes OWASP-API-2023
  * does not enumerate. Kept separate from OwaspId so the 10 pure OWASP cells
  * cannot be overloaded (Rule D-1: overloading API8 would silently corrupt the
  * meaning of every existing API8 cell and re-open the DVAPI scoring bug).
@@ -14,7 +14,7 @@ export type OwaspId =
 export type SsecId = 'SSEC-INJECTION' | 'SSEC-PROMPT' | 'SSEC-AUDIT' | 'SSEC-STORAGE';
 
 /**
- * Union of OWASP-API ids and Writ-native ids. Reporters that iterate the
+ * Union of OWASP-API ids and x-security-native ids. Reporters that iterate the
  * full category list (owasp-analyze, feasibility) key on this; `mitigates`
  * arrays authored on a policy stay OwaspId-only — SSEC attribution is *derived*
  * by probing capabilities (e.g. request.schema.<f>.injectionGuard), never
@@ -215,7 +215,7 @@ export interface ParamSchema {
    * prompt-injection heuristic denylist, etc.). Per-arg and explicit,
    * replacing the implicit string-type heuristic. All sinks EXCEPT 'ai-prompt'
    * are attributed to SSEC-INJECTION; 'ai-prompt' is the distinct
-   * Writ-native SSEC-PROMPT class. Never an OWASP-API cell.
+   * x-security-native SSEC-PROMPT class. Never an OWASP-API cell.
    * Edge-enforceable on coraza/bunkerweb only.
    */
   injectionGuard?: ('sql' | 'nosql' | 'os-command' | 'xpath' | 'ldap' | 'code-eval' | 'xss' | 'deserialization' | 'ai-prompt')[];
@@ -384,7 +384,7 @@ export interface ResponsePolicy {
  * rbac → API5:2023 BFLA); per-operation cost limits override the block-level
  * coarse limits (API4:2023). OVERRIDE-ONLY on every target — a gateway cannot
  * evaluate per-resolver authz/cost without an operator-supplied GraphQL-aware
- * processor (the same gap as the response-schema ext_proc). Writ emits
+ * processor (the same gap as the response-schema ext_proc). x-security emits
  * scaffolding only; enforcement depends on the operator supplying the
  * processor. capKey graphql.operations.authz (authz) is distinct from the
  * coarse graphql.staticLimits capKey.

@@ -6,7 +6,7 @@
  * filter so the `opa-bfla-403` marker can fire on denial — see extauthz.ts.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import { isAdminOnlyRbac } from '../extauthz.js';
 import { pathToSafeRegex, safeStatId, yamlString } from '../yaml-util.js';
 
@@ -43,7 +43,7 @@ export function emitRbacFilter(lines: string[], rbac: RbacEntry[], jwtName: stri
   // Aggregate unique role sets so we emit one policy per distinct (path, role).
   for (const entry of rbac) {
     for (const role of entry.roles) {
-      const polName = `writ-rbac-${safeStatId(entry.endpoint)}-${role.replace(/[^a-z0-9]+/gi, '-')}`;
+      const polName = `x-security-rbac-${safeStatId(entry.endpoint)}-${role.replace(/[^a-z0-9]+/gi, '-')}`;
       lines.push(`          ${yamlString(polName)}:`);
       lines.push('            permissions:');
       lines.push('              - url_path:');

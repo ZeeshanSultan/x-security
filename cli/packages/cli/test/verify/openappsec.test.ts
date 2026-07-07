@@ -16,12 +16,12 @@ const fix = (p: string): string => path.join(here, '__fixtures__', 'openappsec',
 test('openappsec verify: parseOpenappsecPolicy extracts practices, assets, triggers', async () => {
   const yamlText = await readFile(fix('policy.yaml'), 'utf8');
   const p = parseOpenappsecPolicy(yamlText);
-  assert.deepEqual(new Set(p.practices), new Set(['writ-threat-prevention', 'writ-rate-limit']));
+  assert.deepEqual(new Set(p.practices), new Set(['x-security-threat-prevention', 'x-security-rate-limit']));
   assert.equal(p.assets.length, 1);
-  assert.equal(p.assets[0]!.name, 'writ-asset-vapi');
+  assert.equal(p.assets[0]!.name, 'x-security-asset-vapi');
   assert.equal(p.assets[0]!.host, 'vapi');
-  assert.deepEqual(p.triggers, ['writ-log-trigger']);
-  assert.deepEqual(p.customResponses, ['writ-blocked-response']);
+  assert.deepEqual(p.triggers, ['x-security-log-trigger']);
+  assert.deepEqual(p.customResponses, ['x-security-blocked-response']);
   assert.equal(p.schemaEntries.length, 2);
   assert.equal(p.schemaEntries[0]!.endpoint, 'GET /vapi/api1/user/{id}');
 });
@@ -37,8 +37,8 @@ test('openappsec verify: reconcile marks every emitted name loaded when all pres
   const yamlText = await readFile(fix('policy.yaml'), 'utf8');
   const policy = parseOpenappsecPolicy(yamlText);
   const emitted = [
-    { id: 'writ-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' },
-    { id: 'writ-asset-vapi', kind: 'envoy-endpoint-policy' as const, endpoint: '(asset) vapi', label: 'asset' },
+    { id: 'x-security-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' },
+    { id: 'x-security-asset-vapi', kind: 'envoy-endpoint-policy' as const, endpoint: '(asset) vapi', label: 'asset' },
     { id: 'get-api1-user-by-id', kind: 'envoy-endpoint-policy' as const, endpoint: 'GET /vapi/api1/user/{id}', label: 'schema' }
   ];
   // All three names appear in the agent conf fixture.
@@ -51,7 +51,7 @@ test('openappsec verify: reconcile marks every emitted name loaded when all pres
 
 test('openappsec verify: reconcile flags everything when no policy loaded', () => {
   const emitted = [
-    { id: 'writ-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' }
+    { id: 'x-security-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' }
   ];
   const loaded = [
     {
@@ -68,26 +68,26 @@ test('openappsec verify: reconcile flags everything when no policy loaded', () =
 
 test('openappsec verify: reconcile reports verdict count diagnostic', () => {
   const emitted = [
-    { id: 'writ-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' }
+    { id: 'x-security-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' }
   ];
   const loaded = [
-    { id: 'writ-threat-prevention', kind: 'envoy-endpoint-policy' as const },
+    { id: 'x-security-threat-prevention', kind: 'envoy-endpoint-policy' as const },
     { id: '__verdict-count__', kind: 'envoy-endpoint-policy' as const, rejectionReason: 'verdicts:42' }
   ];
   const { diagnostics } = openappsecReader.reconcile(emitted, loaded);
-  assert.ok(diagnostics.some((d) => /42 Writ-attributed verdict/.test(d)));
+  assert.ok(diagnostics.some((d) => /42 x-security-attributed verdict/.test(d)));
 });
 
 test('openappsec verify: reconcile flags missing practice names', () => {
   const emitted = [
-    { id: 'writ-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' },
-    { id: 'writ-missing-practice', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' }
+    { id: 'x-security-threat-prevention', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' },
+    { id: 'x-security-missing-practice', kind: 'envoy-endpoint-policy' as const, endpoint: '(practices)', label: 'practice' }
   ];
   const loaded = [
-    { id: 'writ-threat-prevention', kind: 'envoy-endpoint-policy' as const }
+    { id: 'x-security-threat-prevention', kind: 'envoy-endpoint-policy' as const }
   ];
   const { rows } = openappsecReader.reconcile(emitted, loaded);
   assert.equal(rows[0]!.loaded, 1);
   assert.equal(rows[0]!.rejected.length, 1);
-  assert.equal(rows[0]!.rejected[0]!.id, 'writ-missing-practice');
+  assert.equal(rows[0]!.rejected[0]!.id, 'x-security-missing-practice');
 });

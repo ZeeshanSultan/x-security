@@ -6,7 +6,7 @@
  * runtime can parse without manual sanitization.
  *
  * The hard acceptance criteria for `modsec-nginx` come from REPORT-v3 §3:
- *   1. No `coraza.yml` — must emit `writ.conf` (plain directives).
+ *   1. No `coraza.yml` — must emit `x-security.conf` (plain directives).
  *   2. No `SecDefaultAction` — crs-setup.conf already calls it once per phase.
  *   3. No `initcol:user=` / `initcol:apikey=` — libmodsecurity3 v3.0.15 only
  *      accepts `ip`, `global`, `resource` as collection names.
@@ -14,8 +14,8 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 import { createCorazaGenerator } from '../../src/generators/coraza/index.js';
 import {
@@ -104,24 +104,24 @@ describe('coraza-engines: profile constants', () => {
 });
 
 describe('coraza-engines: modsec-nginx output is libmodsecurity3-safe', () => {
-  it('emits writ.conf (not coraza.yml) with no YAML wrapper', () => {
+  it('emits x-security.conf (not coraza.yml) with no YAML wrapper', () => {
     const gen = createCorazaGenerator({ engine: 'modsec-nginx' });
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string; format: string }>;
-    const conf = arts.find((a) => a.path === 'writ.conf');
-    assert.ok(conf, 'must emit writ.conf');
+    const conf = arts.find((a) => a.path === 'x-security.conf');
+    assert.ok(conf, 'must emit x-security.conf');
     assert.equal(conf!.format, 'conf');
     assert.doesNotMatch(conf!.content, /^directives: \|/m, 'no YAML wrapper');
-    assert.doesNotMatch(conf!.content, /^generator: writ-coraza/m, 'no YAML metadata header');
+    assert.doesNotMatch(conf!.content, /^generator: x-security-coraza/m, 'no YAML metadata header');
     // The companion include snippet must exist with a stable mount path.
-    const inc = arts.find((a) => a.path === 'writ-include.conf');
-    assert.ok(inc, 'must emit writ-include.conf');
-    assert.match(inc!.content, /Include \/etc\/modsecurity\.d\/writ\.conf/);
+    const inc = arts.find((a) => a.path === 'x-security-include.conf');
+    assert.ok(inc, 'must emit x-security-include.conf');
+    assert.match(inc!.content, /Include \/etc\/modsecurity\.d\/x-security\.conf/);
   });
 
   it('emits NO SecDefaultAction (crs-setup.conf already sets them)', () => {
     const gen = createCorazaGenerator({ engine: 'modsec-nginx' });
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>;
-    const conf = arts.find((a) => a.path === 'writ.conf')!;
+    const conf = arts.find((a) => a.path === 'x-security.conf')!;
     assert.doesNotMatch(
       conf.content,
       /^SecDefaultAction/m,
@@ -134,7 +134,7 @@ describe('coraza-engines: modsec-nginx output is libmodsecurity3-safe', () => {
   it('emits NO initcol:user= or initcol:apikey= (only ip/global/resource)', () => {
     const gen = createCorazaGenerator({ engine: 'modsec-nginx' });
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>;
-    const conf = arts.find((a) => a.path === 'writ.conf')!;
+    const conf = arts.find((a) => a.path === 'x-security.conf')!;
 
     assert.doesNotMatch(conf.content, /initcol:user=/, 'libmodsecurity3 rejects user collection');
     assert.doesNotMatch(conf.content, /initcol:apikey=/, 'apikey is not a legal collection');
@@ -156,7 +156,7 @@ describe('coraza-engines: modsec-nginx output is libmodsecurity3-safe', () => {
   it('emits ctl:requestBodyProcessor=JSON for endpoints with application/json content-type', () => {
     const gen = createCorazaGenerator({ engine: 'modsec-nginx' });
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>;
-    const conf = arts.find((a) => a.path === 'writ.conf')!;
+    const conf = arts.find((a) => a.path === 'x-security.conf')!;
     // wave-8: ctl emission decoupled from allowlist — fires for any JSON endpoint.
     assert.match(conf.content, /ctl:requestBodyProcessor=JSON/);
     assert.match(conf.content, /Content-Type "@rx \^application\/\(json\|vnd/);
@@ -181,16 +181,16 @@ describe('coraza-engines: modsec-nginx output is libmodsecurity3-safe', () => {
 });
 
 describe('coraza-engines: modsec-apache mirrors modsec-nginx', () => {
-  it('emits writ.conf with Apache-style include snippet, no SecDefaultAction', () => {
+  it('emits x-security.conf with Apache-style include snippet, no SecDefaultAction', () => {
     const gen = createCorazaGenerator({ engine: 'modsec-apache' });
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>;
-    const conf = arts.find((a) => a.path === 'writ.conf');
-    const inc = arts.find((a) => a.path === 'writ-include.conf');
+    const conf = arts.find((a) => a.path === 'x-security.conf');
+    const inc = arts.find((a) => a.path === 'x-security-include.conf');
     assert.ok(conf);
     assert.ok(inc);
     assert.doesNotMatch(conf!.content, /^SecDefaultAction/m);
     assert.doesNotMatch(conf!.content, /initcol:user=/);
-    assert.match(inc!.content, /Include \/etc\/modsecurity\/writ\.conf/);
+    assert.match(inc!.content, /Include \/etc\/modsecurity\/x-security\.conf/);
   });
 });
 
@@ -276,7 +276,7 @@ describe('coraza-engines: configure() switches profile in place', () => {
     gen.configure({ engine: 'modsec-nginx' });
     assert.equal(gen.engine, 'modsec-nginx');
     arts = gen.generate(fixtureSpec()) as Array<{ path: string }>;
-    assert.ok(arts.find((a) => a.path === 'writ.conf'));
+    assert.ok(arts.find((a) => a.path === 'x-security.conf'));
     assert.ok(!arts.find((a) => a.path === 'coraza.yml'));
   });
 });
@@ -340,8 +340,8 @@ describe('coraza-engines C-1: response.* support across all profiles', () => {
       );
       const joined = rules.join('\n');
       assert.match(joined, /phase:4/);
-      assert.match(joined, /writ-api3-bopla/);
-      assert.match(joined, /Writ: response\.secret exceeds maxLength=64/);
+      assert.match(joined, /x-security-api3-bopla/);
+      assert.match(joined, /x-security: response\.secret exceeds maxLength=64/);
       // perf-cost warning is loud, with engine identity attached.
       const downgrade = warnings.find(
         (w: any) => w.severity === 'downgrade' && /response inspection/.test(w.reason)
@@ -373,7 +373,7 @@ describe('coraza-engines C-1: response.* support across all profiles', () => {
     const respEp = ep('GET', '/api3/comment', { response: { schema: { secret: { maxLength: 16 } } } });
     const spec: SpecIR = { info: { title: 't', version: '1' }, endpoints: [respEp], servers: [] };
     const gen = createCorazaGenerator({ engine: 'modsec-nginx' });
-    const text = gen.generate(spec).find((a) => a.path === 'writ.conf')!.content;
+    const text = gen.generate(spec).find((a) => a.path === 'x-security.conf')!.content;
     assert.match(text, /C-1: response-body inspection required by spec/);
     assert.match(text, /SecResponseBodyAccess On/);
   });
@@ -401,12 +401,12 @@ describe('coraza-engines: W11 HAProxy stick-tables for coraza-spoa', () => {
     const cfg = arts.find((a) => a.path === 'haproxy-stick-tables.cfg');
     assert.ok(cfg, 'haproxy-stick-tables.cfg must be emitted');
     // Backend block with stick-table for the IP-keyed /login endpoint.
-    assert.match(cfg!.content, /backend st_writ_post_login/);
+    assert.match(cfg!.content, /backend st_x_security_post_login/);
     assert.match(cfg!.content, /stick-table type ip size 100k expire 1m store http_req_rate\(1m\)/);
     // Frontend snippet — ACL/track/deny lines for /login (5/min).
     assert.match(cfg!.content, /=== WRIT FRONTEND SNIPPET ===/);
-    assert.match(cfg!.content, /http-request track-sc0 src table st_writ_post_login/);
-    assert.match(cfg!.content, /http-request deny deny_status 429 .* sc0_http_req_rate\(st_writ_post_login\) gt 5/);
+    assert.match(cfg!.content, /http-request track-sc0 src table st_x_security_post_login/);
+    assert.match(cfg!.content, /http-request deny deny_status 429 .* sc0_http_req_rate\(st_x_security_post_login\) gt 5/);
   });
 
   it('user-id identifier → string-keyed table on Authorization header', () => {
@@ -414,21 +414,21 @@ describe('coraza-engines: W11 HAProxy stick-tables for coraza-spoa', () => {
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>;
     const cfg = arts.find((a) => a.path === 'haproxy-stick-tables.cfg')!;
     assert.match(cfg.content, /stick-table type string len 128 .* store http_req_rate\(1m\)/);
-    assert.match(cfg.content, /http-request track-sc0 req\.hdr\(Authorization\) table st_writ_post_api_users_id/);
+    assert.match(cfg.content, /http-request track-sc0 req\.hdr\(Authorization\) table st_x_security_post_api_users_id/);
   });
 
   it('api-key identifier → req.hdr(X-API-Key)', () => {
     const gen = createCorazaGenerator({ engine: 'coraza-spoa' });
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>;
     const cfg = arts.find((a) => a.path === 'haproxy-stick-tables.cfg')!;
-    assert.match(cfg.content, /http-request track-sc0 req\.hdr\(X-API-Key\) table st_writ_get_api_data/);
+    assert.match(cfg.content, /http-request track-sc0 req\.hdr\(X-API-Key\) table st_x_security_get_api_data/);
   });
 
   it('header:X identifier → req.hdr(X)', () => {
     const gen = createCorazaGenerator({ engine: 'coraza-spoa' });
     const arts = gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>;
     const cfg = arts.find((a) => a.path === 'haproxy-stick-tables.cfg')!;
-    assert.match(cfg.content, /http-request track-sc0 req\.hdr\(X-Tenant-Id\) table st_writ_get_api_tenant/);
+    assert.match(cfg.content, /http-request track-sc0 req\.hdr\(X-Tenant-Id\) table st_x_security_get_api_tenant/);
   });
 
   it('burst → separate sc1-tracked stick-table with 10s window (W24-C1)', () => {
@@ -440,14 +440,14 @@ describe('coraza-engines: W11 HAProxy stick-tables for coraza-spoa', () => {
     const cfg = (gen.generate(spec) as Array<{ path: string; content: string }>)
       .find((a) => a.path === 'haproxy-stick-tables.cfg')!;
     // Main long-window table is untouched (no `,http_req_rate(1s)` glommed on).
-    assert.match(cfg.content, /backend st_writ_post_burst\n\s+stick-table type ip size 100k expire 1m store http_req_rate\(1m\)\s*$/m);
+    assert.match(cfg.content, /backend st_x_security_post_burst\n\s+stick-table type ip size 100k expire 1m store http_req_rate\(1m\)\s*$/m);
     // Separate burst backend, 10s window.
-    assert.match(cfg.content, /backend st_writ_post_burst_burst\n\s+stick-table type ip size 100k expire 10s store http_req_rate\(10s\)/);
+    assert.match(cfg.content, /backend st_x_security_post_burst_burst\n\s+stick-table type ip size 100k expire 10s store http_req_rate\(10s\)/);
     // Long-window deny on sc0.
-    assert.match(cfg.content, /sc0_http_req_rate\(st_writ_post_burst\) gt 60/);
+    assert.match(cfg.content, /sc0_http_req_rate\(st_x_security_post_burst\) gt 60/);
     // Burst deny on sc1 against the burst backend.
-    assert.match(cfg.content, /track-sc1 src table st_writ_post_burst_burst/);
-    assert.match(cfg.content, /sc1_http_req_rate\(st_writ_post_burst_burst\) gt 5/);
+    assert.match(cfg.content, /track-sc1 src table st_x_security_post_burst_burst/);
+    assert.match(cfg.content, /sc1_http_req_rate\(st_x_security_post_burst_burst\) gt 5/);
   });
 
   it('composite identifier {components} → honors first component + LOUD downgrade warning (Rule D-1)', () => {
@@ -463,7 +463,7 @@ describe('coraza-engines: W11 HAProxy stick-tables for coraza-spoa', () => {
     const arts = gen.generate(spec) as Array<{ path: string; content: string }>;
     const cfg = arts.find((a) => a.path === 'haproxy-stick-tables.cfg')!;
     // First component (ip) honored.
-    assert.match(cfg.content, /http-request track-sc0 src table st_writ_post_comp/);
+    assert.match(cfg.content, /http-request track-sc0 src table st_x_security_post_comp/);
     // Loud warning surfaced in lastWarnings — never silent.
     const w = gen.lastWarnings.join('\n');
     assert.match(w, /composite.*Honored "ip".*dropped: "header:X-User-Id", "api-key"/);
@@ -491,7 +491,7 @@ describe('coraza-engines: W13-D HAProxy peer replication', () => {
     const cfg = (gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>)
       .find((a) => a.path === 'haproxy-stick-tables.cfg')!;
     assert.doesNotMatch(cfg.content, /^peers /m);
-    assert.doesNotMatch(cfg.content, /peers writ$/m);
+    assert.doesNotMatch(cfg.content, /peers x-security$/m);
     // Sanity: stick-table line ends at `store http_req_rate(...)` without trailing ` peers ...`.
     assert.match(cfg.content, /stick-table type ip size 100k expire 1m store http_req_rate\(1m\)\n/);
   });
@@ -503,16 +503,16 @@ describe('coraza-engines: W13-D HAProxy peer replication', () => {
     });
     const cfg = (gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>)
       .find((a) => a.path === 'haproxy-stick-tables.cfg')!;
-    assert.match(cfg.content, /^peers writ$/m);
+    assert.match(cfg.content, /^peers x-security$/m);
     assert.match(cfg.content, /^    peer node1 10\.0\.0\.1:10000$/m);
     assert.match(cfg.content, /^    peer node2 10\.0\.0\.2:10000$/m);
-    // Every stick-table line must end with `peers writ`.
+    // Every stick-table line must end with `peers x-security`.
     const stickTableLines = cfg.content
       .split('\n')
       .filter((l) => l.trimStart().startsWith('stick-table '));
     assert.ok(stickTableLines.length > 0, 'expected at least one stick-table line');
     for (const line of stickTableLines) {
-      assert.match(line, / peers writ$/, `missing peer opt-in on: ${line}`);
+      assert.match(line, / peers x-security$/, `missing peer opt-in on: ${line}`);
     }
     // No downgrade warning since the input was well-formed.
     const w = gen.lastWarnings.join('\n');
@@ -527,7 +527,7 @@ describe('coraza-engines: W13-D HAProxy peer replication', () => {
     const cfg = (gen.generate(fixtureSpec()) as Array<{ path: string; content: string }>)
       .find((a) => a.path === 'haproxy-stick-tables.cfg')!;
     assert.doesNotMatch(cfg.content, /^peers /m);
-    assert.doesNotMatch(cfg.content, / peers writ$/m);
+    assert.doesNotMatch(cfg.content, / peers x-security$/m);
     const w = gen.lastWarnings.join('\n');
     assert.match(w, /--coraza-peers entry "node1:10\.0\.0\.1" is malformed/);
     assert.match(w, /peer replication disabled/);

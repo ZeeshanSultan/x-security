@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Binary entry. Cursor invokes this via `npx -y @writ/cli mcp`, which
+// Binary entry. Cursor invokes this via `npx -y @x-security/cli mcp`, which
 // in turn dynamic-imports and calls main(). We also expose main() as the
 // default export so the CLI wrapper can run us in-process without forking.
 
@@ -19,7 +19,7 @@ export default main;
 const isDirectRun =
   import.meta.url === `file://${process.argv[1] ?? ''}` ||
   process.argv[1]?.endsWith('cursor-mcp/dist/index.js') === true ||
-  process.argv[1]?.endsWith('writ-cursor-mcp') === true;
+  process.argv[1]?.endsWith('x-security-cursor-mcp') === true;
 
 if (isDirectRun) {
   main().catch((e: unknown) => {

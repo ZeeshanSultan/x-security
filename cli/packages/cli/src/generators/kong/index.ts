@@ -12,14 +12,14 @@ import type {
   ConfigArtifact,
   SpecIR,
   EndpointIR
-} from '@writ/core';
+} from '@x-security/core';
 import type {
   KongDeclarativeConfig,
   KongPlugin,
   KongRoute,
   KongService,
   KongDeployment,
-  WritWarning
+  XSecurityWarning
 } from './types.js';
 import { collectSsrfPolicyWarnings } from '../ssrf-policy-check.js';
 import {
@@ -98,9 +98,9 @@ export interface KongGeneratorOptions {
 // computed uuid and Kong rejects the second one as a "uniqueness violation".
 // We make the id deterministic from route+plugin+index so the same input
 // always yields the same kong.yml (lazy diff depends on it).
-const WRIT_KONG_NAMESPACE = 'a4f7e8c2-1b3d-4e5f-9a8b-7c6d5e4f3a2b';
+const X_SECURITY_KONG_NAMESPACE = 'a4f7e8c2-1b3d-4e5f-9a8b-7c6d5e4f3a2b';
 
-function uuidv5(name: string, namespace: string = WRIT_KONG_NAMESPACE): string {
+function uuidv5(name: string, namespace: string = X_SECURITY_KONG_NAMESPACE): string {
   const nsBytes = Buffer.from(namespace.replace(/-/g, ''), 'hex');
   const hash = createHash('sha1').update(nsBytes).update(name).digest();
   const bytes = Buffer.from(hash.subarray(0, 16));
@@ -193,7 +193,7 @@ function buildEndpointPlugins(ep: EndpointIR, ctx: BuildContext): KongPlugin[] {
       warn: ctx.warn
     }),
     // v0.7 authentication.accountLockout — per-credential rate-limit throttle
-    // (PARTIAL — not a true failed-attempt lockout; see _writ_warnings).
+    // (PARTIAL — not a true failed-attempt lockout; see _x_security_warnings).
     ...buildAccountLockoutPlugins(p.authentication, {
       ...(ep.operationId ? { endpoint: ep.operationId } : {}),
       warn: ctx.warn
@@ -220,7 +220,7 @@ function buildEndpointPlugins(ep: EndpointIR, ctx: BuildContext): KongPlugin[] {
       warn: ctx.warn
     }),
     // W26: rate-limit fingerprint composite key (ip+ua hash) — runs before
-    // request-side checks so the X-Writ-Fingerprint header is set
+    // request-side checks so the X-XSecurity-Fingerprint header is set
     // before any plugin (or upstream) might consume it.
     ...buildRateLimitFingerprintPlugins(p.rateLimit, {
       ...(ep.operationId ? { endpoint: ep.operationId } : {})
@@ -248,7 +248,7 @@ function buildEndpointPlugins(ep: EndpointIR, ctx: BuildContext): KongPlugin[] {
       warn: ctx.warn
     }),
     // v0.7 request.idempotencyKey — best-effort shared_dict replay suppression
-    // (PARTIAL — not atomic idempotency; see _writ_warnings).
+    // (PARTIAL — not atomic idempotency; see _x_security_warnings).
     ...buildIdempotencyKeyPlugins(p.request, {
       ...(ep.operationId ? { endpoint: ep.operationId } : {}),
       warn: ctx.warn
@@ -347,8 +347,8 @@ export interface KongGenerator extends Generator {
    *  these and emits them on stderr so the operator sees the HS256 downgrade. */
   readonly lastWarnings: readonly string[];
   /** Structured warnings from the most recent generate() call. Same content
-   *  as the kong.yml's `_writ_warnings` block. */
-  readonly lastStructuredWarnings: readonly WritWarning[];
+   *  as the kong.yml's `_x_security_warnings` block. */
+  readonly lastStructuredWarnings: readonly XSecurityWarning[];
 }
 
 export function createKongGenerator(opts: KongGeneratorOptions = {}): KongGenerator {
@@ -358,7 +358,7 @@ export function createKongGenerator(opts: KongGeneratorOptions = {}): KongGenera
   let dbless: boolean = opts.dbless ?? false;
   let policy: 'local' | 'cluster' | undefined = opts.policy;
   let lastWarnings: string[] = [];
-  let lastStructuredWarnings: WritWarning[] = [];
+  let lastStructuredWarnings: XSecurityWarning[] = [];
 
   const gen: KongGenerator = {
     name: 'kong',
@@ -376,14 +376,14 @@ export function createKongGenerator(opts: KongGeneratorOptions = {}): KongGenera
       return lastWarnings;
     },
 
-    get lastStructuredWarnings(): readonly WritWarning[] {
+    get lastStructuredWarnings(): readonly XSecurityWarning[] {
       return lastStructuredWarnings;
     },
 
     generate(spec: SpecIR): ConfigArtifact[] {
       lastWarnings = [];
       lastStructuredWarnings = [];
-      const structured: WritWarning[] = [];
+      const structured: XSecurityWarning[] = [];
       const warn: WarningSink = (w) => structured.push(w);
 
       const ctx: BuildContext = { edition, warn, dbless, policy };
@@ -448,14 +448,14 @@ export function createKongGenerator(opts: KongGeneratorOptions = {}): KongGenera
       });
 
       // Kong rejects unknown top-level keys (`unknown field: ...`), so we
-      // CAN'T put `_writ_warnings:` directly in the declarative
+      // CAN'T put `_x_security_warnings:` directly in the declarative
       // config. Instead we emit a comment header at the top of the file
       // with two grep targets:
       //   1) `# WARNING:` lines — one per divergence, human-readable.
-      //   2) A YAML-commented `# _writ_warnings:` block — structured
+      //   2) A YAML-commented `# _x_security_warnings:` block — structured
       //      data that uncomments cleanly into a valid YAML array (so
-      //      `sed 's/^# _writ_warnings/_writ_warnings/; s/^#   //' kong.yml | yq` works for tooling).
-      // Both forms cover `grep _writ_warnings kong.yml` and
+      //      `sed 's/^# _x_security_warnings/_x_security_warnings/; s/^#   //' kong.yml | yq` works for tooling).
+      // Both forms cover `grep _x_security_warnings kong.yml` and
       // `grep '^# WARNING' kong.yml` per the workstream contract.
       const header = renderWarningsHeader(structured, deployment, edition);
 
@@ -490,8 +490,8 @@ export function createKongGenerator(opts: KongGeneratorOptions = {}): KongGenera
           'request.contentType': 'full',
           'request.maxBodySize': 'full',                   // via request-size-limiting
           'request.schema': 'partial',                     // request-validator is enterprise-only for body_schema; OSS users see degraded enforcement (mass-assign + sqli pre-functions partially cover)
-          'request.schema.injectionGuard': 'unsupported',  // HONEST: Kong OSS has no libinjection/@detectSQLi; a pre-function regex would be a fragile fake (Rule D-1). Abstain + _writ_warnings divergence note; front with coraza/bunkerweb which carry SSEC-INJECTION.
-          'request.denyUnknownFields': 'full',             // K-3: pre-function rejects unknown top-level body fields with writ-mass-assign-403
+          'request.schema.injectionGuard': 'unsupported',  // HONEST: Kong OSS has no libinjection/@detectSQLi; a pre-function regex would be a fragile fake (Rule D-1). Abstain + _x_security_warnings divergence note; front with coraza/bunkerweb which carry SSEC-INJECTION.
+          'request.denyUnknownFields': 'full',             // K-3: pre-function rejects unknown top-level body fields with x-security-mass-assign-403
           'request.allowedFields': 'full',                 // K-3: pre-function allowlist enforcement
           'request.signature': 'partial',                  // hmac-auth: full for hmac-sha* + Authorization header; ed25519/custom-header degrade with stderr warning
           'response.contentType': 'full',                  // post-function header_filter asserts 2xx Content-Type against allowlist, fail-closed 502
@@ -519,9 +519,9 @@ export function createKongGenerator(opts: KongGeneratorOptions = {}): KongGenera
           'logging': 'full',                               // v0.7: native Kong log plugin per logging.sink (http-log/file-log/tcp-log/syslog) with declared-event custom fields; piiRedaction nil-sets declared pii field names out of the serialized entry. Real native plugins → full.
           'authentication.passwordPolicy': 'full',         // v0.7: access pre-function validates the password body field (minLength/uppercase/digit/symbol/blocklist) and exits 422 before upstream. Genuine edge enforcement → full.
           'response.forbidArrayRoot': 'full',              // v0.7 API3: body_filter post-function cjson-decodes the body and rewrites a bare top-level array response to 502. Decoded-value check (not raw regex) → full.
-          'request.idempotencyKey': 'partial',             // v0.7 API6: HONEST — Kong OSS has no native idempotency. pre-function shared_dict dedupe is best-effort (per-instance, non-atomic check-and-set); suppresses sequential replays but races on concurrent first-requests. _writ_warnings divergence note. Never full.
-          'authentication.accountLockout': 'partial',      // v0.7: HONEST — no native per-credential lockout. rate-limiting limit_by=header throttles per-credential attempts (blunts brute-force) but is NOT a fixed-duration lockout and counts all attempts (gateway can't see the auth verdict). Body-field identifiers degrade to unsupported+warning. _writ_warnings note. Never full.
-          'deprecated': 'full',                            // K-5: pre-function returns 410 with writ-deprecated-endpoint-block
+          'request.idempotencyKey': 'partial',             // v0.7 API6: HONEST — Kong OSS has no native idempotency. pre-function shared_dict dedupe is best-effort (per-instance, non-atomic check-and-set); suppresses sequential replays but races on concurrent first-requests. _x_security_warnings divergence note. Never full.
+          'authentication.accountLockout': 'partial',      // v0.7: HONEST — no native per-credential lockout. rate-limiting limit_by=header throttles per-credential attempts (blunts brute-force) but is NOT a fixed-duration lockout and counts all attempts (gateway can't see the auth verdict). Body-field identifiers degrade to unsupported+warning. _x_security_warnings note. Never full.
+          'deprecated': 'full',                            // K-5: pre-function returns 410 with x-security-deprecated-endpoint-block
           'sunsetDate': 'full',                             // K-5: 410 + RFC 8594 Deprecation: true & Sunset: <date> response headers
           'replacementEndpoint': 'partial',                 // K-5: surfaced in 410 response body, no Link: rel=successor-version header
           'targetOverrides.kong': 'full'
@@ -534,17 +534,17 @@ export function createKongGenerator(opts: KongGeneratorOptions = {}): KongGenera
 }
 
 // Build a `# WARNING:` comment header that precedes the YAML body. Operators
-// can `grep '^# WARNING'` or `grep _writ_warnings` and see the same
+// can `grep '^# WARNING'` or `grep _x_security_warnings` and see the same
 // content rendered two ways. Empty warnings → empty header.
 function renderWarningsHeader(
-  warnings: WritWarning[],
+  warnings: XSecurityWarning[],
   deployment: KongDeployment,
   edition: KongEdition
 ): string {
   const lines: string[] = [];
-  lines.push(`# Writ Kong generator — deployment=${deployment} edition=${edition}`);
+  lines.push(`# XSecurity Kong generator — deployment=${deployment} edition=${edition}`);
   if (!warnings.length) {
-    lines.push('# _writ_warnings: []  (no spec→runtime divergences detected)');
+    lines.push('# _x_security_warnings: []  (no spec→runtime divergences detected)');
     lines.push('');
     return lines.join('\n');
   }
@@ -554,9 +554,9 @@ function renderWarningsHeader(
     lines.push(`# WARNING: ${w.field}${ep}: declared="${w.declared}" emitted="${w.emitted}" — ${w.reason}`);
   }
   // Commented YAML block — Kong ignores it (it's all comments), but it
-  // remains grep-able via `grep _writ_warnings kong.yml` and round-
+  // remains grep-able via `grep _x_security_warnings kong.yml` and round-
   // trips back to valid YAML if a tool strips the leading `# `.
-  lines.push('# _writ_warnings:');
+  lines.push('# _x_security_warnings:');
   for (const w of warnings) {
     lines.push(`#   - field: ${yamlScalar(w.field)}`);
     if (w.endpoint) lines.push(`#     endpoint: ${yamlScalar(w.endpoint)}`);
@@ -582,8 +582,8 @@ function yamlScalar(s: string): string {
 // request.schema.<field>.injectionGuard. Kong OSS cannot enforce it (no
 // libinjection / @detectSQLi primitive; a pre-function regex would be a
 // fragile fake — Rule D-1), so we abstain honestly rather than emit a plugin.
-function collectInjectionGuardWarnings(spec: SpecIR): WritWarning[] {
-  const out: WritWarning[] = [];
+function collectInjectionGuardWarnings(spec: SpecIR): XSecurityWarning[] {
+  const out: XSecurityWarning[] = [];
   for (const ep of spec.endpoints) {
     const schema = ep.policy.request?.schema;
     if (!schema) continue;

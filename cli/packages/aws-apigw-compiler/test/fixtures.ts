@@ -1,5 +1,5 @@
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 export function makeEndpoint(args: {
   method: EndpointIR['method'];

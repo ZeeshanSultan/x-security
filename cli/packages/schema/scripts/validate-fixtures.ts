@@ -1,5 +1,5 @@
 // Smoke: parse every fixture through its Zod schema. Exit non-zero on the
-// first failure. Run via `pnpm -F @writ/schema exec tsx scripts/validate-fixtures.ts`
+// first failure. Run via `pnpm -F @x-security/schema exec tsx scripts/validate-fixtures.ts`
 // (with apps/api built so the workspace import resolves).
 import { fixtureEndpoints, fixtureRules, fixtureOwasp, fixtureScanLog } from '../../../apps/api/src/fixtures/rules.js';
 import { fixtureDeploys, fixtureManifests } from '../../../apps/api/src/fixtures/deploys.js';

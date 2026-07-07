@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
-import { loadSpec } from '@writ/core';
+import { loadSpec } from '@x-security/core';
 import { detectFirewallDrift } from '../../src/drift/firewall.js';
 import { firewallGenerator } from '../../src/generators/firewall/index.js';
 

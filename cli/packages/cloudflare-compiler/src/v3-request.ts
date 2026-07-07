@@ -2,12 +2,12 @@
 // duplicateParamPolicy, headerInjectionGuard, pathCanonicalization,
 // denyUnknownFields, ParamSchema binary additions.
 
-import type { ParamSchema, RequestPolicy, RequestSignature, XSecurityPolicy } from '@writ/schema';
+import type { ParamSchema, RequestPolicy, RequestSignature, XSecurityPolicy } from '@x-security/schema';
 import { and, hasHeader, headerMatches, missingHeader, not, or } from './expressions.js';
 import { escapeStr } from './endpoint.js';
 import { decorate, emitWorker, getOverride, noteProvenance, type V3Builder } from './v3-shared.js';
 
-const SIGNATURE_WORKER_TEMPLATE = `// Writ: HMAC/Ed25519 webhook signature verifier (v0.3 request.signature)
+const SIGNATURE_WORKER_TEMPLATE = `// x-security: HMAC/Ed25519 webhook signature verifier (v0.3 request.signature)
 // Deploy as a Cloudflare Worker bound to this route. Reject before origin.
 export default {
   async fetch(req, env) {
@@ -30,7 +30,7 @@ export default {
   }
 };`;
 
-const DENY_UNKNOWN_FIELDS_WORKER_TEMPLATE = `// Writ: deny-unknown-fields body validator (v0.3 request.denyUnknownFields)
+const DENY_UNKNOWN_FIELDS_WORKER_TEMPLATE = `// x-security: deny-unknown-fields body validator (v0.3 request.denyUnknownFields)
 // Worker reads the JSON body and rejects any property not present in the schema allowlist.
 export default {
   async fetch(req) {
@@ -45,7 +45,7 @@ export default {
   }
 };`;
 
-const MAGIC_BYTE_WORKER_TEMPLATE = `// Writ: magic-byte upload sniffer (v0.3 request.schema.*.magicByteCheck)
+const MAGIC_BYTE_WORKER_TEMPLATE = `// x-security: magic-byte upload sniffer (v0.3 request.schema.*.magicByteCheck)
 // Worker reads the first 16 bytes of the upload, matches against the declared MIME's signature.
 export default {
   async fetch(req) {

@@ -30,7 +30,7 @@
  * Helpers (esc/escRx/header/chainTerm) are self-contained, mirroring
  * v08-residual-rules.ts, so this module doesn't reach into rules.ts internals.
  *
- * ID ranges (disjoint from every other Writ range — per-endpoint primary
+ * ID ranges (disjoint from every other x-security range — per-endpoint primary
  * 100000-369999, body-allowlist 400000-408999, response-inspect 420000-428999,
  * SQLi 430000+, SSRF 980000+, CSRF 272000-274999, serialize 286000-287999,
  * graphql 288000-289999):
@@ -41,7 +41,7 @@
  *   logging          418000..418999
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import {
   CORAZA_GO_PROFILE,
   type CorazaEngineProfile,
@@ -105,7 +105,7 @@ export function buildPasswordPolicyRules(
 ): string[] {
   const pol = endpoint.policy.authentication?.passwordPolicy;
   if (!pol) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seedBase = endpointHash(endpoint.method, `${endpoint.path}|pwpolicy`);
   const term = chainTerm(profile);
@@ -136,7 +136,7 @@ export function buildPasswordPolicyRules(
             `Body-carried password strength (API2:2023). PCRE !@rx on the password\n` +
             `field — rejects a present-but-weak password. FULL (plain @rx).`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'Writ: ${esc(c.reason)}',tag:'${esc(tag)}',tag:'writ-rule-password-policy',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'x-security: ${esc(c.reason)}',tag:'${esc(tag)}',tag:'x-security-rule-password-policy',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "chain"`,
         `    SecRule ${selector} "!@rx ${escRx(c.rx)}"${term}`,
       ].join('\n')
@@ -149,7 +149,7 @@ export function buildPasswordPolicyRules(
     out.push(
       [
         header(`v0.7 passwordPolicy: blocklisted password for ${endpoint.method} ${endpoint.path}`),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'Writ: password is on the blocklist',tag:'${esc(tag)}',tag:'writ-rule-password-policy',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'x-security: password is on the blocklist',tag:'${esc(tag)}',tag:'x-security-rule-password-policy',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "chain"`,
         `    SecRule ${selector} "@rx ${escRx(`(?i)^(?:${alt})$`)}"${term}`,
       ].join('\n')
@@ -206,7 +206,7 @@ export function buildAccountLockoutRules(
     return [];
   }
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const window = parseDurationSec(lock.window) || 900;
   const { expansion, keyPhase } = lockoutVar(lock.identifier);
@@ -228,7 +228,7 @@ export function buildAccountLockoutRules(
       `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:${keyPhase},pass,nolog,tag:'${esc(tag)}',${initcol},chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${term}`,
       // 2. Deny while locked out — counter already over budget.
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 1},phase:${keyPhase},deny,status:429,log,msg:'Writ: account locked (>${lock.attempts} failed logins / ${esc(lock.window)})',tag:'${esc(tag)}',tag:'writ-rule-account-lockout',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 1},phase:${keyPhase},deny,status:429,log,msg:'x-security: account locked (>${lock.attempts} failed logins / ${esc(lock.window)})',tag:'${esc(tag)}',tag:'x-security-rule-account-lockout',chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule GLOBAL:${counterKey} "@gt ${lock.attempts}"${term}`,
       // 3. On a failed-auth response (>=400), increment + refresh the TTL (phase:5).
@@ -269,7 +269,7 @@ export function buildForbidArrayRootRules(
     return [];
   }
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seed = endpointHash(endpoint.method, `${endpoint.path}|arrayroot`);
   const id = FORBID_ARRAY_ROOT_BASE_ID + (seed % 999);
@@ -282,7 +282,7 @@ export function buildForbidArrayRootRules(
           `non-whitespace byte; an array-rooted body is denied (wrap in an object instead).\n` +
           `FULL on ${profile.name} (supportsResponseBodyAccess).`
       ),
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'Writ: bare top-level JSON array response (forbidArrayRoot)',tag:'${esc(tag)}',tag:'writ-rule-forbid-array-root',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'x-security: bare top-level JSON array response (forbidArrayRoot)',tag:'${esc(tag)}',tag:'x-security-rule-forbid-array-root',chain"`,
       `  SecRule RESPONSE_BODY "@rx ^[\\s\\xef\\xbb\\xbf]*\\["${term}`,
     ].join('\n'),
   ];
@@ -314,7 +314,7 @@ export function buildIdempotencyKeyRules(
   const idem = endpoint.policy.request?.idempotencyKey;
   if (!idem) return [];
   const epId = `${endpoint.method} ${endpoint.path}`;
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const ttl = parseDurationSec(idem.ttl) || 300;
   const seed = endpointHash(endpoint.method, `${endpoint.path}|idempotency`);
@@ -332,7 +332,7 @@ export function buildIdempotencyKeyRules(
         `v0.7 idempotencyKey: require header ${idem.header} for ${endpoint.method} ${endpoint.path}\n` +
           `(API6:2023). Header-presence check — FULL on ${profile.name}.`
       ),
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:1,deny,status:400,log,msg:'Writ: missing ${esc(idem.header)} header',tag:'${esc(tag)}',tag:'writ-rule-idempotency-key',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:1,deny,status:400,log,msg:'x-security: missing ${esc(idem.header)} header',tag:'${esc(tag)}',tag:'x-security-rule-idempotency-key',chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule &REQUEST_HEADERS:${esc(idem.header)} "@eq 0"${term}`,
     ].join('\n')
@@ -368,7 +368,7 @@ export function buildIdempotencyKeyRules(
       `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 2},phase:1,pass,nolog,tag:'${esc(tag)}',setvar:global.${counterKey}=+1,expirevar:global.${counterKey}=${ttl},chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${term}`,
       // Deny the replay — second+ request with this key inside the ttl window.
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 3},phase:1,deny,status:409,log,msg:'Writ: replayed idempotency key (${esc(idem.header)})',tag:'${esc(tag)}',tag:'writ-rule-idempotency-key',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 3},phase:1,deny,status:409,log,msg:'x-security: replayed idempotency key (${esc(idem.header)})',tag:'${esc(tag)}',tag:'x-security-rule-idempotency-key',chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule GLOBAL:${counterKey} "@gt 1"${term}`,
     ].join('\n')
@@ -381,9 +381,9 @@ export function buildIdempotencyKeyRules(
 // logging (SSEC-AUDIT). PARTIAL.
 //
 // ModSecurity emits an audit log for every rule carrying `log,auditlog` — the
-// Writ injection-block / authz-deny / rate-limit-trip rules already do,
+// x-security injection-block / authz-deny / rate-limit-trip rules already do,
 // so those LoggingEvents are covered. What this emitter adds: a phase:5
-// SecRule tagged `writ-audit` that forces ALL transactions on the
+// SecRule tagged `x-security-audit` that forces ALL transactions on the
 // endpoint into the audit log (covering the `request`/`response` events), plus
 // a `ctl:auditLogParts` directive shaping what is recorded — and, when
 // piiRedaction is set, a `ctl:auditLogParts=ABIFHZ` that DROPS the request/
@@ -409,7 +409,7 @@ export function buildLoggingRules(
 ): string[] {
   const log = endpoint.policy.logging;
   if (!log || !Array.isArray(log.events) || log.events.length === 0) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seed = endpointHash(endpoint.method, `${endpoint.path}|logging`);
   const id = LOGGING_BASE_ID + (seed % 999);
@@ -421,7 +421,7 @@ export function buildLoggingRules(
   const notes: string[] = [];
   notes.push(`events declared: ${log.events.join(', ')}`);
   notes.push(`auth-failure / authz-deny / injection-block / rate-limit-trip are`);
-  notes.push(`already audit-logged by the corresponding Writ deny rules.`);
+  notes.push(`already audit-logged by the corresponding x-security deny rules.`);
   if (log.sink && log.sink !== 'stdout') {
     notes.push(`sink='${log.sink}' is NOT enforced at the WAF — configure it at the`);
     notes.push(`log-shipping layer (SecAuditLogStorageDir + syslog/fluent-bit sidecar).`);
@@ -449,7 +449,7 @@ export function buildLoggingRules(
           `v0.7 logging (SSEC-AUDIT): force audit log for ${endpoint.method} ${endpoint.path}\n` +
             notes.join('\n')
         ),
-        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:5,pass,log,auditlog,msg:'Writ: audit (request/response) for ${esc(endpoint.method)} ${esc(endpoint.path)}',tag:'${esc(tag)}',tag:'writ-audit'${partsCtl},chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:5,pass,log,auditlog,msg:'x-security: audit (request/response) for ${esc(endpoint.method)} ${esc(endpoint.path)}',tag:'${esc(tag)}',tag:'x-security-audit'${partsCtl},chain"`,
         `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${term}`,
       ].join('\n')
     );

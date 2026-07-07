@@ -1,11 +1,11 @@
 // v0.3 protocol-specific lowering: graphql, websocket, botProtection.
 
-import type { BotProtection, GraphqlPolicy, WebsocketPolicy, XSecurityPolicy } from '@writ/schema';
+import type { BotProtection, GraphqlPolicy, WebsocketPolicy, XSecurityPolicy } from '@x-security/schema';
 import { and, hasHeader, missingHeader, not, or, parseDurationSeconds } from './expressions.js';
 import { escapeStr } from './endpoint.js';
 import { decorate, emitWorker, getOverride, noteProvenance, type V3Builder } from './v3-shared.js';
 
-const GRAPHQL_WORKER_TEMPLATE = `// Writ: GraphQL abuse limits (v0.3 graphql.*)
+const GRAPHQL_WORKER_TEMPLATE = `// x-security: GraphQL abuse limits (v0.3 graphql.*)
 // Worker parses the GraphQL document and enforces depth/complexity/alias/batch limits.
 // Drop in graphql-armor or hand-roll an AST walker — Cloudflare WAF cannot parse GraphQL.
 export default {
@@ -23,7 +23,7 @@ export default {
   }
 };`;
 
-const WS_DO_WORKER_TEMPLATE = `// Writ: WebSocket controls (v0.3 websocket.*)
+const WS_DO_WORKER_TEMPLATE = `// x-security: WebSocket controls (v0.3 websocket.*)
 // Run as a Durable Object. Handshake-level origin check is enforceable at the WAF
 // (see ws-origin-check rule); per-message size/rate/connection caps live here.
 export class WSGuard {
@@ -44,7 +44,7 @@ export class WSGuard {
   }
 }`;
 
-const RECAPTCHA_WORKER_TEMPLATE = `// Writ: CAPTCHA siteverify (v0.3 botProtection.provider in {recaptcha,hcaptcha})
+const RECAPTCHA_WORKER_TEMPLATE = `// x-security: CAPTCHA siteverify (v0.3 botProtection.provider in {recaptcha,hcaptcha})
 export default {
   async fetch(req, env) {
     const token = req.headers.get('cf-captcha-token') || (await req.clone().formData()).get('captcha');

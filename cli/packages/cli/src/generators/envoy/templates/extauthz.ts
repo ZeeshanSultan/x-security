@@ -4,7 +4,7 @@
  * Emits opa/policy.rego with the OPA-Envoy structured-decision shape:
  *   { "allowed": true }
  *   { "allowed": false, "http_status": 403,
- *     "headers": {"x-writ-rule": "opa-<class>-403"}, "body": "..." }
+ *     "headers": {"x-x-security-rule": "opa-<class>-403"}, "body": "..." }
  *
  * Defense classes (else-chain order, most-specific first):
  *   opa-bfla-403              W18-A — rbac admin-only routes
@@ -23,7 +23,7 @@
  * extauthz-rule-based.ts). This file is the orchestration entry point.
  */
 
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import {
   denyLiteral,
   OPA_CLUSTER,
@@ -106,7 +106,7 @@ export function needsOpa(spec: SpecIR): boolean {
  *
  * Wave-17 W17-A: no `headers_to_remove` is set; Envoy forwards every header
  * from OPA's DeniedHttpResponse to the client by default, which is how the
- * `x-writ-rule` marker reaches the scorer.
+ * `x-x-security-rule` marker reaches the scorer.
  */
 export function emitExtAuthzFilter(lines: string[]): void {
   lines.push('  - name: envoy.filters.http.ext_authz');
@@ -120,9 +120,9 @@ export function emitExtAuthzFilter(lines: string[]): void {
   lines.push('      failure_mode_allow: false');
   lines.push('      include_peer_certificate: false');
   // W17-A: explicitly carry OPA's denied_response headers (including the
-  // x-writ-rule marker) through to the downstream client. This is
+  // x-x-security-rule marker) through to the downstream client. This is
   // Envoy's default but we declare it so the contract is greppable.
-  lines.push('      # W17-A: forward OPA-emitted x-writ-rule marker downstream.');
+  lines.push('      # W17-A: forward OPA-emitted x-x-security-rule marker downstream.');
   lines.push('      with_request_body:');
   lines.push('        max_request_bytes: 8192');
   lines.push('        allow_partial_message: true');
@@ -192,11 +192,11 @@ function buildRegoPolicyInner(cfg: RegoBuildInput): string {
   const ssrf = cfg.ssrfPolicy ?? [];
   const abac = cfg.abac ?? [];
   const lines: string[] = [];
-  lines.push('# Writ → OPA — auto-generated. DO NOT EDIT BY HAND.');
-  lines.push(`# generator: writ-envoy/extauthz v${VERSION}`);
+  lines.push('# x-security → OPA — auto-generated. DO NOT EDIT BY HAND.');
+  lines.push(`# generator: x-security-envoy/extauthz v${VERSION}`);
   lines.push(`# source: ${cfg.specTitle} ${cfg.specVersion}`);
   lines.push('# Wave-10 E-3: rule-based authorization → ext_authz + OPA sidecar.');
-  lines.push('# Wave-17 W17-A: structured decision object emits per-class x-writ-rule');
+  lines.push('# Wave-17 W17-A: structured decision object emits per-class x-x-security-rule');
   lines.push('# headers (opa-bola-403, opa-jwt-claim-403, opa-default-403) so the scorer\'s');
   lines.push('# intent-attribution layer can map a denial back to the right defense-class.');
   lines.push('# Wave-18 W18-A: + opa-bfla-403 (rbac admin-only routes, principal-role check)');

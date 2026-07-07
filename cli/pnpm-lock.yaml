@@ -23,13 +23,13 @@ importers:
 
   packages/aws-apigw-compiler:
     dependencies:
-      '@writ/core':
+      '@x-security/core':
         specifier: workspace:*
         version: link:../core
-      '@writ/schema':
+      '@x-security/schema':
         specifier: workspace:*
         version: link:../schema
-      '@writ/shared':
+      '@x-security/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -45,25 +45,25 @@ importers:
       '@stoplight/spectral-core':
         specifier: ^1.19.0
         version: 1.23.1
-      '@writ/aws-apigw-compiler':
+      '@x-security/aws-apigw-compiler':
         specifier: workspace:*
         version: link:../aws-apigw-compiler
-      '@writ/cloudflare-compiler':
+      '@x-security/cloudflare-compiler':
         specifier: workspace:*
         version: link:../cloudflare-compiler
-      '@writ/core':
+      '@x-security/core':
         specifier: workspace:*
         version: link:../core
-      '@writ/crypto':
+      '@x-security/crypto':
         specifier: workspace:*
         version: link:../crypto
-      '@writ/cursor-mcp':
+      '@x-security/cursor-mcp':
         specifier: workspace:*
         version: link:../cursor-mcp
-      '@writ/detect-core':
+      '@x-security/detect-core':
         specifier: workspace:*
         version: link:../detect-core
-      '@writ/schema':
+      '@x-security/schema':
         specifier: workspace:*
         version: link:../schema
       chalk:
@@ -106,13 +106,13 @@ importers:
 
   packages/cloudflare-compiler:
     dependencies:
-      '@writ/core':
+      '@x-security/core':
         specifier: workspace:*
         version: link:../core
-      '@writ/schema':
+      '@x-security/schema':
         specifier: workspace:*
         version: link:../schema
-      '@writ/shared':
+      '@x-security/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -131,7 +131,7 @@ importers:
       '@apidevtools/swagger-parser':
         specifier: ^10.1.1
         version: 10.1.1(openapi-types@12.1.3)
-      '@writ/schema':
+      '@x-security/schema':
         specifier: workspace:*
         version: link:../schema
       openapi-types:
@@ -171,7 +171,7 @@ importers:
 
   packages/cursor-mcp:
     dependencies:
-      '@writ/schema':
+      '@x-security/schema':
         specifier: workspace:*
         version: link:../schema
       undici:
@@ -193,7 +193,7 @@ importers:
 
   packages/detect-core:
     dependencies:
-      '@writ/schema':
+      '@x-security/schema':
         specifier: workspace:*
         version: link:../schema
       js-yaml:

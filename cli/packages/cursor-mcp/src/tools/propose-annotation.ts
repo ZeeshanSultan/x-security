@@ -1,5 +1,5 @@
 // Rules-based proposer: given a route signature, emit a sensible x-security YAML
-// block matching the @writ/schema shape. No LLM calls — this runs on the
+// block matching the @x-security/schema shape. No LLM calls — this runs on the
 // developer's machine in <1ms so the agent can pick it up while diffing.
 
 import type { McpTool } from '../server.js';
@@ -124,7 +124,7 @@ export function propose(input: ProposeInput): Proposal {
 }
 
 export const proposeAnnotationTool: McpTool = {
-  name: 'writ/propose-annotation',
+  name: 'x-security/propose-annotation',
   description:
     'Propose an x-security block for a route signature. Pure heuristic; no network calls. ' +
     'Returns YAML the agent can paste under the operation in its OpenAPI spec.',

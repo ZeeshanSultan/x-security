@@ -31,7 +31,7 @@ import { mkdtempSync, readFileSync, rmSync, existsSync, statSync } from 'node:fs
 import { tmpdir } from 'node:os';
 import * as path from 'node:path';
 import yaml from 'js-yaml';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import { loadGenerator } from '../../registry.js';
 import type { EmittedArtifact, GatewayReader, LoadedArtifact, VerifyRow } from '../index.js';
 
@@ -283,7 +283,8 @@ export const corazaSpoaReader: GatewayReader = {
     return scanEmittedRules(extractDirectives(yml.content));
   },
 
-  async readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]> {
+  async readLoadedArtifacts(gateway: string, _timeoutMs?: number): Promise<LoadedArtifact[]> {
+    // No outbound HTTP here — `docker exec`/`docker cp`/`docker logs`. timeoutMs n/a.
     const split = parseSpoaGateway(gateway);
     const haproxyLog = split.haproxy ? dockerLogs(split.haproxy) : '';
     const spoaLog = split.spoa ? dockerLogs(split.spoa) : '';

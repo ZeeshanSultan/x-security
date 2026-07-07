@@ -19,7 +19,7 @@
 // signal that REPORT-v3 §3 was missing.
 
 import { request } from 'undici';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import { loadGenerator } from '../../registry.js';
 import type { EmittedArtifact, GatewayReader, LoadedArtifact, VerifyRow } from '../index.js';
 
@@ -42,16 +42,23 @@ interface KongAdminService {
   name?: string;
 }
 
-async function getJson<T>(base: string, p: string): Promise<T> {
+async function getJson<T>(base: string, p: string, timeoutMs?: number): Promise<T> {
   const url = base.replace(/\/$/, '') + p;
   try {
-    const res = await request(url, { method: 'GET' });
+    const res = await request(url, {
+      method: 'GET',
+      ...(timeoutMs !== undefined ? { signal: AbortSignal.timeout(timeoutMs) } : {})
+    });
     if (res.statusCode >= 400) {
       throw new Error(`${url} → HTTP ${res.statusCode}`);
     }
     const body = (await res.body.json()) as T;
     return body;
   } catch (e) {
+    const name = (e as Error).name;
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      throw new Error(`${url} timed out after ${timeoutMs}ms`);
+    }
     const msg = (e as Error).message;
     if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN/.test(msg)) {
       throw new Error(`gateway-unreachable: ${msg}`);
@@ -62,12 +69,12 @@ async function getJson<T>(base: string, p: string): Promise<T> {
 
 interface KongPage<T> { data: T[]; next?: string | null; }
 
-async function listAll<T>(base: string, p: string): Promise<T[]> {
+async function listAll<T>(base: string, p: string, timeoutMs?: number): Promise<T[]> {
   // Kong's admin paginator returns `next` as an absolute or path-relative URL.
   let url: string | null = p;
   const out: T[] = [];
   while (url) {
-    const page: KongPage<T> = await getJson<KongPage<T>>(base, url);
+    const page: KongPage<T> = await getJson<KongPage<T>>(base, url, timeoutMs);
     out.push(...page.data);
     if (page.next) {
       const u = new URL(page.next, base + '/');
@@ -131,11 +138,11 @@ export const kongReader: GatewayReader = {
     return scanEmittedFromDeclarative(decl);
   },
 
-  async readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]> {
+  async readLoadedArtifacts(gateway: string, timeoutMs?: number): Promise<LoadedArtifact[]> {
     const [services, routes, plugins] = await Promise.all([
-      listAll<KongAdminService>(gateway, '/services'),
-      listAll<KongAdminRoute>(gateway, '/routes'),
-      listAll<KongAdminPlugin>(gateway, '/plugins')
+      listAll<KongAdminService>(gateway, '/services', timeoutMs),
+      listAll<KongAdminRoute>(gateway, '/routes', timeoutMs),
+      listAll<KongAdminPlugin>(gateway, '/plugins', timeoutMs)
     ]);
 
     const routeIdToName = new Map<string, string>();

@@ -59,12 +59,12 @@ test('enforce mode uses Block for auth + body-size + ip-allow', () => {
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const auth = r.webAclRules.find(x => x.writ.rule_type === 'auth');
-  const body = r.webAclRules.find(x => x.writ.rule_type === 'body-size');
+  const auth = r.webAclRules.find(x => x.xSecurity.rule_type === 'auth');
+  const body = r.webAclRules.find(x => x.xSecurity.rule_type === 'body-size');
   assert.ok(auth && body);
   assert.ok(auth.Action?.Block !== undefined);
   assert.ok(body.Action?.Block !== undefined);
-  assert.match(auth.Name, /^writ-[0-9a-f]{12}-auth$/);
+  assert.match(auth.Name, /^x-security-[0-9a-f]{12}-auth$/);
 });
 
 test('rule names are stable & sort order is deterministic across input shuffles', () => {
@@ -75,8 +75,8 @@ test('rule names are stable & sort order is deterministic across input shuffles'
   assert.equal(a.contentHash, b.contentHash);
   // /a's auth rule must come before /b's
   const names = a.webAclRules.map(r => r.Name);
-  const idxA = names.findIndex(n => n.endsWith('-auth') && a.webAclRules.find(r => r.Name === n)!.writ.endpoint_id === 'GET_/a');
-  const idxB = names.findIndex(n => n.endsWith('-auth') && a.webAclRules.find(r => r.Name === n)!.writ.endpoint_id === 'GET_/b');
+  const idxA = names.findIndex(n => n.endsWith('-auth') && a.webAclRules.find(r => r.Name === n)!.xSecurity.endpoint_id === 'GET_/a');
+  const idxB = names.findIndex(n => n.endsWith('-auth') && a.webAclRules.find(r => r.Name === n)!.xSecurity.endpoint_id === 'GET_/b');
   assert.ok(idxA >= 0 && idxB >= 0 && idxA < idxB);
 });
 
@@ -89,7 +89,7 @@ test('rate limit: IP identifier → RateBasedStatement', () => {
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const rl = r.webAclRules.find(x => x.writ.rule_type === 'ratelimit-0');
+  const rl = r.webAclRules.find(x => x.xSecurity.rule_type === 'ratelimit-0');
   assert.ok(rl);
   assert.equal(rl.Statement.RateBasedStatement?.AggregateKeyType, 'IP');
   assert.equal(rl.Statement.RateBasedStatement?.Limit, 500);
@@ -110,7 +110,7 @@ test('rate limit: api-key identifier → Usage Plan (not WAF rule)', () => {
   // 1000 req / 1h ⇒ rateLimit = max(1, floor(1000/3600)) = 1
   assert.equal(r.usagePlans[0]?.Throttle.RateLimit, 1);
   // No rate-limit WAF rule emitted
-  assert.equal(r.webAclRules.filter(x => x.writ.rule_type.startsWith('ratelimit-')).length, 0);
+  assert.equal(r.webAclRules.filter(x => x.xSecurity.rule_type.startsWith('ratelimit-')).length, 0);
 });
 
 test('rate limit: requests<100 is rounded up to AWS minimum with warning', () => {
@@ -122,7 +122,7 @@ test('rate limit: requests<100 is rounded up to AWS minimum with warning', () =>
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const rl = r.webAclRules.find(x => x.writ.rule_type === 'ratelimit-0');
+  const rl = r.webAclRules.find(x => x.xSecurity.rule_type === 'ratelimit-0');
   assert.equal(rl?.Statement.RateBasedStatement?.Limit, 100);
   assert.ok(r.warnings.some(w => w.field === 'rateLimit.requests'));
 });
@@ -164,7 +164,7 @@ test('byte-size body cap emits SizeConstraintStatement on Body', () => {
     makeEndpoint({ method: 'POST', path: '/upload', policy: { request: { maxBodySize: '5MB' } } })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const body = r.webAclRules.find(x => x.writ.rule_type === 'body-size');
+  const body = r.webAclRules.find(x => x.xSecurity.rule_type === 'body-size');
   assert.ok(body);
   // Drill through AndStatement
   const found = JSON.stringify(body.Statement).includes('"Size":5242880');
@@ -182,7 +182,7 @@ test('CORS: blocks disallowed Origin, methods emit info warning (response header
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  const corsRule = r.webAclRules.find(x => x.writ.rule_type === 'cors-origin');
+  const corsRule = r.webAclRules.find(x => x.xSecurity.rule_type === 'cors-origin');
   assert.ok(corsRule);
   assert.ok(r.warnings.some(w => w.field === 'cors.allowedMethods' && w.severity === 'info'));
 });
@@ -199,7 +199,7 @@ test('ipPolicy.allow array emits an IPSet + corresponding Block rule', () => {
   assert.equal(r.ipSets.length, 1);
   assert.equal(r.ipSets[0]?.Addresses.length, 2);
   assert.equal(r.ipSets[0]?.IPAddressVersion, 'IPV4');
-  assert.ok(r.webAclRules.find(x => x.writ.rule_type === 'ip-allow'));
+  assert.ok(r.webAclRules.find(x => x.xSecurity.rule_type === 'ip-allow'));
 });
 
 test('request.schema emits unsupported (deep validation belongs in API GW validator)', () => {
@@ -230,26 +230,26 @@ test('owaspApiTop10 mitigates → sqli + xss inspections on POST/PUT/PATCH', () 
     })
   ]);
   const r = compile(spec, { mode: 'enforce' });
-  assert.ok(r.webAclRules.find(x => x.writ.rule_type === 'sqli-body' && x.writ.endpoint_id === 'POST_/api/x'));
-  assert.ok(r.webAclRules.find(x => x.writ.rule_type === 'xss-body' && x.writ.endpoint_id === 'POST_/api/x'));
+  assert.ok(r.webAclRules.find(x => x.xSecurity.rule_type === 'sqli-body' && x.xSecurity.endpoint_id === 'POST_/api/x'));
+  assert.ok(r.webAclRules.find(x => x.xSecurity.rule_type === 'xss-body' && x.xSecurity.endpoint_id === 'POST_/api/x'));
   // GET endpoint must NOT receive body inspection
-  assert.ok(!r.webAclRules.find(x => x.writ.rule_type === 'sqli-body' && x.writ.endpoint_id === 'GET_/api/y'));
+  assert.ok(!r.webAclRules.find(x => x.xSecurity.rule_type === 'sqli-body' && x.xSecurity.endpoint_id === 'GET_/api/y'));
 });
 
 test('botProtection without explicit opt-in → warning only, no rule', () => {
-  const policy = { botProtection: true } as unknown as import('@writ/schema').XSecurityPolicy;
+  const policy = { botProtection: true } as unknown as import('@x-security/schema').XSecurityPolicy;
   const r = compile(makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]), { mode: 'enforce' });
-  assert.ok(!r.webAclRules.find(x => x.writ.rule_type === 'bot-control'));
+  assert.ok(!r.webAclRules.find(x => x.xSecurity.rule_type === 'bot-control'));
   assert.ok(r.warnings.some(w => w.field === 'botProtection' && /paid managed rule group/i.test(w.message)));
 });
 
 test('botProtection opt-in → Bot Control managed rule group + cost warning', () => {
-  const policy = { botProtection: true } as unknown as import('@writ/schema').XSecurityPolicy;
+  const policy = { botProtection: true } as unknown as import('@x-security/schema').XSecurityPolicy;
   const r = compile(
     makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]),
     { mode: 'enforce', enableManagedBotControl: true }
   );
-  const bc = r.webAclRules.find(x => x.writ.rule_type === 'bot-control');
+  const bc = r.webAclRules.find(x => x.xSecurity.rule_type === 'bot-control');
   assert.ok(bc);
   assert.equal(bc?.Statement.ManagedRuleGroupStatement?.Name, 'AWSManagedRulesBotControlRuleSet');
   assert.deepEqual(bc?.OverrideAction, { None: {} });
@@ -257,12 +257,12 @@ test('botProtection opt-in → Bot Control managed rule group + cost warning', (
 });
 
 test('botProtection in shadow → OverrideAction.Count, not None', () => {
-  const policy = { botProtection: true } as unknown as import('@writ/schema').XSecurityPolicy;
+  const policy = { botProtection: true } as unknown as import('@x-security/schema').XSecurityPolicy;
   const r = compile(
     makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]),
     { mode: 'shadow', enableManagedBotControl: true }
   );
-  const bc = r.webAclRules.find(x => x.writ.rule_type === 'bot-control');
+  const bc = r.webAclRules.find(x => x.xSecurity.rule_type === 'bot-control');
   assert.deepEqual(bc?.OverrideAction, { Count: {} });
 });
 
@@ -281,7 +281,7 @@ test('snapshot: full canonical compile output is structurally stable', () => {
   const r = compile(spec, { mode: 'shadow', schemaVersion: '0.2.0' });
   assert.match(r.contentHash, /^[0-9a-f]{64}$/);
   for (const rule of r.webAclRules) {
-    assert.match(rule.Name, /^writ-shadow-[0-9a-f]{12}-[a-z0-9-]+$/);
+    assert.match(rule.Name, /^x-security-shadow-[0-9a-f]{12}-[a-z0-9-]+$/);
     assert.equal(typeof rule.Priority, 'number');
     assert.ok(rule.VisibilityConfig.MetricName.length > 0);
   }

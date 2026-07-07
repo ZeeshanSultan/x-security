@@ -1,5 +1,5 @@
 import SwaggerParser from '@apidevtools/swagger-parser';
-import { validateXSecurity, type XSecurityPolicy } from '@writ/schema';
+import { validateXSecurity, type XSecurityPolicy } from '@x-security/schema';
 import type { OpenAPIV3, OpenAPIV3_1 } from 'openapi-types';
 import { SchemaValidationError, UnresolvedVariableError, UnsupportedDialectError } from './errors.js';
 import type { EndpointIR, HttpMethod, ParamIR, SpecIR } from './ir.js';

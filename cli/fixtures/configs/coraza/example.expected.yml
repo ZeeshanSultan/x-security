@@ -1,0 +1,209 @@
+generator: x-security-coraza
+version: 0.1.0
+source:
+  title: Example API
+  version: 1.0.0
+directives: |
+  # x-security → Coraza v3.x — auto-generated. DO NOT EDIT BY HAND.
+  # generator: x-security-coraza v0.1.0
+  # source: Example API 1.0.0
+
+  # ── Engine globals ───────────────────────────────────────────
+  SecRuleEngine On
+  SecRequestBodyAccess On
+  SecResponseBodyAccess On
+  SecResponseBodyMimeType application/json application/vnd.api+json
+  SecResponseBodyLimit 524288
+  SecResponseBodyLimitAction ProcessPartial
+  # smallest maxBodySize across endpoints (per-endpoint caps still apply)
+  SecRequestBodyLimit 10240
+  SecRequestBodyNoFilesLimit 10240
+  SecRequestBodyLimitAction Reject
+  SecDefaultAction "phase:1,log,auditlog,deny,status:403"
+  SecDefaultAction "phase:2,log,auditlog,deny,status:403"
+
+  # ════════════════════════════════════════════════════════════
+  # GET /api/admin/users  (operationId: listUsers)
+  # ════════════════════════════════════════════════════════════
+  # endpoint scope marker for GET /api/admin/users
+  SecAction "id:129070,phase:1,pass,nolog,tag:'x-security/GET /api/admin/users'"
+
+  # authentication required (Authorization) for GET /api/admin/users
+  SecRule REQUEST_METHOD "@streq GET" "id:129073,phase:1,deny,status:401,msg:'x-security: missing Authorization header',tag:'x-security/GET /api/admin/users',chain"
+    SecRule REQUEST_URI "@rx ^/api/admin/users$" "chain"
+      SecRule &REQUEST_HEADERS:Authorization "@eq 0" "t:none"
+
+  # ipPolicy.allow for GET /api/admin/users
+  SecRule REQUEST_METHOD "@streq GET" "id:129074,phase:1,deny,status:403,msg:'x-security: source IP not in allowlist',tag:'x-security/GET /api/admin/users',chain"
+    SecRule REQUEST_URI "@rx ^/api/admin/users$" "chain"
+      SecRule REMOTE_ADDR "!@ipMatch 10.0.0.0/8" "t:none"
+
+  # rateLimit 30/1m (identifier=user-id) for GET /api/admin/users
+  # pattern: initcol → setvar/expirevar → @gt check (Coraza v3 collection semantics)
+  SecRule REQUEST_URI "@rx ^/api/admin/users$" "id:129076,phase:1,pass,nolog,tag:'x-security/GET /api/admin/users',initcol:tx=%{REQUEST_HEADERS.Authorization},chain"
+    SecRule REQUEST_METHOD "@streq GET" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/admin/users$" "id:129077,phase:1,pass,nolog,tag:'x-security/GET /api/admin/users',setvar:tx.rl_listUsers=+1,expirevar:tx.rl_listUsers=60,chain"
+    SecRule REQUEST_METHOD "@streq GET" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/admin/users$" "id:129078,phase:1,deny,status:429,msg:'x-security: rate limit exceeded (30/1m)',tag:'x-security/GET /api/admin/users',log,chain"
+    SecRule REQUEST_METHOD "@streq GET" "chain"
+      SecRule TX:rl_listUsers "@gt 30" "t:none"
+
+  # ════════════════════════════════════════════════════════════
+  # POST /api/auth/login  (operationId: login)
+  # ════════════════════════════════════════════════════════════
+  # endpoint scope marker for POST /api/auth/login
+  SecAction "id:260530,phase:1,pass,nolog,tag:'x-security/POST /api/auth/login'"
+
+  # request.contentType allowlist for POST /api/auth/login
+  SecRule REQUEST_METHOD "@streq POST" "id:260531,phase:1,deny,status:415,msg:'x-security: unsupported Content-Type',tag:'x-security/POST /api/auth/login',chain"
+    SecRule REQUEST_URI "@rx ^/api/auth/login$" "chain"
+      SecRule REQUEST_HEADERS:Content-Type "!@rx ^(application/json)(;.*)?$" "t:none"
+
+  # enable JSON body processor for POST /api/auth/login
+  # engine=coraza-go: SPOE/Coraza-Go don't auto-parse JSON bodies the way
+  # modsec-nginx's bundled setup.conf does; this ctl forces ARGS_NAMES to be
+  # populated for application/json (and vnd.*+json) so phase-2 schema /
+  # allowlist rules can see the body keys. Redundant-but-harmless on
+  # libmodsecurity3 engines (bundled id:200001 already sets the same processor).
+  SecRule REQUEST_METHOD "@streq POST" "id:415351,phase:1,pass,nolog,tag:'x-security/POST /api/auth/login',chain"
+    SecRule REQUEST_URI "@rx ^/api/auth/login$" "chain"
+      SecRule REQUEST_HEADERS:Content-Type "@rx ^application/(json|vnd\.[\w.+-]+\+json)\b" "ctl:requestBodyProcessor=JSON,t:none"
+
+  # request.maxBodySize=10240 bytes for POST /api/auth/login
+  SecRule REQUEST_METHOD "@streq POST" "id:260532,phase:1,deny,status:413,msg:'x-security: request body exceeds endpoint limit',tag:'x-security/POST /api/auth/login',chain"
+    SecRule REQUEST_URI "@rx ^/api/auth/login$" "chain"
+      SecRule REQUEST_HEADERS:Content-Length "@gt 10240" "t:none"
+
+  # rateLimit 5/1m (identifier=ip) for POST /api/auth/login
+  # pattern: initcol → setvar/expirevar → @gt check (Coraza v3 collection semantics)
+  SecRule REQUEST_URI "@rx ^/api/auth/login$" "id:260536,phase:1,pass,nolog,tag:'x-security/POST /api/auth/login',initcol:tx=%{REMOTE_ADDR},chain"
+    SecRule REQUEST_METHOD "@streq POST" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/auth/login$" "id:260537,phase:1,pass,nolog,tag:'x-security/POST /api/auth/login',setvar:tx.rl_login=+1,expirevar:tx.rl_login=60,chain"
+    SecRule REQUEST_METHOD "@streq POST" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/auth/login$" "id:260538,phase:1,deny,status:429,msg:'x-security: rate limit exceeded (5/1m)',tag:'x-security/POST /api/auth/login',log,chain"
+    SecRule REQUEST_METHOD "@streq POST" "chain"
+      SecRule TX:rl_login "@gt 5" "t:none"
+  # rateLimit burst=2/1s (identifier=ip) for POST /api/auth/login
+  SecRule REQUEST_URI "@rx ^/api/auth/login$" "id:260539,phase:1,pass,nolog,tag:'x-security/POST /api/auth/login',initcol:tx=%{REMOTE_ADDR},chain"
+    SecRule REQUEST_METHOD "@streq POST" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/auth/login$" "id:260540,phase:1,pass,nolog,tag:'x-security/POST /api/auth/login',setvar:tx.rl_login_burst=+1,expirevar:tx.rl_login_burst=1,chain"
+    SecRule REQUEST_METHOD "@streq POST" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/auth/login$" "id:260541,phase:1,deny,status:429,msg:'x-security: rate limit burst exceeded (2/1s)',tag:'x-security/POST /api/auth/login',log,chain"
+    SecRule REQUEST_METHOD "@streq POST" "chain"
+      SecRule TX:rl_login_burst "@gt 2" "t:none"
+
+  # request.schema.email.maxLength=254 for POST /api/auth/login
+  SecRule REQUEST_METHOD "@streq POST" "id:260546,phase:2,deny,status:400,msg:'x-security: field email too long',tag:'x-security/POST /api/auth/login',chain"
+    SecRule REQUEST_URI "@rx ^/api/auth/login$" "chain"
+      SecRule ARGS:email "@gt 254" "t:length"
+
+  # request.schema.email.type=email for POST /api/auth/login
+  SecRule REQUEST_METHOD "@streq POST" "id:260547,phase:2,deny,status:400,msg:'x-security: field email not a valid email',tag:'x-security/POST /api/auth/login',chain"
+    SecRule REQUEST_FILENAME "@rx ^/api/auth/login$" "chain"
+      SecRule ARGS:email "!@rx ^[^@\s]+@[^@\s]+\.[^@\s]+$" "t:none"
+
+  # request.schema.password.minLength=8 for POST /api/auth/login
+  SecRule REQUEST_METHOD "@streq POST" "id:260548,phase:2,deny,status:400,msg:'x-security: field password too short',tag:'x-security/POST /api/auth/login',chain"
+    SecRule REQUEST_URI "@rx ^/api/auth/login$" "chain"
+      SecRule ARGS:password "@lt 8" "t:length"
+
+  # request.schema.password.maxLength=128 for POST /api/auth/login
+  SecRule REQUEST_METHOD "@streq POST" "id:260549,phase:2,deny,status:400,msg:'x-security: field password too long',tag:'x-security/POST /api/auth/login',chain"
+    SecRule REQUEST_URI "@rx ^/api/auth/login$" "chain"
+      SecRule ARGS:password "@gt 128" "t:length"
+
+  # W24-D stored-XSS guard on request.schema.password for POST /api/auth/login
+  # phase:2 — denies when the free-text field carries a literal <script tag
+  # or javascript: URI. Stops the payload at write time so the GET-side echo
+  # (which coraza-spoa cannot inspect — no response body via SPOE) is moot.
+  SecRule REQUEST_METHOD "@streq POST" "id:444422,phase:2,deny,status:403,msg:'x-security: stored-XSS payload in password',tag:'x-security/POST /api/auth/login',tag:'x-security-xss-stored',chain"
+    SecRule REQUEST_URI "@rx ^/api/auth/login$" "chain"
+      SecRule ARGS:json.password "@rx (?i)(?:<script\b|javascript:)" "t:none"
+
+  # C-1 response.schema.token.maxLength=2048 for POST /api/auth/login
+  # phase:4 inspects RESPONSE_BODY for "token":"<value of length > 999>". Heuristic regex-over-JSON; nested / escaped values may not match.
+  SecRule REQUEST_URI "@rx ^/api/auth/login$" "id:425351,phase:4,deny,status:500,msg:'x-security: response.token exceeds maxLength=2048 (data exposure)',tag:'x-security/POST /api/auth/login',tag:'x-security-api3-bopla',chain"
+    SecRule REQUEST_METHOD "@streq POST" "chain"
+      SecRule RESPONSE_BODY "@rx \x22token\x22\s*:\s*\x22[^\x22]{1000,}\x22" "t:none"
+
+  # C-1 stored-XSS guard for POST /api/auth/login
+  # phase:4 — response.contentType is application/json, so raw <script> or
+  # javascript: URIs in the body indicate a stored-XSS echo. msg carries
+  # 'x-security-xss-stored' for scorer attribution.
+  SecRule REQUEST_FILENAME "@rx ^/api/auth/login$" "id:425352,phase:4,deny,status:500,msg:'x-security: stored-XSS payload in JSON response body',tag:'x-security/POST /api/auth/login',tag:'x-security-xss-stored',chain"
+    SecRule REQUEST_METHOD "@streq POST" "chain"
+      SecRule RESPONSE_BODY "@rx (?i)(?:<script\b|javascript:)" "t:none"
+
+  # CORS origin allowlist for POST /api/auth/login
+  # phase:1 — deny when Origin header is set and not in allowedOrigins.
+  # msg carries the literal substring 'id:339' so scorer attribution
+  # (scoring_lib/attribution.py) maps the firing to cors-policy regardless
+  # of audit-log format (libmodsec3 writes [id "339NNN"], not id:339NNN).
+  SecRule REQUEST_FILENAME "@rx ^/api/auth/login$" "id:339351,phase:1,deny,status:403,msg:'x-security id:339 CORS origin not allowed',tag:'x-security/POST /api/auth/login',tag:'x-security-cors-policy',chain"
+    SecRule &REQUEST_HEADERS:Origin "@gt 0" "chain"
+      SecRule REQUEST_HEADERS:Origin "!@rx ^(https://app\\.example\\.com)$" "t:none"
+
+  # CORS preflight method check for POST /api/auth/login
+  # phase:1 — on OPTIONS, deny when Access-Control-Request-Method is set
+  # and not in allowedMethods. msg carries 'id:332' for attribution.
+  SecRule REQUEST_METHOD "@streq OPTIONS" "id:332351,phase:1,deny,status:403,msg:'x-security id:332 CORS preflight method not allowed',tag:'x-security/POST /api/auth/login',tag:'x-security-cors-policy',chain"
+    SecRule REQUEST_FILENAME "@rx ^/api/auth/login$" "chain"
+      SecRule REQUEST_HEADERS:Access-Control-Request-Method "!@rx ^(POST)$" "t:none"
+
+  # CORS credentials advertisement for POST /api/auth/login
+  # phase:3 — setenv Access-Control-Allow-Credentials:true for upstream add_header.
+  SecAction "id:333351,phase:3,pass,nolog,msg:'x-security id:333 CORS credentials true',tag:'x-security/POST /api/auth/login',tag:'x-security-cors-policy',setenv:Access-Control-Allow-Credentials=true"
+
+  # C-2 data-exposure (PII) filter: response.token for POST /api/auth/login
+  # phase:4 — deny when sensitive-named field appears in RESPONSE_BODY with
+  # a non-empty string value. msg carries 'id:428' for scorer attribution.
+  SecRule REQUEST_FILENAME "@rx ^/api/auth/login$" "id:428520,phase:4,deny,status:500,msg:'x-security id:428 data-exposure: response leaked sensitive field token',tag:'x-security/POST /api/auth/login',tag:'x-security-data-exposure',chain"
+      SecRule RESPONSE_BODY "@rx \x22token\x22\s*:\s*\x22[^\x22]+\x22" "t:none"
+
+  # response.contentType allowlist for POST /api/auth/login
+  # phase:3 — deny when RESPONSE_HEADERS:Content-Type not in allowlist.
+  # msg carries 'id:276' substring (x-security-response-ct).
+  SecRule REQUEST_METHOD "@streq POST" "id:276351,phase:3,deny,status:500,msg:'x-security id:276 response content-type not allowed',tag:'x-security/POST /api/auth/login',tag:'x-security-response-ct',chain"
+    SecRule REQUEST_FILENAME "@rx ^/api/auth/login$" "chain"
+      SecRule RESPONSE_HEADERS:Content-Type "!@rx ^(application/json)(;.*)?$" "t:none"
+
+  # ════════════════════════════════════════════════════════════
+  # POST /api/files/upload  (operationId: uploadFile)
+  # ════════════════════════════════════════════════════════════
+  # endpoint scope marker for POST /api/files/upload
+  SecAction "id:122980,phase:1,pass,nolog,tag:'x-security/POST /api/files/upload'"
+
+  # request.contentType allowlist for POST /api/files/upload
+  SecRule REQUEST_METHOD "@streq POST" "id:122981,phase:1,deny,status:415,msg:'x-security: unsupported Content-Type',tag:'x-security/POST /api/files/upload',chain"
+    SecRule REQUEST_URI "@rx ^/api/files/upload$" "chain"
+      SecRule REQUEST_HEADERS:Content-Type "!@rx ^(multipart/form-data)(;.*)?$" "t:none"
+
+  # request.maxBodySize=52428800 bytes for POST /api/files/upload
+  SecRule REQUEST_METHOD "@streq POST" "id:122982,phase:1,deny,status:413,msg:'x-security: request body exceeds endpoint limit',tag:'x-security/POST /api/files/upload',chain"
+    SecRule REQUEST_URI "@rx ^/api/files/upload$" "chain"
+      SecRule REQUEST_HEADERS:Content-Length "@gt 52428800" "t:none"
+
+  # authentication required (Authorization) for POST /api/files/upload
+  SecRule REQUEST_METHOD "@streq POST" "id:122983,phase:1,deny,status:401,msg:'x-security: missing Authorization header',tag:'x-security/POST /api/files/upload',chain"
+    SecRule REQUEST_URI "@rx ^/api/files/upload$" "chain"
+      SecRule &REQUEST_HEADERS:Authorization "@eq 0" "t:none"
+
+  # rateLimit 20/1m (identifier=user-id) for POST /api/files/upload
+  # pattern: initcol → setvar/expirevar → @gt check (Coraza v3 collection semantics)
+  SecRule REQUEST_URI "@rx ^/api/files/upload$" "id:122986,phase:1,pass,nolog,tag:'x-security/POST /api/files/upload',initcol:tx=%{REQUEST_HEADERS.Authorization},chain"
+    SecRule REQUEST_METHOD "@streq POST" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/files/upload$" "id:122987,phase:1,pass,nolog,tag:'x-security/POST /api/files/upload',setvar:tx.rl_uploadFile=+1,expirevar:tx.rl_uploadFile=60,chain"
+    SecRule REQUEST_METHOD "@streq POST" "t:none"
+  SecRule REQUEST_URI "@rx ^/api/files/upload$" "id:122988,phase:1,deny,status:429,msg:'x-security: rate limit exceeded (20/1m)',tag:'x-security/POST /api/files/upload',log,chain"
+    SecRule REQUEST_METHOD "@streq POST" "chain"
+      SecRule TX:rl_uploadFile "@gt 20" "t:none"
+
+  # request.schema.file.allowedMimeTypes (request Content-Type) for POST /api/files/upload
+  SecRule REQUEST_METHOD "@streq POST" "id:122996,phase:1,deny,status:415,msg:'x-security: field file Content-Type not in allowedMimeTypes',tag:'x-security/POST /api/files/upload',chain"
+    SecRule REQUEST_URI "@rx ^/api/files/upload$" "chain"
+      SecRule REQUEST_HEADERS:Content-Type "!@rx ^(image/png|image/jpeg|application/pdf)(;.*)?$" "t:none"
+
+  # request.schema.file.allowedMimeTypes (multipart part MIME) for POST /api/files/upload
+  SecRule REQUEST_METHOD "@streq POST" "id:122997,phase:2,deny,status:415,msg:'x-security: field file upload MIME not allowed',tag:'x-security/POST /api/files/upload',chain"
+    SecRule REQUEST_URI "@rx ^/api/files/upload$" "chain"
+      SecRule FILES_TMP_CONTENT:file|FILES:file "!@rx ^(image/png|image/jpeg|application/pdf)$" "t:none"

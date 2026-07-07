@@ -2,27 +2,27 @@ policies:
   default:
     mode: prevent-learn
     practices:
-      - writ-threat-prevention
-      - writ-rate-limit
+      - x-security-threat-prevention
+      - x-security-rate-limit
     triggers:
-      - writ-log-trigger
-    custom-response: writ-blocked-response
+      - x-security-log-trigger
+    custom-response: x-security-blocked-response
   specific-rules:
-    - name: writ-asset-vapi
+    - name: x-security-asset-vapi
       host: vapi
       practices:
-        - writ-threat-prevention
-        - writ-rate-limit
+        - x-security-threat-prevention
+        - x-security-rate-limit
 practices:
-  - name: writ-threat-prevention
+  - name: x-security-threat-prevention
     type: threat-prevention
-  - name: writ-rate-limit
+  - name: x-security-rate-limit
     type: rate-limit
 log-triggers:
-  - name: writ-log-trigger
+  - name: x-security-log-trigger
 custom-responses:
-  - name: writ-blocked-response
-writ-extended:
+  - name: x-security-blocked-response
+x-security-extended:
   schema-validation:
     - name: get-api1-user-by-id
       binding:

@@ -1,7 +1,7 @@
 {
   "ruleNames": [
-    "writ-shadow-9eb29ad55ee9-auth",
-    "writ-shadow-9eb29ad55ee9-ratelimit-0"
+    "x-security-shadow-9eb29ad55ee9-auth",
+    "x-security-shadow-9eb29ad55ee9-ratelimit-0"
   ],
   "ruleTypes": ["auth", "ratelimit-0"],
   "rateBasedLimit": 500,

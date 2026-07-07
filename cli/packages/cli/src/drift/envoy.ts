@@ -4,15 +4,15 @@
  * Accepts either:
  *   - a single `envoy.yaml` path (with the Lua source inlined via
  *     `envoy.filters.http.lua.inline_code`), OR
- *   - a directory containing `envoy.yaml` + `writ.lua`.
+ *   - a directory containing `envoy.yaml` + `x-security.lua`.
  *
  * Strategy:
- *   1. Regenerate expected `envoy.yaml` + `writ.lua` from the SpecIR via
+ *   1. Regenerate expected `envoy.yaml` + `x-security.lua` from the SpecIR via
  *      the Envoy generator.
  *   2. Extract the per-endpoint Lua policy blocks (sentinel markers
- *      `-- writ:<METHOD>:<path>:START` ... `-- writ:END`) from
+ *      `-- xSecurity:<METHOD>:<path>:START` ... `-- xSecurity:END`) from
  *      both the expected and the actual Lua source. The actual Lua is read
- *      from `writ.lua` if present, else from the inlined block inside
+ *      from `x-security.lua` if present, else from the inlined block inside
  *      `envoy.yaml` under `inline_code: |`.
  *   3. Diff the two block sets:
  *        - Endpoint block missing             → CRITICAL.
@@ -24,24 +24,24 @@
  *          policy line missing detected)      → MEDIUM.
  *        - Rate-limit descriptor missing in
  *          deployed envoy.yaml                → CRITICAL.
- *        - Unknown writ-tagged block on
+ *        - Unknown x-security-tagged block on
  *          deployed config                    → LOW.
  */
 
 import { readFile, stat } from 'node:fs/promises';
 import * as path from 'node:path';
 import yaml from 'js-yaml';
-import type { SpecIR, EndpointIR } from '@writ/core';
+import type { SpecIR, EndpointIR } from '@x-security/core';
 import type { DriftIssue, DriftReport, DriftSeverity } from '../reporters/types.js';
 import { envoyGenerator } from '../generators/envoy/index.js';
 import { endpointLabel } from './kong-shared.js';
 
 export interface EnvoyDriftOptions {
-  /** Path to either an envoy.yaml file or a directory containing it + writ.lua. */
+  /** Path to either an envoy.yaml file or a directory containing it + x-security.lua. */
   filePath: string;
   /** Raw envoy.yaml override (for tests). */
   yamlContent?: string;
-  /** Raw writ.lua override (for tests). Takes precedence over inlined Lua. */
+  /** Raw x-security.lua override (for tests). Takes precedence over inlined Lua. */
   luaContent?: string;
 }
 
@@ -51,10 +51,10 @@ interface EndpointBlock {
   lines: string[];
 }
 
-const START_RE = /^\s*--\s*writ:([A-Z]+):(.+):START\s*$/;
-const END_RE = /^\s*--\s*writ:END\s*$/;
+const START_RE = /^\s*--\s*xSecurity:([A-Z]+):(.+):START\s*$/;
+const END_RE = /^\s*--\s*xSecurity:END\s*$/;
 
-/** Extract every `-- writ:<METHOD>:<path>:START` ... `-- writ:END`
+/** Extract every `-- xSecurity:<METHOD>:<path>:START` ... `-- xSecurity:END`
  * block from a Lua source. Markers that lack a matching END are ignored (the
  * detector will report the missing endpoint via the expected-block iteration). */
 function extractEndpointBlocks(luaSource: string): Map<string, EndpointBlock> {
@@ -144,8 +144,8 @@ function extractRateLimitStatPrefixes(rawYaml: string): Set<string> {
       if (node && typeof node === 'object') {
         const obj = node as Record<string, unknown>;
         if (typeof obj.stat_prefix === 'string' &&
-            obj.stat_prefix !== 'writ_chain_ratelimit' &&
-            obj.stat_prefix !== 'writ_hcm') {
+            obj.stat_prefix !== 'x_security_chain_ratelimit' &&
+            obj.stat_prefix !== 'x_security_hcm') {
           // Only emit prefixes that match the generator's per-route shape.
           if (/_ratelimit$/.test(obj.stat_prefix)) out.add(obj.stat_prefix);
         }
@@ -283,7 +283,7 @@ async function readSources(opts: EnvoyDriftOptions): Promise<{ envoyYaml: string
         envoyYaml = '';
       }
       try {
-        lua = await readFile(path.join(opts.filePath, 'writ.lua'), 'utf8');
+        lua = await readFile(path.join(opts.filePath, 'x-security.lua'), 'utf8');
       } catch {
         lua = null;
       }
@@ -302,14 +302,14 @@ export async function detectEnvoyDrift(
 ): Promise<DriftReport> {
   const { envoyYaml: actualYaml, lua: actualLuaFile } = await readSources(opts);
 
-  // The deployed Lua source is preferentially the standalone `writ.lua`;
+  // The deployed Lua source is preferentially the standalone `x-security.lua`;
   // fall back to the YAML's `inline_code` block. This matches the generator's
   // two-artifact emission shape.
   const actualLua = actualLuaFile ?? extractInlineLua(actualYaml) ?? '';
 
   const expectedArtifacts = await Promise.resolve(envoyGenerator.generate(spec));
   const expectedYaml = expectedArtifacts.find((a) => a.path === 'envoy.yaml')?.content ?? '';
-  const expectedLua = expectedArtifacts.find((a) => a.path === 'writ.lua')?.content ?? '';
+  const expectedLua = expectedArtifacts.find((a) => a.path === 'x-security.lua')?.content ?? '';
 
   const expectedBlocks = extractEndpointBlocks(expectedLua);
   const actualBlocks = extractEndpointBlocks(actualLua);
@@ -378,7 +378,7 @@ export async function detectEnvoyDrift(
     for (const role of authz.roles) {
       // The generator emits one policy per (operationId, role). We look for
       // the role fragment in the YAML — cheap and stable.
-      const fragment = `"writ-rbac-`;
+      const fragment = `"x-security-rbac-`;
       const roleFragment = role.replace(/[^a-z0-9]+/gi, '-');
       if (!deployedHasRbacPolicy(actualYaml, fragment) || !actualYaml.includes(`-${roleFragment}":`)) {
         issues.push({
@@ -393,7 +393,7 @@ export async function detectEnvoyDrift(
     }
   }
 
-  // ── Unknown writ-tagged blocks in actual ────────────────────────
+  // ── Unknown x-security-tagged blocks in actual ────────────────────────
   for (const [key, block] of actualBlocks.entries()) {
     if (expectedBlocks.has(key)) continue;
     issues.push({
@@ -402,7 +402,7 @@ export async function detectEnvoyDrift(
       severity: 'LOW',
       expected: 'absent',
       actual: 'present',
-      message: `Unknown Writ-tagged endpoint block in deployed Lua: ${block.method} ${block.pathTemplate}`
+      message: `Unknown x-security-tagged endpoint block in deployed Lua: ${block.method} ${block.pathTemplate}`
     });
   }
 

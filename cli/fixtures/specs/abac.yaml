@@ -1,0 +1,35 @@
+openapi: 3.0.0
+info:
+  title: ABAC Proof
+  version: 1.0.0
+paths:
+  /docs/{id}:
+    get:
+      operationId: getDoc
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: https://idp.example.com/.well-known/jwks.json
+          issuer: https://idp.example.com
+          allowedAlgorithms: [RS256]
+        authorization:
+          type: abac
+          attributes:
+            rules:
+              - claim: department
+                operator: equals
+                value: engineering
+              - claim: sub
+                operator: equals
+                pathParam: id
+        ipPolicy:
+          allow: [10.0.0.0/8]
+      responses:
+        '200':
+          description: ok

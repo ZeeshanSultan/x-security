@@ -1,7 +1,7 @@
 // `lazy push <repoDir>` — Phase 4 SaaS upsell.
 //
 // Bundles the locally-generated, CLI-verified policies under .writ/ and
-// POSTs them to the Writ SaaS import endpoint. This is the ONLY verb that
+// POSTs them to the x-security SaaS import endpoint. This is the ONLY verb that
 // leaves the user's machine, so it carries three hard gates:
 //
 //   D-1 (no shortcuts that mask quality): we re-run the local audit and ABORT
@@ -24,8 +24,8 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import yaml from 'js-yaml';
-import type { Citation, XSecurityPolicy } from '@writ/detect-core';
-import { policiesDir, REPORT_FILE, writDir, type PolicyCites } from './store.js';
+import type { Citation, XSecurityPolicy } from '@x-security/detect-core';
+import { resolvePoliciesDir, REPORT_FILE, resolveArtifactDir, type PolicyCites } from './store.js';
 import { runAudit, type AuditResult } from './audit.js';
 
 const execFileAsync = promisify(execFile);
@@ -41,7 +41,7 @@ export const DEFAULT_API_URL = 'https://usewaf.com';
 const HOST_ALLOWLIST_SUFFIXES = ['.chain305.com', '.lazy.chain305.com'];
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 
-const USER_AGENT = '@writ/cli push';
+const USER_AGENT = '@x-security/cli push';
 
 // Mirror of the server's PUBLIC_REPO_URL_RE (apps/api/src/server.ts): the
 // import endpoint only accepts https://github.com/<owner>/<repo>(.git)?. We
@@ -121,7 +121,7 @@ const defaultPoster: Poster = async (url, init) => {
 /** Resolve + validate the API base. Refuses any host not on the allowlist so a
  * poisoned WRIT_API_URL can't redirect the Bearer token (G-4). */
 export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
-  const override = env.WRIT_API_URL?.trim();
+  const override = (env.X_SECURITY_API_URL ?? env.WRIT_API_URL)?.trim();
   if (!override) return DEFAULT_API_URL;
 
   let parsed: URL;
@@ -147,7 +147,7 @@ export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
   if (!allowed) {
     throw new PushError(
       `Refusing to send the API token to "${host}". ` +
-        `WRIT_API_URL must be the Writ SaaS ` +
+        `WRIT_API_URL must be the x-security SaaS ` +
         `(host ending in ${HOST_ALLOWLIST_SUFFIXES.join(' or ')}, or localhost for dev). ` +
         `This guard prevents token exfiltration to an attacker-controlled host.`,
     );
@@ -160,10 +160,10 @@ export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
 /** Read the token from env ONLY (G-2). Returns the raw value; the caller never
  * logs it. Absent token is an abort. */
 export function resolveToken(env: NodeJS.ProcessEnv): string {
-  const token = env.WRIT_API_TOKEN?.trim();
+  const token = (env.X_SECURITY_API_TOKEN ?? env.WRIT_API_TOKEN)?.trim();
   if (!token) {
     throw new PushError(
-      'WRIT_API_TOKEN is not set. Export your Writ API key ' +
+      'WRIT_API_TOKEN is not set. Export your x-security API key ' +
         '(WRIT_API_TOKEN=...) — push reads it from the environment only, ' +
         'never from a flag.',
     );
@@ -223,7 +223,7 @@ export async function resolveRepoIdentity(
  * bundle that audit would already have flagged, so we treat it as a hard error
  * rather than uploading an unbacked control (D-1). */
 async function loadPolicies(repoDir: string): Promise<PushPolicy[]> {
-  const dir = policiesDir(repoDir);
+  const dir = await resolvePoliciesDir(repoDir);
   let files: string[];
   try {
     files = (await fs.readdir(dir)).filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));
@@ -262,7 +262,7 @@ async function loadPolicies(repoDir: string): Promise<PushPolicy[]> {
 
 async function loadReport(repoDir: string): Promise<string | undefined> {
   try {
-    return await fs.readFile(path.join(writDir(repoDir), REPORT_FILE), 'utf8');
+    return await fs.readFile(path.join(await resolveArtifactDir(repoDir), REPORT_FILE), 'utf8');
   } catch {
     return undefined;
   }

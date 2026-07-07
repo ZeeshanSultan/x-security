@@ -1,6 +1,6 @@
-// @writ/shared/validation — types & schemas for P2 continuous synthetic validation.
+// @x-security/shared/validation — types & schemas for P2 continuous synthetic validation.
 //
-// Lives in a separate sub-entry (`@writ/shared/validation`) so that
+// Lives in a separate sub-entry (`@x-security/shared/validation`) so that
 // adding these schemas does not touch the canonical `index.ts` exports.
 import { z } from "zod";
 
@@ -85,7 +85,7 @@ export type TriggerValidationRunRequest = z.infer<typeof TriggerValidationRunReq
  * Optional per-endpoint narrowing carried on the attack-run job payload when
  * the job was enqueued by the rule-change path. Lives next to the rest of the
  * validation contract so the api + runner agree on the shape without having
- * to cross-import from `@writ/shared`'s root entry.
+ * to cross-import from `@x-security/shared`'s root entry.
  *
  * The canonical Zod schema lives on `AttackRunJob.endpointIds` in `index.ts`
  * (this re-export keeps the validation subpath self-describing).

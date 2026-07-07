@@ -23,7 +23,7 @@
  * touch nginx still get a 410 enforcement.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 
 function pathToNginxLocation(path: string): string {
   // Replace `{param}` with named regex capture `(?<param>[^/]+)`. Using
@@ -122,7 +122,7 @@ export function buildModsecNginxServerConf(spec: SpecIR): string | null {
   if (!tlsFloor && !ciphers && endpointBlocks.length === 0) return null;
 
   const lines: string[] = [
-    '# Writ → modsec-nginx server-side directives — auto-generated.',
+    '# x-security → modsec-nginx server-side directives — auto-generated.',
     '# Merge inside your `server { ... }` block (not at http {} scope).',
     '# Source: ' + `${spec.info.title} ${spec.info.version}`,
     '',

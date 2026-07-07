@@ -1,0 +1,279 @@
+# XSecurity Kong generator — deployment=standalone edition=oss
+# 2 spec→runtime divergence(s) recorded below.
+# WARNING: rateLimit.policy (endpoint=listUsers): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# WARNING: rateLimit.policy (endpoint=uploadFile): declared="cluster (per-identity intent)" emitted="local" — rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis.
+# _x_security_warnings:
+#   - field: rateLimit.policy
+#     endpoint: listUsers
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+#   - field: rateLimit.policy
+#     endpoint: uploadFile
+#     declared: "cluster (per-identity intent)"
+#     emitted: local
+#     reason: "rate-limit limit_by=consumer uses policy=local by default; counters are scoped per-Kong-instance and not shared. For true per-identity buckets across instances, run Kong in database mode and pass `--kong-policy cluster`, or add a redis store and use policy=redis."
+_format_version: '3.0'
+_transform: true
+services:
+  - name: svc_login
+    url: https://api.example.com
+    routes:
+      - name: route_login
+        paths:
+          - /api/auth/login
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: rate-limiting
+            config:
+              minute: 25
+              limit_by: ip
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_login
+            id: ca36af17-0af0-54ad-b739-0524c7a72f0f
+          - name: cors
+            config:
+              origins:
+                - https://app.example.com
+              methods:
+                - POST
+              credentials: true
+              preflight_continue: false
+            id: 2af46be9-1c63-5a05-9bab-1aae3894311d
+          - name: response-transformer
+            config:
+              add:
+                headers:
+                  - Cache-Control:no-store
+                  - Pragma:no-cache
+            id: e95c5da3-7bda-59a4-a842-ccb8be802232
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 1
+              size_unit: megabytes
+              require_content_length: false
+            id: 2079cae3-56cc-59eb-bd34-be031fa04d42
+          - name: pre-function
+            config:
+              access:
+                - |-
+                  -- XSecurity K-4 SQLi heuristic pre-function for endpoint=login
+                  -- Scans JSON body string values for classic SQLi patterns; rejects on hit.
+                  local body = kong.request.get_body()
+                  if type(body) == "table" then
+                    local hit_field, hit_rule = (function()
+                      for k, v in pairs(body) do
+                        if type(v) == "string" then
+                          local vl = v:lower()
+                        if vl:match("[' \"]%s*or%s+%d+%s*=%s*%d+") then return k, 1 end
+                        if vl:match("[' \"]%s*or%s+['\"]?%w+['\"]?%s*=") then return k, 2 end
+                        if vl:match("%-%-%s") then return k, 3 end
+                        if vl:match("union%s+select") then return k, 4 end
+                        if vl:match("drop%s+table") then return k, 5 end
+                        if vl:match("insert%s+into") then return k, 6 end
+                        if vl:match(";%s*shutdown") then return k, 7 end
+                        if vl:match("/%*.-%*/") then return k, 8 end
+                        if vl:match("0x%x+") then return k, 9 end
+                        end
+                      end
+                      return nil, nil
+                    end)()
+                    if hit_field ~= nil then
+                      kong.log.warn("[x-security-sqli-403] sqli pattern " .. tostring(hit_rule) .. " in field '" .. tostring(hit_field) .. "'")
+                      return kong.response.exit(403, {
+                        message = "XSecurity: SQLi pattern rejected",
+                        tag = "x-security-sqli-403",
+                        field = tostring(hit_field),
+                        rule = hit_rule
+                      })
+                    end
+                  end
+            tags:
+              - x-security-sqli-403
+            id: 624327f6-a393-59bd-a349-5af3c035019f
+          - name: post-function
+            config:
+              body_filter:
+                - |-
+                  -- XSecurity W26 response typed-schema validation for endpoint=login
+                  -- Validates the cjson-DECODED value (canonical: immune to pretty-printing,
+                  -- escaped quotes, key order, numeric formatting). Never matches raw body bytes.
+                  local cjson = require("cjson.safe")
+                  local raw = kong.response.get_raw_body()
+                  if raw and #raw > 0 then
+                    local obj = cjson.decode(raw)
+                    -- Pass-through when body is undecodable or not a JSON object (no fields to check).
+                    if type(obj) == "table" then
+                      local dropped = 0
+                      local truncated = 0
+                    do
+                      local v = obj["token"]
+                      if v ~= nil then
+                        local ok_type = (function(v) return type(v)=="string" end)(v)
+                        if not ok_type then
+                          obj["token"] = nil; dropped = dropped + 1
+                          kong.log.warn("[x-security-response-schema] dropped field token: type/format mismatch (expected string)")
+                        end
+                        v = obj["token"]
+                        if v ~= nil then
+                          if type(v) == "string" and #v > 2048 then
+                            obj["token"] = v:sub(1, 2048); v = obj["token"]; truncated = truncated + 1
+                            kong.log.warn("[x-security-response-schema] truncated field token to maxLength 2048")
+                          end
+                        end
+                      end
+                    end
+                    do
+                      local v = obj["expiresIn"]
+                      if v ~= nil then
+                        local ok_type = (function(v) return type(v)=="number" and v == math.floor(v) end)(v)
+                        if not ok_type then
+                          obj["expiresIn"] = nil; dropped = dropped + 1
+                          kong.log.warn("[x-security-response-schema] dropped field expiresIn: type/format mismatch (expected integer)")
+                        end
+                        v = obj["expiresIn"]
+                        if v ~= nil then
+                        end
+                      end
+                    end
+                      if dropped > 0 or truncated > 0 then
+                        kong.log.warn("[x-security-response-schema] enforced response.schema: dropped " .. tostring(dropped) .. " field(s), truncated " .. tostring(truncated))
+                        local encoded = cjson.encode(obj)
+                        if encoded then kong.response.set_raw_body(encoded) end
+                      end
+                    end
+                  end
+            tags:
+              - x-security-response-schema
+            id: 587e6e47-89a4-5107-90bd-61c7c6cfb6fa
+          - name: post-function
+            config:
+              header_filter:
+                - |-
+                  -- XSecurity response Content-Type assertion endpoint=login
+                  local allowed = { ["application/json"]=true }
+                  local status = kong.response.get_status()
+                  if status >= 200 and status < 300 then
+                    local ct = kong.response.get_header("Content-Type")
+                    if ct then
+                      local base = ct:match("^[^;]+")
+                      base = base and base:gsub("%s+$", ""):gsub("^%s+", ""):lower() or nil
+                      if base and not allowed[base] then
+                        kong.ctx.plugin.ss_ct_block = true
+                        kong.response.set_status(502)
+                        kong.response.set_header("Content-Type", "application/json")
+                        kong.log.warn("[x-security-response-contenttype] response Content-Type '" .. tostring(ct) .. "' not in allowlist; blocked")
+                      end
+                    end
+                  end
+              body_filter:
+                - |-
+                  if kong.ctx.plugin.ss_ct_block then
+                    kong.response.set_raw_body('{"message":"Upstream returned a disallowed Content-Type","tag":"x-security-response-contenttype"}')
+                  end
+            tags:
+              - x-security-response-contenttype
+            id: 779aef83-3140-5c9e-94e3-37932dfdead3
+    read_timeout: 5000
+  - name: svc_listUsers
+    url: https://api.example.com
+    routes:
+      - name: route_listUsers
+        paths:
+          - /api/admin/users
+        methods:
+          - GET
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___auth.example.com_.well-known_jwks.json
+              - issuer=https___auth.example.com_
+              - audience=api.example.com
+            id: 990e034b-01a0-5e39-a2ae-ec550243abc2
+          - name: acl
+            config:
+              allow:
+                - admin
+                - super-admin
+              hide_groups_header: true
+            id: bdc84e4c-ffa0-5f22-b301-8f78f92982b4
+          - name: rate-limiting
+            config:
+              minute: 90
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_listUsers
+            id: bdcd26da-b770-57a9-9d41-9ab59f6cf8a7
+          - name: ip-restriction
+            config:
+              allow:
+                - 10.0.0.0/8
+            id: d2034015-17a2-53d6-9752-00ef662787a6
+          - name: response-transformer
+            config:
+              add:
+                headers:
+                  - Cache-Control:no-store
+                  - Pragma:no-cache
+            id: b0182517-0d94-5929-87f4-251b1f319650
+    read_timeout: 10000
+  - name: svc_uploadFile
+    url: https://api.example.com
+    routes:
+      - name: route_uploadFile
+        paths:
+          - /api/files/upload
+        methods:
+          - POST
+        strip_path: false
+        preserve_host: true
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify:
+                - exp
+              key_claim_name: iss
+              run_on_preflight: true
+            tags:
+              - jwks=https___auth.example.com_.well-known_jwks.json
+            id: feb1ea1f-d492-5f65-8c76-5413c202ca30
+          - name: rate-limiting
+            config:
+              minute: 60
+              limit_by: consumer
+              policy: local
+              fault_tolerant: true
+              hide_client_headers: false
+            tags:
+              - x-security-per-route-ratelimit_uploadFile
+            id: fe710cc0-f4d8-5caf-af91-e0c509ecf5cb
+          - name: response-transformer
+            config:
+              add:
+                headers:
+                  - Cache-Control:no-store
+                  - Pragma:no-cache
+            id: 8fdffe2a-2c78-52bd-b16b-751fa98e28f7
+          - name: request-size-limiting
+            config:
+              allowed_payload_size: 50
+              size_unit: megabytes
+              require_content_length: false
+            id: 51ea014d-63a4-5104-a00a-b5ab4cd28c22
+    read_timeout: 30000

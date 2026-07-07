@@ -27,13 +27,13 @@
 //   docker:<scheduler-container>+docker:<bunkerweb-container>
 
 import { spawnSync } from 'node:child_process';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import { loadGenerator } from '../../registry.js';
 import type { EmittedArtifact, GatewayReader, LoadedArtifact, VerifyRow } from '../index.js';
 
 const RULE_ID_RE = /\bid:(\d{4,7})\b/g;
 const SOURCE_ENDPOINTS_RE = /^#\s*Source endpoints?:\s*(.+)$/i;
-const SECTION_HEADER_RE = /^#\s*Writ-generated [^\n]*$/i;
+const SECTION_HEADER_RE = /^#\s*x-security-generated [^\n]*$/i;
 
 interface SplitGateway {
   bunkerweb: string;
@@ -168,7 +168,8 @@ export const bunkerwebReader: GatewayReader = {
     }));
   },
 
-  async readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]> {
+  async readLoadedArtifacts(gateway: string, _timeoutMs?: number): Promise<LoadedArtifact[]> {
+    // No outbound HTTP here — `docker exec nginx -T`. timeoutMs n/a.
     const split = parseBunkerwebGateway(gateway);
     const dump = dumpNginxConfig(split.bunkerweb);
     const ids = new Set<string>();
@@ -182,7 +183,7 @@ export const bunkerwebReader: GatewayReader = {
         id: '__empty-dump__',
         kind: 'coraza-rule',
         rejectionReason:
-          'nginx -T returned no Writ rule ids — the scheduler may not have synced configs/modsec into the bunkerweb container yet'
+          'nginx -T returned no x-security rule ids — the scheduler may not have synced configs/modsec into the bunkerweb container yet'
       });
     }
 

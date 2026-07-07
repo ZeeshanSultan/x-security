@@ -15,8 +15,8 @@
  * mis-configured upstream cannot override the hardened value. Wave-22 W22-A.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { Hsts, ResponseHeaders } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { Hsts, ResponseHeaders } from '@x-security/schema';
 import { yamlString } from '../yaml-util.js';
 
 export interface RouteResponseHeader {

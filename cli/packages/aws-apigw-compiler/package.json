@@ -1,5 +1,5 @@
 {
-  "name": "@writ/aws-apigw-compiler",
+  "name": "@x-security/aws-apigw-compiler",
   "version": "0.1.0",
   "description": "Compile x-security annotations to AWS WAFv2 rules + API Gateway resource policy + Usage Plan JSON",
   "license": "Apache-2.0",
@@ -14,9 +14,9 @@
     "test": "node --test --import tsx 'test/**/*.test.ts'"
   },
   "dependencies": {
-    "@writ/schema": "workspace:*",
-    "@writ/core": "workspace:*",
-    "@writ/shared": "workspace:*"
+    "@x-security/schema": "workspace:*",
+    "@x-security/core": "workspace:*",
+    "@x-security/shared": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.0",

@@ -46,7 +46,7 @@ import {
   type RouteInventoryEntry,
   type SyntheticRequest,
   type VerifierContext,
-} from '@writ/detect-core';
+} from '@x-security/detect-core';
 import { runCompile, type CompileFinding } from './compile.js';
 import { createTools } from './fs-tools.js';
 

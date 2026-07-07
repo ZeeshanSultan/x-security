@@ -24,7 +24,7 @@
  * (supportsPersistentCollections=true, supportsResponseBodyAccess=true).
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import { endpointHash, pathRegex, parseDurationSec } from '../coraza/rules.js';
 
 function esc(s: string): string {
@@ -62,7 +62,7 @@ const PASSWORD_FIELDS = ['password', 'passwd', 'pwd', 'newPassword', 'new_passwo
 export function buildPasswordPolicyRules(endpoint: EndpointIR): string[] {
   const pol = endpoint.policy.authentication?.passwordPolicy;
   if (!pol) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seedBase = endpointHash(`${endpoint.method}|${endpoint.path}|pwpolicy`, '');
 
@@ -94,7 +94,7 @@ export function buildPasswordPolicyRules(endpoint: EndpointIR): string[] {
             `Body-carried password strength (API2:2023). libmodsec3 PCRE !@rx on the\n` +
             `password field — rejects a present-but-weak password.`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'Writ: ${esc(c.reason)}',tag:'${esc(tag)}',tag:'writ-rule-password-policy',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'x-security: ${esc(c.reason)}',tag:'${esc(tag)}',tag:'x-security-rule-password-policy',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "chain"`,
         `    SecRule ${selector} "!@rx ${escRx(c.rx)}"${CHAIN_TERM}`,
       ].join('\n')
@@ -112,7 +112,7 @@ export function buildPasswordPolicyRules(endpoint: EndpointIR): string[] {
         header(
           `v0.7 passwordPolicy: blocklisted password for ${endpoint.method} ${endpoint.path}`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'Writ: password is on the blocklist',tag:'${esc(tag)}',tag:'writ-rule-password-policy',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:422,log,msg:'x-security: password is on the blocklist',tag:'${esc(tag)}',tag:'x-security-rule-password-policy',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "chain"`,
         `    SecRule ${selector} "@rx ${escRx(`(?i)^(?:${alt})$`)}"${CHAIN_TERM}`,
       ].join('\n')
@@ -156,7 +156,7 @@ function lockoutVar(identifier: string): { expansion: string; collectKeyPhase: n
 export function buildAccountLockoutRules(endpoint: EndpointIR): string[] {
   const lock = endpoint.policy.authentication?.accountLockout;
   if (!lock) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const window = parseDurationSec(lock.window) || 900;
   const { expansion, collectKeyPhase } = lockoutVar(lock.identifier);
@@ -185,7 +185,7 @@ export function buildAccountLockoutRules(endpoint: EndpointIR): string[] {
       `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:${keyPhase},pass,nolog,tag:'${esc(tag)}',${initcol},chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${CHAIN_TERM}`,
       // 2. Deny while locked out — counter already over budget.
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 1},phase:${keyPhase},deny,status:429,log,msg:'Writ: account locked (>${lock.attempts} failed logins / ${esc(lock.window)})',tag:'${esc(tag)}',tag:'writ-rule-account-lockout',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 1},phase:${keyPhase},deny,status:429,log,msg:'x-security: account locked (>${lock.attempts} failed logins / ${esc(lock.window)})',tag:'${esc(tag)}',tag:'x-security-rule-account-lockout',chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule GLOBAL:${counterKey} "@gt ${lock.attempts}"${CHAIN_TERM}`,
       // 3. On a failed-auth response (>=400), increment + refresh the TTL (phase:5).
@@ -210,7 +210,7 @@ const FORBID_ARRAY_ROOT_BASE_ID = 414000;
 
 export function buildForbidArrayRootRules(endpoint: EndpointIR): string[] {
   if (endpoint.policy.response?.forbidArrayRoot !== true) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seed = endpointHash(`${endpoint.method}|${endpoint.path}|arrayroot`, '');
   const id = FORBID_ARRAY_ROOT_BASE_ID + (seed % 999);
@@ -221,7 +221,7 @@ export function buildForbidArrayRootRules(endpoint: EndpointIR): string[] {
           `JSON-hijacking defense (API3:2023). phase:4 RESPONSE_BODY @rx on the first\n` +
           `non-whitespace byte; an array-rooted body is denied (wrap in an object instead).`
       ),
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'Writ: bare top-level JSON array response (forbidArrayRoot)',tag:'${esc(tag)}',tag:'writ-rule-forbid-array-root',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:4,deny,status:500,log,auditlog,msg:'x-security: bare top-level JSON array response (forbidArrayRoot)',tag:'${esc(tag)}',tag:'x-security-rule-forbid-array-root',chain"`,
       `  SecRule RESPONSE_BODY "@rx ^[\\s\\xef\\xbb\\xbf]*\\[" "t:none"`,
     ].join('\n'),
   ];
@@ -249,7 +249,7 @@ const IDEMPOTENCY_BASE_ID = 416000;
 export function buildIdempotencyKeyRules(endpoint: EndpointIR): string[] {
   const idem = endpoint.policy.request?.idempotencyKey;
   if (!idem) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const ttl = parseDurationSec(idem.ttl) || 300;
   const seed = endpointHash(`${endpoint.method}|${endpoint.path}|idempotency`, '');
@@ -267,7 +267,7 @@ export function buildIdempotencyKeyRules(endpoint: EndpointIR): string[] {
           `flight races (no atomic check-and-set at the WAF; handle that in the store).`
       ),
       // 1. Require the idempotency-key header to be present at all.
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:1,deny,status:400,log,msg:'Writ: missing ${esc(idem.header)} header',tag:'${esc(tag)}',tag:'writ-rule-idempotency-key',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base},phase:1,deny,status:400,log,msg:'x-security: missing ${esc(idem.header)} header',tag:'${esc(tag)}',tag:'x-security-rule-idempotency-key',chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule &REQUEST_HEADERS:${esc(idem.header)} "@eq 0"${CHAIN_TERM}`,
       // 2. Open the per-key persistent collection.
@@ -277,7 +277,7 @@ export function buildIdempotencyKeyRules(endpoint: EndpointIR): string[] {
       `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 2},phase:1,pass,nolog,tag:'${esc(tag)}',setvar:global.${counterKey}=+1,expirevar:global.${counterKey}=${ttl},chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${CHAIN_TERM}`,
       // 4. Deny the replay — second+ request with this key inside the ttl window.
-      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 3},phase:1,deny,status:409,log,msg:'Writ: replayed idempotency key (${esc(idem.header)})',tag:'${esc(tag)}',tag:'writ-rule-idempotency-key',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${base + 3},phase:1,deny,status:409,log,msg:'x-security: replayed idempotency key (${esc(idem.header)})',tag:'${esc(tag)}',tag:'x-security-rule-idempotency-key',chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule GLOBAL:${counterKey} "@gt 1"${CHAIN_TERM}`,
     ].join('\n'),
@@ -288,9 +288,9 @@ export function buildIdempotencyKeyRules(endpoint: EndpointIR): string[] {
 // logging (SSEC-AUDIT). PARTIAL.
 //
 // libmodsec3 emits an audit log for every rule carrying `log,auditlog` — the
-// Writ injection-block / authz-deny / rate-limit-trip rules already do,
+// x-security injection-block / authz-deny / rate-limit-trip rules already do,
 // so those LoggingEvents are covered by the existing rule corpus. What this
-// emitter adds: a phase:5 SecAction tagged `writ-audit` so the operator
+// emitter adds: a phase:5 SecAction tagged `x-security-audit` so the operator
 // can route ALL transactions on the endpoint to the audit log (covering the
 // `request`/`response` events), plus a commented nginx `access_log` directive.
 //
@@ -311,7 +311,7 @@ const LOGGING_BASE_ID = 418000;
 export function buildLoggingRules(endpoint: EndpointIR): string[] {
   const log = endpoint.policy.logging;
   if (!log || !Array.isArray(log.events) || log.events.length === 0) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seed = endpointHash(`${endpoint.method}|${endpoint.path}|logging`, '');
   const id = LOGGING_BASE_ID + (seed % 999);
@@ -323,7 +323,7 @@ export function buildLoggingRules(endpoint: EndpointIR): string[] {
   const notes: string[] = [];
   notes.push(`events declared: ${log.events.join(', ')}`);
   notes.push(`auth-failure / authz-deny / injection-block / rate-limit-trip are`);
-  notes.push(`already audit-logged by the corresponding Writ deny rules.`);
+  notes.push(`already audit-logged by the corresponding x-security deny rules.`);
   if (log.sink && log.sink !== 'stdout') {
     notes.push(`sink='${log.sink}' is NOT enforced at libmodsec3 — configure it at`);
     notes.push(`the nginx/bw-scheduler log-shipping layer (syslog/fluent-bit sidecar).`);
@@ -343,7 +343,7 @@ export function buildLoggingRules(endpoint: EndpointIR): string[] {
           `v0.7 logging (SSEC-AUDIT): force audit log for ${endpoint.method} ${endpoint.path}\n` +
             notes.join('\n')
         ),
-        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:5,pass,log,auditlog,msg:'Writ: audit (request/response) for ${esc(endpoint.method)} ${esc(endpoint.path)}',tag:'${esc(tag)}',tag:'writ-audit',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "id:${id},phase:5,pass,log,auditlog,msg:'x-security: audit (request/response) for ${esc(endpoint.method)} ${esc(endpoint.path)}',tag:'${esc(tag)}',tag:'x-security-audit',chain"`,
         `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${CHAIN_TERM}`,
       ].join('\n')
     );

@@ -2,7 +2,7 @@
 // per-concern files (v3-request, v3-response, v3-protocol, v3-authz) all
 // produce uniform provenance notes and Worker artifacts.
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import type {
   CompileWarning,
   CompiledRule,
@@ -110,11 +110,11 @@ export function emitWorker(
  */
 function wrapWorkerWithShadowGate(template: string): string {
   const banner =
-    "// [writ] Shadow-gate. Customer flips env.SHADOW_MODE='enforce' to actually block.\n" +
+    "// [x-security] Shadow-gate. Customer flips env.SHADOW_MODE='enforce' to actually block.\n" +
     "// const SHADOW_MODE = (env && env.SHADOW_MODE) || PARAMS.SHADOW_MODE || 'observe';\n" +
     "// function denyOrLog(req, body, init) {\n" +
     "//   if (SHADOW_MODE === 'enforce') return new Response(body, init);\n" +
-    "//   console.log('[writ][would-block]', init && init.status, body, req.url);\n" +
+    "//   console.log('[x-security][would-block]', init && init.status, body, req.url);\n" +
     "//   return fetch(req);\n" +
     "// }\n";
   return banner + template;
@@ -135,27 +135,27 @@ export function getOverride(b: V3Builder, field: string): unknown {
   return cur;
 }
 
-/** Build canonical Writ rule id: `writ-<observe|shadow|enforce>-<ehash>-<kind>`. */
+/** Build canonical x-security rule id: `x-security-<observe|shadow|enforce>-<ehash>-<kind>`. */
 export function ruleId(b: V3Builder, kind: string): string {
-  return `writ-${modePrefix(b.mode)}-${b.ehash}-${kind}`;
+  return `x-security-${modePrefix(b.mode)}-${b.ehash}-${kind}`;
 }
 
-/** Stamp shared `writ.*` metadata onto an emitted rule. */
+/** Stamp shared `xSecurity.*` metadata onto an emitted rule. */
 export function decorate(
   b: V3Builder,
-  rule: Omit<CompiledRule, 'id' | 'writ' | 'enabled' | 'mode'> & { kind: string; sourceField: string; confidence: CompiledRule['writ']['confidence']; forceLog?: boolean }
+  rule: Omit<CompiledRule, 'id' | 'xSecurity' | 'enabled' | 'mode'> & { kind: string; sourceField: string; confidence: CompiledRule['xSecurity']['confidence']; forceLog?: boolean }
 ): CompiledRule {
   const isNonBlocking = rule.action === 'rewrite';
   const forceLog = rule.forceLog === true || (isObserveMode(b.mode) && !isNonBlocking);
   const action = forceLog ? 'log' : rule.action;
   const out: CompiledRule = {
     id: ruleId(b, rule.kind),
-    description: rule.description.startsWith('[writ] ') ? rule.description : `[writ] ${rule.description}`,
+    description: rule.description.startsWith('[x-security] ') ? rule.description : `[x-security] ${rule.description}`,
     expression: rule.expression,
     action,
     enabled: true,
     mode: b.mode,
-    writ: {
+    xSecurity: {
       endpoint_id: b.eid,
       rule_type: rule.kind,
       source_field: rule.sourceField,

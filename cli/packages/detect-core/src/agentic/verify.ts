@@ -14,7 +14,7 @@
 
 import path from 'node:path';
 
-import { validateXSecurity } from '@writ/schema';
+import { validateXSecurity } from '@x-security/schema';
 
 import type {
   AgentOutput,

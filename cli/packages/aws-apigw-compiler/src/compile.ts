@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import {
   and,
   methodEquals,
@@ -51,10 +51,10 @@ export function compile(spec: SpecIR, options: AwsCompileOptions = {}): AwsCompi
   const schemaVersion = options.schemaVersion ?? SCHEMA_VERSION_DEFAULT;
   const defaultPrefix =
     mode === 'enforce'
-      ? 'writ'
+      ? 'x-security'
       : mode === 'shadow'
-        ? 'writ-shadow'    // back-compat for legacy callers.
-        : 'writ-observe';
+        ? 'x-security-shadow'    // back-compat for legacy callers.
+        : 'x-security-observe';
   const prefix = options.namePrefix ?? defaultPrefix;
   const enableManagedBotControl = options.enableManagedBotControl ?? false;
   const basePriority = options.basePriority ?? 0;

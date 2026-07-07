@@ -8,13 +8,13 @@
  * Rule ID convention:
  *   base = 100000 + (endpointHash % 9000) * 10
  *   each rule slot adds 0..9 (slots reserved per category below).
- * This keeps Writ rule IDs comfortably above the OWASP CRS range
+ * This keeps x-security rule IDs comfortably above the OWASP CRS range
  * (typically 9xxxxx) while staying below 200000 and giving every endpoint
  * a stable, collision-resistant block.
  */
 
-import type { EndpointIR } from '@writ/core';
-import type { XSecurityPolicy, ParamSchema, RateLimit, IpPolicy, SemanticType } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { XSecurityPolicy, ParamSchema, RateLimit, IpPolicy, SemanticType } from '@x-security/schema';
 import {
   CORAZA_GO_PROFILE,
   type CorazaEngineProfile,
@@ -92,7 +92,7 @@ export function ruleBase(endpoint: EndpointIR): number {
  * burst) without colliding with schema-validation IDs.
  */
 export const SLOT = {
-  scope: 0,     // path/method match flag (tx.writ_match)
+  scope: 0,     // path/method match flag (tx.x_security_match)
   ctype: 1,     // content-type allowlist
   bodySize: 2,  // max body size (directive, not SecRule)
   auth: 3,      // missing auth header
@@ -110,8 +110,8 @@ const RL_IDS_WITH_BURST = 6;
 
 /**
  * W19-A: SSRF url-allowlist rule IDs. Two IDs per (endpoint, field):
- *   980000+slot*2  → host not in domainAllowlist (tag writ-rule-ssrf-403)
- *   980000+slot*2+1→ host matches private-range pattern (tag writ-rule-ssrf-private-403)
+ *   980000+slot*2  → host not in domainAllowlist (tag x-security-rule-ssrf-403)
+ *   980000+slot*2+1→ host matches private-range pattern (tag x-security-rule-ssrf-private-403)
  * Disjoint from every other range (per-endpoint primary 100000-369999,
  * body-allowlist 400000-408999, response-inspect 420000-428999, SQLi
  * 430000+). Hash-keyed for collision resistance.
@@ -201,7 +201,7 @@ export function pathRegex(path: string): string {
 interface RuleCtx {
   endpoint: EndpointIR;
   base: number;
-  tag: string; // shared msg tag, e.g. "writ/POST /api/auth/login"
+  tag: string; // shared msg tag, e.g. "x-security/POST /api/auth/login"
 }
 
 function header(comment: string): string {
@@ -213,7 +213,7 @@ function header(comment: string): string {
 
 /**
  * Scope marker rule. Sets tx.ss_match=1 when the request matches this endpoint
- * (method + path). All subsequent Writ rules for this endpoint chain off
+ * (method + path). All subsequent x-security rules for this endpoint chain off
  * REQUEST_URI/REQUEST_METHOD directly rather than this flag (Coraza chained
  * SecRules with `setvar` semantics are simpler to keep stateless), but we
  * still emit it as a no-op informational tag for traceability.
@@ -255,7 +255,7 @@ export function buildContentType(
   const term = chainTerm(profile);
   return [
     header(`request.contentType allowlist for ${endpoint.method} ${endpoint.path}`),
-    `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:415,msg:'Writ: unsupported Content-Type',tag:'${esc(tag)}',chain"`,
+    `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:415,msg:'x-security: unsupported Content-Type',tag:'${esc(tag)}',chain"`,
     `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
     `    SecRule REQUEST_HEADERS:Content-Type "!@rx ^(${alt})(;.*)?$"${term}`,
   ].join('\n');
@@ -277,7 +277,7 @@ export function buildBodySize(
   const term = chainTerm(profile);
   return [
     header(`request.maxBodySize=${bytes} bytes for ${endpoint.method} ${endpoint.path}`),
-    `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:413,msg:'Writ: request body exceeds endpoint limit',tag:'${esc(tag)}',chain"`,
+    `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:413,msg:'x-security: request body exceeds endpoint limit',tag:'${esc(tag)}',chain"`,
     `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
     `    SecRule REQUEST_HEADERS:Content-Length "@gt ${bytes}"${term}`,
   ].join('\n');
@@ -295,7 +295,7 @@ export function buildAuth(
   const term = chainTerm(profile);
   return [
     header(`authentication required (${hdr}) for ${endpoint.method} ${endpoint.path}`),
-    `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:401,msg:'Writ: missing ${esc(hdr)} header',tag:'${esc(tag)}',chain"`,
+    `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:401,msg:'x-security: missing ${esc(hdr)} header',tag:'${esc(tag)}',chain"`,
     `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
     `    SecRule &REQUEST_HEADERS:${hdr} "@eq 0"${term}`,
   ].join('\n');
@@ -317,7 +317,7 @@ export function buildIpPolicy(
     out.push(
       [
         header(`ipPolicy.allow for ${endpoint.method} ${endpoint.path}`),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'Writ: source IP not in allowlist',tag:'${esc(tag)}',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'x-security: source IP not in allowlist',tag:'${esc(tag)}',chain"`,
         `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
         `    SecRule REMOTE_ADDR "!@ipMatch ${allow.join(',')}"${term}`,
       ].join('\n')
@@ -328,7 +328,7 @@ export function buildIpPolicy(
     out.push(
       [
         header(`ipPolicy.deny for ${endpoint.method} ${endpoint.path}`),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'Writ: source IP in denylist',tag:'${esc(tag)}',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'x-security: source IP in denylist',tag:'${esc(tag)}',chain"`,
         `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
         `    SecRule REMOTE_ADDR "@ipMatch ${deny.join(',')}"${term}`,
       ].join('\n')
@@ -360,7 +360,7 @@ interface RateLimitTarget {
 }
 
 /**
- * Map a Writ rate-limit identifier to the Coraza collection + key it
+ * Map a x-security rate-limit identifier to the Coraza collection + key it
  * should be stored under.
  *
  * Coraza supports persistent collections `ip`, `user`, `global`, `resource`,
@@ -374,7 +374,7 @@ interface RateLimitTarget {
  *
  * The `user` collection is keyed by an arbitrary string — using the
  * Authorization or API-key header value gives per-principal counters that
- * persist across requests, which is the behavior the Writ contract
+ * persist across requests, which is the behavior the x-security contract
  * implies.
  */
 function resolveRateLimitTarget(
@@ -584,7 +584,7 @@ export function buildRateLimit(
     `SecRule REQUEST_URI "@rx ${pathRx}" "id:${counterId},phase:1,pass,nolog,tag:'${esc(tag)}',setvar:${col}.${counterKey}=+1,expirevar:${col}.${counterKey}=${window},chain"`,
     `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${chainTerm}`,
     // 3. check — deny when counter exceeds the configured limit.
-    `SecRule REQUEST_URI "@rx ${pathRx}" "id:${checkId},phase:1,deny,status:429,msg:'Writ: rate limit exceeded (${rl.requests}/${esc(rl.window)})',tag:'${esc(tag)}',log,chain"`,
+    `SecRule REQUEST_URI "@rx ${pathRx}" "id:${checkId},phase:1,deny,status:429,msg:'x-security: rate limit exceeded (${rl.requests}/${esc(rl.window)})',tag:'${esc(tag)}',log,chain"`,
     `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
     `    SecRule ${col.toUpperCase()}:${counterKey} "@gt ${rl.requests}"${chainTerm}`,
   ];
@@ -604,7 +604,7 @@ export function buildRateLimit(
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${chainTerm}`,
       `SecRule REQUEST_URI "@rx ${pathRx}" "id:${burstCounterId},phase:1,pass,nolog,tag:'${esc(tag)}',setvar:${col}.${burstCounterKey}=+1,expirevar:${col}.${burstCounterKey}=1,chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}"${chainTerm}`,
-      `SecRule REQUEST_URI "@rx ${pathRx}" "id:${burstCheckId},phase:1,deny,status:429,msg:'Writ: rate limit burst exceeded (${rl.burst}/1s)',tag:'${esc(tag)}',log,chain"`,
+      `SecRule REQUEST_URI "@rx ${pathRx}" "id:${burstCheckId},phase:1,deny,status:429,msg:'x-security: rate limit burst exceeded (${rl.burst}/1s)',tag:'${esc(tag)}',log,chain"`,
       `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
       `    SecRule ${col.toUpperCase()}:${burstCounterKey} "@gt ${rl.burst}"${chainTerm}`
     );
@@ -690,7 +690,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.minLength=${ps.minLength} for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ: field ${esc(field)} too short',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security: field ${esc(field)} too short',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule ARGS:${field} "@lt ${ps.minLength}" "t:length"`,
         ].join('\n')
@@ -701,7 +701,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.maxLength=${ps.maxLength} for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ: field ${esc(field)} too long',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security: field ${esc(field)} too long',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule ARGS:${field} "@gt ${ps.maxLength}" "t:length"`,
         ].join('\n')
@@ -712,7 +712,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.fixedLength=${ps.fixedLength} for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ: field ${esc(field)} wrong length',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security: field ${esc(field)} wrong length',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule ARGS:${field} "!@eq ${ps.fixedLength}" "t:length"`,
         ].join('\n')
@@ -723,7 +723,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.min=${ps.min} for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ: field ${esc(field)} below min',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security: field ${esc(field)} below min',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule ARGS:${field} "@lt ${ps.min}"${term}`,
         ].join('\n')
@@ -734,7 +734,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.max=${ps.max} for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ: field ${esc(field)} above max',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security: field ${esc(field)} above max',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule ARGS:${field} "@gt ${ps.max}"${term}`,
         ].join('\n')
@@ -745,7 +745,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.pattern for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ: field ${esc(field)} pattern mismatch',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security: field ${esc(field)} pattern mismatch',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule ARGS:${field} "!@rx ${esc(ps.pattern)}"${term}`,
         ].join('\n')
@@ -765,7 +765,7 @@ export function buildSchemaRules(
         rules.push(
           [
             header(`request.schema.${field}.type=${ps.type} for ${endpoint.method} ${endpoint.path}`),
-            `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ: field ${esc(field)} not ${spec.what}',tag:'${esc(tag)}',chain"`,
+            `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security: field ${esc(field)} not ${spec.what}',tag:'${esc(tag)}',chain"`,
             // REQUEST_FILENAME (path-only), not REQUEST_URI (path+query): an
             // anchored `^/path$` against REQUEST_URI never matches once the
             // request carries a query string, so the type check would silently
@@ -795,7 +795,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.allowedMimeTypes (request Content-Type) for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${ctId},phase:1,deny,status:415,msg:'Writ: field ${esc(field)} Content-Type not in allowedMimeTypes',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${ctId},phase:1,deny,status:415,msg:'x-security: field ${esc(field)} Content-Type not in allowedMimeTypes',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule REQUEST_HEADERS:Content-Type "!@rx ^(${alt})(;.*)?$"${term}`,
         ].join('\n')
@@ -804,7 +804,7 @@ export function buildSchemaRules(
       rules.push(
         [
           header(`request.schema.${field}.allowedMimeTypes (multipart part MIME) for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${fileId},phase:2,deny,status:415,msg:'Writ: field ${esc(field)} upload MIME not allowed',tag:'${esc(tag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${fileId},phase:2,deny,status:415,msg:'x-security: field ${esc(field)} upload MIME not allowed',tag:'${esc(tag)}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule FILES_TMP_CONTENT:${field}|FILES:${field} "!@rx ^(${alt})$"${term}`,
         ].join('\n')
@@ -823,7 +823,7 @@ export function buildSchemaRules(
  *
  * The SecRule inspects ARGS:<field> (which covers both query-string and JSON
  * body fields once the body processor has run). Phase 2, status 403, tagged
- * `writ-rule-ssrf-403` / `writ-rule-ssrf-private-403` so the
+ * `x-security-rule-ssrf-403` / `x-security-rule-ssrf-private-403` so the
  * scorer's intent-attribution maps it to defense-class `url-allowlist`.
  */
 export function buildSsrfRules(
@@ -834,7 +834,7 @@ export function buildSsrfRules(
   const schema = endpoint.policy.request?.schema;
   if (!schema) return [];
   const term = chainTerm(profile);
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rules: string[] = [];
   // Slot range [0, 4500) leaves room for 2 IDs per endpoint within [980000, 989999).
   const slot = endpointHash(endpoint.method, endpoint.path) % 4500;
@@ -857,7 +857,7 @@ export function buildSsrfRules(
       rules.push(
         [
           header(`W19-A SSRF: ${field} must match domainAllowlist for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:${phase},deny,status:403,msg:'Writ: ${esc(field)} host not in domainAllowlist',tag:'${esc(tag)}',tag:'writ-rule-ssrf-403',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:${phase},deny,status:403,msg:'x-security: ${esc(field)} host not in domainAllowlist',tag:'${esc(tag)}',tag:'x-security-rule-ssrf-403',chain"`,
           // W22-B: REQUEST_FILENAME (path-only), not REQUEST_URI. libmodsec3's
           // REQUEST_URI is path *+ query string* — an anchored `^/path$` rx
           // never matches once the endpoint receives the very ?url= it is
@@ -877,7 +877,7 @@ export function buildSsrfRules(
       rules.push(
         [
           header(`W19-A SSRF: ${field} blockPrivateRanges for ${endpoint.method} ${endpoint.path}`),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:${phase},deny,status:403,msg:'Writ: ${esc(field)} resolves to private/loopback host',tag:'${esc(tag)}',tag:'writ-rule-ssrf-private-403',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:${phase},deny,status:403,msg:'x-security: ${esc(field)} resolves to private/loopback host',tag:'${esc(tag)}',tag:'x-security-rule-ssrf-private-403',chain"`,
           // W22-B: REQUEST_FILENAME — see comment on the domainAllowlist rule above.
           `  SecRule REQUEST_FILENAME "@rx ${pathRegex(endpoint.path)}" "chain"`,
           // W22-B: escRx — see comment on escRx. Same reasoning as the allowlist rule.
@@ -925,7 +925,7 @@ export function buildJsonBodyProcessor(
 ): string | null {
   const policy = endpoint.policy;
   if (!hasJsonContentType(policy.request?.contentType)) return null;
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const ctlId = BODY_ALLOWLIST_BASE_ID + 10000 + (endpointHash(endpoint.method, endpoint.path) % 9000);
   const term = chainTerm(profile);
   return [
@@ -995,7 +995,7 @@ export function buildBodyFieldAllowlistRules(
   }
   if (safe.length === 0) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   // Dedicated ID range so we did not have to widen SLOT_STRIDE (which would
   // have shifted every previously-emitted rule ID across all categories).
   const id = BODY_ALLOWLIST_BASE_ID + (endpointHash(endpoint.method, endpoint.path) % 9000);
@@ -1036,7 +1036,7 @@ export function buildBodyFieldAllowlistRules(
   out.push(
     [
       header(headerLines.join('\n')),
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'Writ: request body contains field outside allowlist (mass-assignment)',tag:'${esc(tag)}',tag:'writ-api6-mass-assignment',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'x-security: request body contains field outside allowlist (mass-assignment)',tag:'${esc(tag)}',tag:'x-security-api6-mass-assignment',chain"`,
       `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
       // Content-Type guard: only enforce the json.<key> allowlist when the body
       // is actually JSON. Without this, a POST carrying query-string/form args
@@ -1122,7 +1122,7 @@ export function buildResponseInspectionRules(
     detail: { mechanism: 'SecResponseBodyAccess', phase: 4 },
   });
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const base = RESPONSE_INSPECT_BASE_ID + (endpointHash(endpoint.method, endpoint.path) % 9000) * 1;
   const pathRx = pathRegex(endpoint.path);
   const term = chainTerm(profile);
@@ -1151,22 +1151,22 @@ export function buildResponseInspectionRules(
                 `phase:4 inspects RESPONSE_BODY for "${field}":"<value of length > ${cap}>". ` +
                 `Heuristic regex-over-JSON; nested / escaped values may not match.`
             ),
-            `SecRule REQUEST_URI "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'Writ: response.${esc(field)} exceeds maxLength=${ps.maxLength} (data exposure)',tag:'${esc(tag)}',tag:'writ-api3-bopla',chain"`,
+            `SecRule REQUEST_URI "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'x-security: response.${esc(field)} exceeds maxLength=${ps.maxLength} (data exposure)',tag:'${esc(tag)}',tag:'x-security-api3-bopla',chain"`,
             `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
-            `    SecRule RESPONSE_BODY "@rx \\"${esc(field)}\\"\\s*:\\s*\\"[^\\"]{${cap + 1},}\\""${term}`,
+            `    SecRule RESPONSE_BODY "@rx \\x22${esc(field)}\\x22\\s*:\\s*\\x22[^\\x22]{${cap + 1},}\\x22"${term}`,
           ].join('\n')
         );
       }
       // Pattern constraint — W10-1: RE2 (Coraza-Go's regex engine) does NOT
       // support negative lookahead `(?!...)`. We split the check into two
       // chained rules:
-      //   A. capture the field value into TX:writ_<field>
+      //   A. capture the field value into TX:x_security_<field>
       //   B. deny when the captured value does not match the required pattern
       //      (`!@rx <pattern>` — inversion removes the lookahead need)
       if (ps.pattern) {
         const captureId = nextId++;
         const denyId = nextId++;
-        const txVar = `writ_${safeVarName(field)}`;
+        const txVar = `x_security_${safeVarName(field)}`;
         rules.push(
           [
             header(
@@ -1175,7 +1175,7 @@ export function buildResponseInspectionRules(
             ),
             `SecRule REQUEST_URI "@rx ${pathRx}" "id:${captureId},phase:4,pass,nolog,chain"`,
             `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
-            `    SecRule RESPONSE_BODY "@rx \\"${esc(field)}\\"\\s*:\\s*\\"([^\\"]*)\\"" "capture,setvar:tx.${txVar}=%{TX.1}${term ? ',t:none' : ''}"`,
+            `    SecRule RESPONSE_BODY "@rx \\x22${esc(field)}\\x22\\s*:\\s*\\x22([^\\x22]*)\\x22" "capture,setvar:tx.${txVar}=%{TX.1}${term ? ',t:none' : ''}"`,
           ].join('\n')
         );
         rules.push(
@@ -1184,7 +1184,7 @@ export function buildResponseInspectionRules(
               `C-1 response.schema.${field}.pattern (deny) for ${endpoint.method} ${endpoint.path}\n` +
                 `phase:4 rule B: deny when TX:${txVar} does not match the required pattern (RE2-safe; no lookahead)`
             ),
-            `SecRule TX:${txVar} "!@rx ${esc(ps.pattern)}" "id:${denyId},phase:4,deny,status:500,msg:'Writ: response.${esc(field)} pattern mismatch (data exposure)',tag:'${esc(tag)}',tag:'writ-api3-bopla'"`,
+            `SecRule TX:${txVar} "!@rx ${esc(ps.pattern)}" "id:${denyId},phase:4,deny,status:500,msg:'x-security: response.${esc(field)} pattern mismatch (data exposure)',tag:'${esc(tag)}',tag:'x-security-api3-bopla'"`,
           ].join('\n')
         );
       }
@@ -1205,14 +1205,14 @@ export function buildResponseInspectionRules(
           `C-1 stored-XSS guard for ${endpoint.method} ${endpoint.path}\n` +
             `phase:4 — response.contentType is application/json, so raw <script> or\n` +
             `javascript: URIs in the body indicate a stored-XSS echo. msg carries\n` +
-            `'writ-xss-stored' for scorer attribution.`
+            `'x-security-xss-stored' for scorer attribution.`
         ),
         // REQUEST_FILENAME (path-only) — REQUEST_URI on Coraza/libmodsec3
         // includes the query string, so an anchored `^/path$` rx fails for
         // any request carrying `?foo=bar`. The vAPI XSS attack hits
         // /vapi/stickynotes?format=html; REQUEST_FILENAME strips the query
         // and matches cleanly. (Same fix W22-B applied to the SSRF rules.)
-        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'Writ: stored-XSS payload in JSON response body',tag:'${esc(tag)}',tag:'writ-xss-stored',chain"`,
+        `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'x-security: stored-XSS payload in JSON response body',tag:'${esc(tag)}',tag:'x-security-xss-stored',chain"`,
         `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
         `    SecRule RESPONSE_BODY "@rx (?i)(?:<script\\b|javascript:)"${term}`,
       ].join('\n')
@@ -1265,9 +1265,9 @@ export function buildResponseInspectionRules(
                 `Note: this is a deny-on-unknown rule, NOT a strip — true stripping requires a Lua plugin.\n` +
                 `PCRE-only (uses negative lookahead); RE2-backed engines (coraza-go/spoa) skip this rule.`
             ),
-            `SecRule REQUEST_URI "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'Writ: response contains undeclared field (stripUnknownFields)',tag:'${esc(tag)}',tag:'writ-api3-bopla',chain"`,
+            `SecRule REQUEST_URI "@rx ${pathRx}" "id:${id},phase:4,deny,status:500,msg:'x-security: response contains undeclared field (stripUnknownFields)',tag:'${esc(tag)}',tag:'x-security-api3-bopla',chain"`,
             `  SecRule REQUEST_METHOD "@streq ${endpoint.method}" "chain"`,
-            `    SecRule RESPONSE_BODY "@rx \\"(?!(?:${allowAlt})\\")[A-Za-z_][A-Za-z0-9_]*\\"\\s*:"${term}`,
+            `    SecRule RESPONSE_BODY "@rx \\x22(?!(?:${allowAlt})\\x22)[A-Za-z_][A-Za-z0-9_]*\\x22\\s*:"${term}`,
           ].join('\n')
         );
       }
@@ -1288,7 +1288,7 @@ function fieldHasResponseConstraint(ps: ParamSchema): boolean {
  * W19: per-arg injection-hardening rules driven by
  * `request.schema.<field>.injectionGuard`.
  *
- * The author declares which injection sinks a field flows into; Writ
+ * The author declares which injection sinks a field flows into; x-security
  * compiles one enforcing phase-2 rule per (field, sink). This PROMOTES the
  * former W10-8 latent heuristic — which inferred SQLi targets from
  * `ps.type==='string'` and so fired on every string field whether or not it
@@ -1305,7 +1305,7 @@ function fieldHasResponseConstraint(ps: ParamSchema): boolean {
  * `json.<field>`, verified empirically against ghcr.io/corazawaf/coraza-spoa:main;
  * see the same multi-target rationale at the SSRF emitter, rules.ts:812). Both
  * variants share one phase-2 rule so injectionGuard enforces regardless of where
- * the arg lands. Findings carry the Writ-native `writ-injection` tag
+ * the arg lands. Findings carry the x-security-native `x-security-injection` tag
  * plus a per-sink tag so the reporter can attribute them to SSEC-INJECTION.
  *
  * Per-sink operator (Rule D-1 — every sink emits a real enforcing matcher, no
@@ -1337,9 +1337,9 @@ type InjectionSink = NonNullable<ParamSchema['injectionGuard']>[number];
  * Per-sink rule body. Each entry returns the SecRule action tag + the matcher
  * line for the `ARGS:json.<field>` selector. `tagSuffix` keys the reporter's
  * per-sink attribution; `msg` is operator-facing. `category` selects the
- * Writ-native attribution class tag the reporter probes: every sink maps
- * to `writ-injection` (→ SSEC-INJECTION) EXCEPT `ai-prompt`, which carries
- * `writ-prompt` (→ the distinct SSEC-PROMPT class — v0.7). One synthetic
+ * x-security-native attribution class tag the reporter probes: every sink maps
+ * to `x-security-injection` (→ SSEC-INJECTION) EXCEPT `ai-prompt`, which carries
+ * `x-security-prompt` (→ the distinct SSEC-PROMPT class — v0.7). One synthetic
  * id per threat class; LLM prompt-injection is not lumped under generic
  * injection.
  *
@@ -1466,7 +1466,7 @@ export function buildSqliHeuristics(
   const req = policy.request;
   if (!req || !req.schema) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const term = chainTerm(profile);
   const out: string[] = [];
 
@@ -1487,10 +1487,10 @@ export function buildSqliHeuristics(
       const m = INJECTION_SINK_MATCHERS[sink];
       const idSeed = endpointHash(`${endpoint.method}|${endpoint.path}|${field}|${sink}`, '');
       const id = INJECTION_GUARD_BASE_ID + (idSeed % 9000);
-      // `category` selects the Writ-native attribution-class tag the
-      // reporter probes: `writ-injection` → SSEC-INJECTION for every sink
-      // except `ai-prompt`, which carries `writ-prompt` → SSEC-PROMPT.
-      const classTag = `writ-${m.category}`;
+      // `category` selects the x-security-native attribution-class tag the
+      // reporter probes: `x-security-injection` → SSEC-INJECTION for every sink
+      // except `ai-prompt`, which carries `x-security-prompt` → SSEC-PROMPT.
+      const classTag = `x-security-${m.category}`;
       const ssecId = m.category === 'prompt' ? 'SSEC-PROMPT' : 'SSEC-INJECTION';
       out.push(
         [
@@ -1499,7 +1499,7 @@ export function buildSqliHeuristics(
               `Author-declared injectionGuard sink; phase:2 denies the payload at write\n` +
               `time over the body/query field. Attributed to ${ssecId} by the reporter.`
           ),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'Writ: ${m.msg} detected in ${esc(field)}',tag:'${esc(tag)}',tag:'${classTag}',tag:'${classTag}-${m.tagSuffix}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'x-security: ${m.msg} detected in ${esc(field)}',tag:'${esc(tag)}',tag:'${classTag}',tag:'${classTag}-${m.tagSuffix}',chain"`,
           `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
           `    SecRule ARGS:${field}|ARGS:json.${field} "${m.operator}"${term}`,
         ].join('\n')
@@ -1538,7 +1538,7 @@ export function buildXssHeuristics(
   if (!req || !req.schema) return [];
   if (!hasJsonContentType(req.contentType)) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const term = chainTerm(profile);
   const out: string[] = [];
 
@@ -1557,7 +1557,7 @@ export function buildXssHeuristics(
             `or javascript: URI. Stops the payload at write time so the GET-side echo\n` +
             `(which coraza-spoa cannot inspect — no response body via SPOE) is moot.`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'Writ: stored-XSS payload in ${esc(field)}',tag:'${esc(tag)}',tag:'writ-xss-stored',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'x-security: stored-XSS payload in ${esc(field)}',tag:'${esc(tag)}',tag:'x-security-xss-stored',chain"`,
         `  SecRule REQUEST_URI "@rx ${pathRegex(endpoint.path)}" "chain"`,
         `    SecRule ARGS:json.${field} "@rx (?i)(?:<script\\b|javascript:)"${term}`,
       ].join('\n')
@@ -1579,7 +1579,7 @@ export function buildPolicyRules(
 ): string[] {
   const policy: XSecurityPolicy = endpoint.policy;
   const base = ruleBase(endpoint);
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const ctx: RuleCtx = { endpoint, base, tag };
 
   const out: string[] = [];

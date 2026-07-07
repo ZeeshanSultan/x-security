@@ -58,11 +58,11 @@ test('observe-mode demotes WAFv2 Block actions to Count', () => {
   for (const r of observe.webAclRules) {
     assert.ok(r.Action?.Count !== undefined, `${r.Name} should be Count in observe`);
     assert.equal(r.mode, 'observe');
-    assert.match(r.Name, /^writ-observe-/);
+    assert.match(r.Name, /^x-security-observe-/);
   }
 
   const enforce = compile(spec, { mode: 'enforce' });
-  const auth = enforce.webAclRules.find(x => x.writ.rule_type === 'auth')!;
+  const auth = enforce.webAclRules.find(x => x.xSecurity.rule_type === 'auth')!;
   assert.ok(auth.Action?.Block !== undefined);
   assert.equal(auth.mode, 'enforce');
 });
@@ -216,12 +216,12 @@ test('capability matrix entries include shadowModeSupport', () => {
 // ────────────────────────────────────────────────────────────────────────────
 
 test('Bot Control OverrideAction is Count in observe, None in enforce', () => {
-  const policy = { botProtection: true } as unknown as import('@writ/schema').XSecurityPolicy;
+  const policy = { botProtection: true } as unknown as import('@x-security/schema').XSecurityPolicy;
   const observe = compile(
     makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]),
     { mode: 'observe', enableManagedBotControl: true }
   );
-  const bcO = observe.webAclRules.find(x => x.writ.rule_type === 'bot-control')!;
+  const bcO = observe.webAclRules.find(x => x.xSecurity.rule_type === 'bot-control')!;
   assert.deepEqual(bcO.OverrideAction, { Count: {} });
   assert.equal(bcO.mode, 'observe');
 
@@ -229,7 +229,7 @@ test('Bot Control OverrideAction is Count in observe, None in enforce', () => {
     makeSpec([makeEndpoint({ method: 'GET', path: '/x', policy })]),
     { mode: 'enforce', enableManagedBotControl: true }
   );
-  const bcE = enforce.webAclRules.find(x => x.writ.rule_type === 'bot-control')!;
+  const bcE = enforce.webAclRules.find(x => x.xSecurity.rule_type === 'bot-control')!;
   assert.deepEqual(bcE.OverrideAction, { None: {} });
   assert.equal(bcE.mode, 'enforce');
 });
@@ -250,7 +250,7 @@ test("legacy 'shadow' mode still demotes Block to Count", () => {
   for (const rule of r.webAclRules) {
     assert.ok(rule.Action?.Count !== undefined);
     assert.equal(rule.mode, 'shadow');
-    assert.match(rule.Name, /^writ-shadow-/);
+    assert.match(rule.Name, /^x-security-shadow-/);
   }
   // Lambda authorizers in shadow still bind MODE=observe at runtime.
   const sigSpec = makeSpec([makeEndpoint({

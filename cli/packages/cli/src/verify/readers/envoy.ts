@@ -1,7 +1,7 @@
 // Envoy verify reader (wave-9 native-filter rev).
 //
 // Wave-7 emitted a Lua-everything snippet; the reader only had to grep for
-// `envoy.filters.http.lua` and the Writ sentinel markers. Wave-9 emits a
+// `envoy.filters.http.lua` and the x-security sentinel markers. Wave-9 emits a
 // full bootstrap with native filters (jwt_authn, rbac, local_ratelimit, cors,
 // lua, router) and per-route typed_per_filter_config overrides. This reader
 // reconciles each native artefact independently so coverage attribution
@@ -11,8 +11,8 @@
 // Emitted artefact kinds (id is the human-readable handle):
 //   envoy-http-filter             chain-level filter name (e.g. envoy.filters.http.jwt_authn)
 //   envoy-jwt-rule                "<METHOD> <path>" — endpoint requiring jwt_authn
-//   envoy-rbac-policy             RBAC policy name (e.g. writ-rbac-listusers-admin)
-//   envoy-ratelimit-route         per-route stat_prefix (e.g. writ_login_ratelimit)
+//   envoy-rbac-policy             RBAC policy name (e.g. x-security-rbac-listusers-admin)
+//   envoy-ratelimit-route         per-route stat_prefix (e.g. x_security_login_ratelimit)
 //   envoy-cors-route              "<METHOD> <path>" — endpoint with native CorsPolicy override
 //   envoy-endpoint-policy         "<METHOD>:<path>" — residual Lua sentinel
 //
@@ -24,7 +24,7 @@
 
 import { request } from 'undici';
 import * as yaml from 'js-yaml';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import { loadGenerator } from '../../registry.js';
 import type { EmittedArtifact, GatewayReader, LoadedArtifact, VerifyRow } from '../index.js';
 
@@ -32,15 +32,22 @@ interface EnvoyConfigDump {
   configs?: Array<Record<string, unknown>>;
 }
 
-async function getJson<T>(base: string, p: string): Promise<T> {
+async function getJson<T>(base: string, p: string, timeoutMs?: number): Promise<T> {
   const url = base.replace(/\/$/, '') + p;
   try {
-    const res = await request(url, { method: 'GET' });
+    const res = await request(url, {
+      method: 'GET',
+      ...(timeoutMs !== undefined ? { signal: AbortSignal.timeout(timeoutMs) } : {})
+    });
     if (res.statusCode >= 400) {
       throw new Error(`${url} → HTTP ${res.statusCode}`);
     }
     return (await res.body.json()) as T;
   } catch (e) {
+    const name = (e as Error).name;
+    if (name === 'TimeoutError' || name === 'AbortError') {
+      throw new Error(`${url} timed out after ${timeoutMs}ms`);
+    }
     const msg = (e as Error).message;
     if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN/.test(msg)) {
       throw new Error(`gateway-unreachable: ${msg}`);
@@ -143,7 +150,7 @@ export function collectJwtRuleRegexes(node: unknown, into: Set<string>): void {
 }
 
 // Markers the residual Lua emits.
-const SENTINEL_RE = /--\s*writ:([A-Z]+):([^\s:]+):START/g;
+const SENTINEL_RE = /--\s*xSecurity:([A-Z]+):([^\s:]+):START/g;
 
 export function extractSentinels(text: string): string[] {
   const out = new Set<string>();
@@ -197,8 +204,8 @@ export function parseEmittedSnippet(yamlText: string): EmittedEnvoyYaml {
   const ratelimitStatPrefixes = new Set<string>();
   collectStatPrefixes(doc, ratelimitStatPrefixes);
   // Filter out the chain-level shell prefix; it doesn't represent per-route enforcement.
-  ratelimitStatPrefixes.delete('writ_chain_ratelimit');
-  ratelimitStatPrefixes.delete('writ_hcm');
+  ratelimitStatPrefixes.delete('x_security_chain_ratelimit');
+  ratelimitStatPrefixes.delete('x_security_hcm');
 
   // CORS routes — walk routes and check typed_per_filter_config.
   const corsRoutes: string[] = [];
@@ -351,11 +358,11 @@ export const envoyReader: GatewayReader = {
     return emittedToArtifacts(parsed);
   },
 
-  async readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]> {
+  async readLoadedArtifacts(gateway: string, timeoutMs?: number): Promise<LoadedArtifact[]> {
     const [listeners, clusters, configDump] = await Promise.all([
-      getJson<unknown>(gateway, '/listeners?format=json').catch(() => ({})),
-      getJson<unknown>(gateway, '/clusters?format=json').catch(() => ({})),
-      getJson<EnvoyConfigDump>(gateway, '/config_dump?include_eds=false')
+      getJson<unknown>(gateway, '/listeners?format=json', timeoutMs).catch(() => ({})),
+      getJson<unknown>(gateway, '/clusters?format=json', timeoutMs).catch(() => ({})),
+      getJson<EnvoyConfigDump>(gateway, '/config_dump?include_eds=false', timeoutMs)
     ]);
 
     const out: LoadedArtifact[] = [];
@@ -374,8 +381,8 @@ export const envoyReader: GatewayReader = {
 
     const statPrefixes = new Set<string>();
     collectStatPrefixes(configDump, statPrefixes);
-    statPrefixes.delete('writ_chain_ratelimit');
-    statPrefixes.delete('writ_hcm');
+    statPrefixes.delete('x_security_chain_ratelimit');
+    statPrefixes.delete('x_security_hcm');
     for (const s of statPrefixes) out.push({ id: s, kind: 'envoy-ratelimit-route' });
 
     // CORS routes — best signal from config_dump is the presence of CorsPolicy
@@ -425,7 +432,7 @@ export const envoyReader: GatewayReader = {
 
     if (loaded.length === 0) {
       diagnostics.push(
-        'envoy /config_dump returned no Writ artifacts — the bootstrap may not have loaded'
+        'envoy /config_dump returned no x-security artifacts — the bootstrap may not have loaded'
       );
     } else {
       const haveJwt = loaded.some((l) => l.kind === 'envoy-http-filter' && l.id === 'envoy.filters.http.jwt_authn');

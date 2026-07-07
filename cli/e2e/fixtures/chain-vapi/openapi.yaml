@@ -1,0 +1,943 @@
+openapi: 3.0.3
+info:
+  title: "vAPI (Vulnerable API) \u2014 Writ-annotated spec"
+  description: "OpenAPI spec for the vAPI training target (roottusk/vapi), annotated\
+    \ with\nWrit x-security extensions. Each route has an x-security policy\
+    \ that,\nif enforced by a gateway/WAF, would block the corresponding OWASP API\n\
+    Security Top 10 (2023) class. Coverage note: vAPI uses a custom\nAuthorization-Token\
+    \ header rather than a standard Bearer JWT \u2014 we model\nthis with bearer-jwt\
+    \ + headerName, since the schema does not expose a\n\"custom-token\" auth type.\
+    \ JWKS / algorithm allowlist therefore reflect the\n*target* policy Writ\
+    \ would enforce, not vAPI's actual behavior.\n"
+  version: 1.0.0
+servers:
+- url: http://vapi:80
+  description: vAPI Docker network target
+paths:
+  /vapi/api1/user:
+    post:
+      operationId: api1-create-user
+      summary: "API1 \u2014 create user (signup)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        authentication:
+          type: none
+        rateLimit:
+          requests: 10
+          window: 1m
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          maxBodySize: 16KB
+          denyUnknownFields: true
+          duplicateParamPolicy: reject
+        mitigates:
+        - API4:2023
+  /vapi/api1/user/{id}:
+    parameters:
+    - in: path
+      name: id
+      required: true
+      schema:
+        type: string
+    get:
+      operationId: api1-get-user-by-id
+      summary: "API1 \u2014 fetch user by id (BOLA target)"
+      parameters:
+      - in: header
+        name: Authorization-Token
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          headerName: Authorization-Token
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        authorization:
+          type: rule-based
+          resourceLookup:
+            endpoint: /users/{id}
+            identifierFrom: request.params.id
+            expose:
+            - ownerId
+          rules:
+          - field: resource.ownerId
+            operator: equals
+            value:
+              ref: jwt.sub
+        rateLimit:
+          requests: 60
+          window: 1m
+          identifier: user-id
+        mitigates:
+        - API1:2023
+    put:
+      operationId: api1-update-user-by-id
+      summary: "API1 \u2014 update user by id (BOLA target)"
+      parameters:
+      - in: header
+        name: Authorization-Token
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          headerName: Authorization-Token
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        authorization:
+          type: rule-based
+          resourceLookup:
+            endpoint: /users/{id}
+            identifierFrom: request.params.id
+            expose:
+            - ownerId
+          rules:
+          - field: resource.ownerId
+            operator: equals
+            value:
+              ref: jwt.sub
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 16KB
+        rateLimit:
+          requests: 30
+          window: 1m
+          identifier: user-id
+        mitigates:
+        - API1:2023
+        - API3:2023
+  /vapi/api2/user/login:
+    post:
+      operationId: api2-user-login
+      summary: "API2 \u2014 user login"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        authentication:
+          type: none
+        rateLimit:
+          requests: 10
+          window: 1m
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 4KB
+        mitigates:
+        - API2:2023
+        - API4:2023
+  /vapi/api2/user/details:
+    get:
+      operationId: api2-user-details
+      summary: "API2 \u2014 authenticated user details"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        rateLimit:
+          requests: 60
+          window: 1m
+          identifier: user-id
+        mitigates:
+        - API2:2023
+  /vapi/api3/user:
+    post:
+      operationId: api3-create-user
+      summary: "API3 \u2014 create user"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 16KB
+          schema:
+            username:
+              type: string
+              minLength: 3
+              maxLength: 64
+              pattern: ^[A-Za-z0-9_]+$
+            password:
+              type: string
+              minLength: 8
+              maxLength: 128
+            email:
+              type: email
+        response:
+          stripUnknownFields: true
+        mitigates:
+        - API3:2023
+  /vapi/api3/user/login:
+    post:
+      operationId: api3-user-login
+      summary: "API3 \u2014 user login"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        rateLimit:
+          requests: 10
+          window: 1m
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+        response:
+          stripUnknownFields: true
+        mitigates:
+        - API3:2023
+        - API4:2023
+  /vapi/api3/comment:
+    get:
+      operationId: api3-list-comments
+      summary: "API3 \u2014 list comments (BOPLA \u2014 strip excessive data)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        response:
+          stripUnknownFields: true
+          schema:
+            id:
+              type: integer
+            author:
+              type: name
+            body:
+              type: free-text
+              maxLength: 4000
+            createdAt:
+              type: datetime
+        mitigates:
+        - API3:2023
+    post:
+      operationId: api3-create-comment
+      summary: "API3 \u2014 create comment"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 8KB
+          schema:
+            body:
+              type: free-text
+              maxLength: 4000
+        response:
+          stripUnknownFields: true
+        mitigates:
+        - API3:2023
+  /vapi/api4/login:
+    post:
+      operationId: api4-mobile-login
+      summary: "API4 \u2014 mobile login (sends OTP)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        rateLimit:
+        - requests: 5
+          window: 1m
+          identifier: ip
+        - requests: 20
+          window: 1h
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 2KB
+          schema:
+            mobile:
+              type: phone
+        mitigates:
+        - API4:2023
+  /vapi/api4/otp/verify:
+    post:
+      operationId: api4-otp-verify
+      summary: "API4 \u2014 verify 4-digit OTP (brute-forceable target)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        rateLimit:
+        - requests: 5
+          window: 1m
+          identifier: ip
+        - requests: 10
+          window: 1h
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 1KB
+          duplicateParamPolicy: reject
+          schema:
+            mobile:
+              type: phone
+            otp:
+              type: integer
+              fixedLength: 4
+              min: 0
+              max: 9999
+        botProtection:
+          provider: turnstile
+          secretRef: ${TURNSTILE_SECRET}
+          mode: enforce
+        mitigates:
+        - API4:2023
+        - API2:2023
+  /vapi/api4/user:
+    get:
+      operationId: api4-get-user
+      summary: "API4 \u2014 authenticated user fetch"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        rateLimit:
+          requests: 60
+          window: 1m
+          identifier: user-id
+        mitigates:
+        - API4:2023
+  /vapi/api5/user:
+    post:
+      operationId: api5-create-user
+      summary: "API5 \u2014 create user"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authorization:
+          type: rbac
+          roles:
+          - admin
+        rateLimit:
+          requests: 10
+          window: 1m
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+        mitigates:
+        - API5:2023
+  /vapi/api5/user/{id}:
+    get:
+      operationId: api5-get-user-by-id
+      summary: "API5 \u2014 get user by id (must be self)"
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        authorization:
+          type: rule-based
+          resourceLookup:
+            endpoint: /users/{id}
+            identifierFrom: request.params.id
+            expose:
+            - ownerId
+          rules:
+          - field: resource.ownerId
+            operator: equals
+            value:
+              ref: jwt.sub
+        mitigates:
+        - API1:2023
+        - API5:2023
+  /vapi/api5/users:
+    get:
+      operationId: api5-list-users-admin
+      summary: "API5 \u2014 admin-only user listing (BFLA target)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        authorization:
+          type: rbac
+          roles:
+          - admin
+        response:
+          stripUnknownFields: true
+        mitigates:
+        - API5:2023
+  /vapi/api6/user:
+    post:
+      operationId: api6-create-user
+      summary: "API6 \u2014 create user (mass-assignment target \u2014 is_admin must\
+        \ be blocked)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 8KB
+          duplicateParamPolicy: reject
+          schema:
+            username:
+              type: string
+              minLength: 3
+              maxLength: 64
+              pattern: ^[A-Za-z0-9_]+$
+            password:
+              type: string
+              minLength: 8
+              maxLength: 128
+            email:
+              type: email
+        response:
+          stripUnknownFields: true
+        rateLimit:
+          requests: 10
+          window: 1m
+          identifier: ip
+        mitigates:
+        - API6:2023
+        - API3:2023
+  /vapi/api6/user/me:
+    get:
+      operationId: api6-user-me
+      summary: "API6 \u2014 current user"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        response:
+          stripUnknownFields: true
+        mitigates:
+        - API6:2023
+        - API3:2023
+  /vapi/api7/user:
+    post:
+      operationId: api7-create-user
+      summary: "API7 \u2014 create user"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        cors:
+          allowedOrigins:
+          - https://vapi.local
+          allowedMethods:
+          - POST
+          allowedHeaders:
+          - Content-Type
+          - Authorization
+          credentials: false
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          headerInjectionGuard: true
+        response:
+          headers:
+            hsts:
+              maxAge: 31536000
+              includeSubDomains: true
+              preload: true
+            contentTypeOptions: nosniff
+            frameOptions: DENY
+            referrerPolicy: no-referrer
+        mitigates:
+        - API8:2023
+  /vapi/api7/user/login:
+    get:
+      operationId: api7-user-login-get
+      summary: "API7 \u2014 login endpoint exposed via GET (intentional misconfig\
+        \ \u2014 GET on auth is the bug)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        cors:
+          allowedOrigins:
+          - https://vapi.local
+          allowedMethods:
+          - POST
+          credentials: false
+        rateLimit:
+          requests: 5
+          window: 1m
+          identifier: ip
+        cacheable: false
+        response:
+          headers:
+            hsts:
+              maxAge: 31536000
+              includeSubDomains: true
+            contentTypeOptions: nosniff
+            frameOptions: DENY
+            referrerPolicy: no-referrer
+            cacheControl: no-store
+        mitigates:
+        - API8:2023
+        - API4:2023
+  /vapi/api7/user/key:
+    get:
+      operationId: api7-user-key
+      summary: "API7 \u2014 fetch API key"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        cors:
+          allowedOrigins:
+          - https://vapi.local
+          allowedMethods:
+          - GET
+          credentials: false
+        cacheable: false
+        response:
+          headers:
+            hsts:
+              maxAge: 31536000
+              includeSubDomains: true
+            contentTypeOptions: nosniff
+            frameOptions: DENY
+            cacheControl: no-store
+        mitigates:
+        - API8:2023
+        - API2:2023
+  /vapi/api7/user/logout:
+    get:
+      operationId: api7-user-logout
+      summary: "API7 \u2014 logout"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        cors:
+          allowedOrigins:
+          - https://vapi.local
+          allowedMethods:
+          - GET
+          credentials: false
+        response:
+          headers:
+            hsts:
+              maxAge: 31536000
+            contentTypeOptions: nosniff
+            frameOptions: DENY
+        mitigates:
+        - API8:2023
+  /vapi/api8/user/login:
+    post:
+      operationId: api8-user-login
+      summary: "API8 \u2014 login (SQL/NoSQL injection target)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          duplicateParamPolicy: reject
+          headerInjectionGuard: true
+          pathCanonicalization: true
+          maxBodySize: 2KB
+          schema:
+            username:
+              type: string
+              minLength: 3
+              maxLength: 64
+              pattern: ^[A-Za-z0-9_]+$
+            password:
+              type: string
+              minLength: 8
+              maxLength: 128
+              pattern: ^[^\s].{7,127}$
+        rateLimit:
+          requests: 5
+          window: 1m
+          identifier: ip
+        mitigates:
+        - API8:2023
+        - API4:2023
+  /vapi/api8/user/secret:
+    get:
+      operationId: api8-user-secret
+      summary: "API8 \u2014 fetch user secret"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        response:
+          headers:
+            cacheControl: no-store
+            contentTypeOptions: nosniff
+        mitigates:
+        - API8:2023
+  /vapi/api9/v1/user/login:
+    post:
+      operationId: api9-v1-user-login
+      summary: "API9 \u2014 deprecated v1 login (no rate limit on actual target)"
+      deprecated: true
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        deprecated: true
+        sunsetDate: '2024-01-01'
+        replacementEndpoint: /vapi/api9/v2/user/login
+        rateLimit:
+          requests: 5
+          window: 1m
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 2KB
+        mitigates:
+        - API9:2023
+        - API4:2023
+  /vapi/api9/v2/user/login:
+    post:
+      operationId: api9-v2-user-login
+      summary: "API9 \u2014 current v2 login (Laravel throttle:5,1)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        profile: auth-endpoint
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        rateLimit:
+          requests: 5
+          window: 1m
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          maxBodySize: 2KB
+        mitigates:
+        - API9:2023
+        - API4:2023
+  /vapi/dashboard/list:
+    get:
+      operationId: dashboard-list
+      summary: "Dashboard listing — reachable by both `user` and `admin` roles. Exists so
+        kong-consumer-team's RBAC fan-out (one ACL plugin per role) is exercised E2E
+        (REPORT-v3 Open-5). Pair with /vapi/api5/users (admin-only) to assert
+        that role_user gets 200 here AND 403 on /api5/users."
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        authorization:
+          type: rbac
+          roles:
+          - user
+          - admin
+        mitigates:
+        - API5:2023
+  /vapi/api10/user/flag:
+    get:
+      operationId: api10-user-flag
+      summary: "API10 \u2014 fetch flag from upstream (unsafe consumption)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        request:
+          allowedHosts:
+          - api.roottusk.com
+          signature:
+            algorithm: hmac-sha256
+            headerName: X-Upstream-Signature
+            secretRef: ${UPSTREAM_HMAC_SECRET}
+            body: raw
+            timestampHeader: X-Upstream-Timestamp
+            timestampToleranceSeconds: 300
+        timeout:
+          connect: 2000
+          read: 5000
+          write: 5000
+        mitigates:
+        - API10:2023
+  /vapi/jwt/user:
+    post:
+      operationId: jwt-create-user
+      summary: "JWT \u2014 create user"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        rateLimit:
+          requests: 10
+          window: 1m
+          identifier: ip
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+        mitigates:
+        - API2:2023
+    get:
+      operationId: jwt-get-user
+      summary: "JWT \u2014 weak-JWT target (alg=none / HS256 weak key in vAPI)"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+          issuer: ${JWT_ISSUER}
+          audience: vapi
+        response:
+          headers:
+            contentTypeOptions: nosniff
+            cacheControl: no-store
+        mitigates:
+        - API2:2023
+        - API8:2023
+  /vapi/serversurfer:
+    get:
+      operationId: serversurfer-ssrf
+      summary: "SSRF target \u2014 ?url= is fetched server-side"
+      parameters:
+      - in: query
+        name: url
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        request:
+          duplicateParamPolicy: reject
+          pathCanonicalization: true
+          headerInjectionGuard: true
+          schema:
+            url:
+              type: url
+              domainAllowlist:
+              - roottusk.com
+              - api.example.com
+              blockPrivateRanges: true
+              maxLength: 2048
+        timeout:
+          connect: 2000
+          read: 4000
+          write: 4000
+        rateLimit:
+          requests: 30
+          window: 1m
+          identifier: user-id
+        mitigates:
+        - API10:2023
+  /vapi/stickynotes:
+    post:
+      operationId: stickynotes-create
+      summary: Sticky note create (XXE / parser-toggle target)
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        request:
+          contentType:
+          - application/json
+          denyUnknownFields: true
+          duplicateParamPolicy: reject
+          pathCanonicalization: true
+          headerInjectionGuard: true
+          maxBodySize: 16KB
+          schema:
+            title:
+              type: string
+              maxLength: 200
+            body:
+              type: free-text
+              maxLength: 8000
+        response:
+          stripUnknownFields: true
+        mitigates:
+        - API8:2023
+        - API3:2023
+    get:
+      operationId: stickynotes-list
+      summary: "Sticky notes list \u2014 ?format= toggles parser (XXE class)"
+      parameters:
+      - in: query
+        name: format
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        request:
+          contentType:
+          - application/json
+          duplicateParamPolicy: reject
+          pathCanonicalization: true
+          headerInjectionGuard: true
+          schema:
+            format:
+              type: string
+              pattern: ^json$
+        response:
+          stripUnknownFields: true
+          contentType:
+          - application/json
+        mitigates:
+        - API8:2023
+        - API3:2023
+  /vapi/dashboard/flag:
+    get:
+      operationId: dashboard-flag
+      summary: "Dashboard \u2014 final flag"
+      responses:
+        '200':
+          description: ok
+      x-security:
+        authentication:
+          type: bearer-jwt
+          jwksUri: ${JWKS_URI}
+          allowedAlgorithms:
+          - RS256
+        authorization:
+          type: rbac
+          roles:
+          - admin
+        response:
+          headers:
+            contentTypeOptions: nosniff
+            frameOptions: DENY
+            cacheControl: no-store
+            referrerPolicy: no-referrer
+        rateLimit:
+          requests: 30
+          window: 1m
+          identifier: user-id
+        mitigates:
+        - API5:2023
+        - API2:2023

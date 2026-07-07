@@ -5,7 +5,7 @@ import type {
   GraphqlPolicy,
   ResponsePolicy,
   WebsocketPolicy
-} from '@writ/schema';
+} from '@x-security/schema';
 import { parseByteSize, parseDurationSeconds } from './statements.js';
 import { isObserveMode } from './shared.js';
 import { noteObserveMode, pushAuthorizer, pushCapability, type V3Builder } from './v3-shared.js';
@@ -64,7 +64,7 @@ function compileResponseCookies(b: V3Builder, resp: ResponsePolicy | undefined):
     StatusCode: 'default',
     ResponseParameters: {},
     ResponseTemplates: { 'application/json': vtl },
-    writ: { endpoint_id: b.eid, source_field: 'response.cookies.defaults' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'response.cookies.defaults' }
   });
   pushCapability(b, 'response.cookies.defaults', 'partial', 'Lambda integration response mapping',
     'Gateway fills missing attributes via VTL; pre-existing flags preserved.',
@@ -83,7 +83,7 @@ function cookieDefaultsVtl(d: CookieDefaults): string {
   if (d.path) attrs.push(`Path=${d.path}`);
   if (d.domain) attrs.push(`Domain=${d.domain}`);
   if (typeof d.maxAge === 'number') attrs.push(`Max-Age=${d.maxAge}`);
-  return `## writ: append cookie attrs if absent: ${attrs.join('; ')}`;
+  return `## xSecurity: append cookie attrs if absent: ${attrs.join('; ')}`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ function compileResponseHeaders(b: V3Builder, resp: ResponsePolicy | undefined):
     b.gatewayResponses.push({
       ResponseType: responseType,
       ResponseParameters: params,
-      writ: { endpoint_id: b.eid, source_field: 'response.headers' }
+      xSecurity: { endpoint_id: b.eid, source_field: 'response.headers' }
     });
   }
   const integrationParams: Record<string, string> = {};
@@ -132,7 +132,7 @@ function compileResponseHeaders(b: V3Builder, resp: ResponsePolicy | undefined):
   b.integrationResponses.push({
     StatusCode: '200',
     ResponseParameters: integrationParams,
-    writ: { endpoint_id: b.eid, source_field: 'response.headers' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'response.headers' }
   });
 
   pushCapability(b, 'response.headers', 'partial', 'Gateway Responses (4xx/5xx) + integration response (2xx)',
@@ -178,7 +178,7 @@ function compileUnkeyedHeadersStrip(b: V3Builder, cache: Cacheable | undefined):
       EnableAcceptEncodingBrotli: true
     },
     StrippedRequestHeaders: [...strip],
-    writ: { endpoint_id: b.eid, source_field: 'cacheable.unkeyedHeadersStrip' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'cacheable.unkeyedHeadersStrip' }
   });
   if (b.scope !== 'CLOUDFRONT') {
     b.warnings.push({
@@ -221,7 +221,7 @@ function compileGraphql(b: V3Builder, gql: GraphqlPolicy | undefined): void {
         allowedOperations: gql.allowedOperations
       }
     },
-    writ: { endpoint_id: b.eid, source_field: 'graphql' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'graphql' }
   });
   pushCapability(b, 'graphql', 'partial', 'Lambda authorizer (graphql-armor or AST walker)',
     'API Gateway has no GraphQL-aware primitive; AppSync is out of scope for this compiler.',
@@ -280,7 +280,7 @@ function compileWebsocket(b: V3Builder, ws: WebsocketPolicy | undefined): void {
   const route: WebSocketRouteSpec = {
     RouteKey: '$connect',
     AllowedOrigins: [...ws.allowedOrigins],
-    writ: { endpoint_id: b.eid, source_field: 'websocket' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'websocket' }
   };
   if (typeof idleSec === 'number') route.IdleTimeoutSeconds = idleSec;
   if (typeof ws.maxConnectionsPerIdentifier === 'number') {
@@ -314,7 +314,7 @@ function compileBotProtectionV3(b: V3Builder, bp: BotProtection | undefined): vo
         mode: bp.mode
       }
     },
-    writ: { endpoint_id: b.eid, source_field: 'botProtection' }
+    xSecurity: { endpoint_id: b.eid, source_field: 'botProtection' }
   });
   pushCapability(b, 'botProtection', 'override-only', 'Lambda authorizer (siteverify)',
     'AWS WAF Bot Control is a different provider; Turnstile/reCAPTCHA/hCaptcha require Lambda siteverify.',

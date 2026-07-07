@@ -27,7 +27,7 @@ import {
   isSelfMutationBodyOwnership,
 } from './synthetic-requests.js';
 import { discoverHandlerParams } from './verify-helpers.js';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 /** url params whose `domainAllowlist` is present-but-EMPTY. An empty allowlist
  *  is a silent no-op in the evaluator (D1): it reads as "no constraint," so the

@@ -19,7 +19,7 @@
 import { readFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { request } from 'undici';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import { loadGenerator } from '../../registry.js';
 import type { EmittedArtifact, GatewayReader, LoadedArtifact, VerifyRow } from '../index.js';
 
@@ -86,12 +86,15 @@ export const corazaGoReader: GatewayReader = {
     return scanEmittedRules(extractDirectives(yml.content));
   },
 
-  async readLoadedArtifacts(gateway: string): Promise<LoadedArtifact[]> {
+  async readLoadedArtifacts(gateway: string, timeoutMs?: number): Promise<LoadedArtifact[]> {
     // HTTP debug endpoint path.
     if (gateway.startsWith('http://') || gateway.startsWith('https://')) {
       const url = gateway.replace(/\/$/, '') + '/debug/rules';
       try {
-        const res = await request(url, { method: 'GET' });
+        const res = await request(url, {
+          method: 'GET',
+          ...(timeoutMs !== undefined ? { signal: AbortSignal.timeout(timeoutMs) } : {})
+        });
         if (res.statusCode >= 400) {
           throw new Error(`debug-rules endpoint returned HTTP ${res.statusCode}`);
         }
@@ -99,6 +102,10 @@ export const corazaGoReader: GatewayReader = {
         const ids = body.rules ?? [];
         return ids.map((r) => ({ id: String(r.id), kind: 'coraza-rule' as const }));
       } catch (e) {
+        const name = (e as Error).name;
+        if (name === 'TimeoutError' || name === 'AbortError') {
+          throw new Error(`${url} timed out after ${timeoutMs}ms`);
+        }
         const msg = (e as Error).message;
         if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN/.test(msg)) throw new Error(`gateway-unreachable: ${msg}`);
         throw e;

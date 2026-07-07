@@ -1,4 +1,4 @@
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 import { and } from './statements.js';
 import { isObserveMode, pushRule } from './shared.js';
 import type { V2Builder } from './v2-builder.js';
@@ -93,7 +93,7 @@ export function compileBotProtectionLegacy(b: V2Builder, policy: XSecurityPolicy
       MetricName: `${b.prefix}-${b.ehash}-bot-control`.replace(/[^A-Za-z0-9]/g, '')
     },
     mode: b.mode,
-    writ: {
+    xSecurity: {
       endpoint_id: b.eid,
       rule_type: 'bot-control',
       source_field: 'botProtection',

@@ -8,7 +8,7 @@
 //   - firewall:    iptables-save / .rules file, or a directory with
 //                  iptables.rules + ip6tables.rules
 
-import { loadSpec, buildResolverChain } from '@writ/core';
+import { loadSpec, buildResolverChain } from '@x-security/core';
 import { detectAdminDrift } from '../drift/kong-admin.js';
 import { detectFileDrift } from '../drift/kong-file.js';
 import { detectCorazaDrift } from '../drift/coraza.js';
@@ -30,6 +30,8 @@ export interface ValidateOptions {
   vault?: boolean;
   awsSecrets?: boolean;
   vaultKvVersion?: 1 | 2;
+  /** Abort outbound gateway requests after this many ms. Unset = no timeout. */
+  timeoutMs?: number;
 }
 
 export interface ValidateResult {
@@ -60,7 +62,7 @@ export async function runValidate(specPath: string, opts: ValidateOptions): Prom
   switch (opts.target) {
     case 'kong':
       report = isHttp
-        ? await detectAdminDrift(spec, { gatewayUrl: opts.gateway })
+        ? await detectAdminDrift(spec, { gatewayUrl: opts.gateway, ...(opts.timeoutMs !== undefined ? { timeoutMs: opts.timeoutMs } : {}) })
         : await detectFileDrift(spec, { filePath: opts.gateway });
       break;
     case 'coraza':

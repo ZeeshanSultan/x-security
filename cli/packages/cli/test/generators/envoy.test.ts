@@ -17,8 +17,8 @@ import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 import * as yaml from 'js-yaml';
-import { loadSpec, type EndpointIR, type SpecIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/schema';
+import { loadSpec, type EndpointIR, type SpecIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 import { envoyGenerator } from '../../src/generators/envoy/index.js';
 import {
@@ -102,14 +102,14 @@ describe('envoy: jwt_authn native filter', () => {
     ]);
     const out = buildEnvoyYaml({ spec, luaSource: null });
     assert.match(out, /envoy\.filters\.http\.jwt_authn/);
-    assert.match(out, /writ_jwt:/);
+    assert.match(out, /x_security_jwt:/);
     assert.match(out, /issuer: "https:\/\/idp\.example\.com"/);
     assert.match(out, /audiences:[\s\S]*api\.example\.com/);
     assert.match(out, /uri: "https:\/\/idp\.example\.com\/jwks"/);
     assert.match(out, /cluster: jwks_cluster/);
     // rule pinning the path
     assert.match(out, /regex: "\^\/secured\$"/);
-    assert.match(out, /provider_name: writ_jwt/);
+    assert.match(out, /provider_name: x_security_jwt/);
   });
 
   it('emits a jwks_cluster with TLS transport_socket for https JWKS', () => {
@@ -168,8 +168,8 @@ describe('envoy: rbac native filter', () => {
     const out = buildEnvoyYaml({ spec, luaSource: null });
     assert.match(out, /envoy\.filters\.http\.rbac/);
     assert.match(out, /action: ALLOW/);
-    assert.match(out, /"writ-rbac-.*-admin":/);
-    assert.match(out, /"writ-rbac-.*-super-admin":/);
+    assert.match(out, /"x-security-rbac-.*-admin":/);
+    assert.match(out, /"x-security-rbac-.*-super-admin":/);
     // principal sources from jwt_authn metadata
     assert.match(out, /filter: envoy\.filters\.http\.jwt_authn/);
     assert.match(out, /key: "role"/);
@@ -223,7 +223,7 @@ describe('envoy: rbac native filter', () => {
     assert.match(rego!.content, /payload\["sub"\] == resource_id/);
   });
 
-  // ── W17-A: per-class x-writ-rule markers on OPA denies ──────────
+  // ── W17-A: per-class x-x-security-rule markers on OPA denies ──────────
   it('W17-A: Rego emits per-class deny headers (bola / jwt-claim / default)', async () => {
     const spec = specWith([
       ep('GET', '/api/users/{id}', {
@@ -242,11 +242,11 @@ describe('envoy: rbac native filter', () => {
     const rego = arts.find((a) => a.path === 'opa/policy.rego');
     assert.ok(rego, 'opa/policy.rego artifact missing');
     // BOLA-class header on the path/method-match-but-identity-fail branch.
-    assert.match(rego!.content, /"x-writ-rule": "opa-bola-403"/);
+    assert.match(rego!.content, /"x-x-security-rule": "opa-bola-403"/);
     // JWT-claim header on the path/method-match-but-claim-missing branch.
-    assert.match(rego!.content, /"x-writ-rule": "opa-jwt-claim-403"/);
+    assert.match(rego!.content, /"x-x-security-rule": "opa-jwt-claim-403"/);
     // Default catch-all header on the terminal else.
-    assert.match(rego!.content, /"x-writ-rule": "opa-default-403"/);
+    assert.match(rego!.content, /"x-x-security-rule": "opa-default-403"/);
     // Permit branch returns {"allowed": true}.
     assert.match(rego!.content, /\{"allowed": true\}/);
     // The else-chain compiles into a single `decision := ...` rule head.
@@ -273,7 +273,7 @@ describe('envoy: rbac native filter', () => {
     assert.match(out, /envoy\.filters\.http\.ext_authz/);
     // W17-A: contract comment about marker forwarding is part of the
     // emitted filter so operators can grep for it.
-    assert.match(out, /W17-A: forward OPA-emitted x-writ-rule/);
+    assert.match(out, /W17-A: forward OPA-emitted x-x-security-rule/);
     // Filter still passes header info downstream (no headers_to_remove that
     // would strip it). Default Envoy behavior is "forward all denied_response
     // headers"; we assert no override that would break that.
@@ -290,7 +290,7 @@ describe('envoy: rbac native filter', () => {
     const arts = await envoyGenerator.generate(spec);
     const rego = arts.find((a) => a.path === 'opa/policy.rego');
     assert.ok(rego, 'opa/policy.rego artifact missing (admin-only rbac should route via OPA)');
-    assert.match(rego!.content, /"x-writ-rule": "opa-bfla-403"/);
+    assert.match(rego!.content, /"x-x-security-rule": "opa-bfla-403"/);
     // Permit branch: principal role == "admin" → allowed.
     assert.match(rego!.content, /payload\["role"\] == "admin"/);
     // The yaml should still wire ext_authz even though there are no
@@ -318,7 +318,7 @@ describe('envoy: rbac native filter', () => {
     const arts = await envoyGenerator.generate(spec);
     const rego = arts.find((a) => a.path === 'opa/policy.rego');
     assert.ok(rego, 'opa/policy.rego artifact missing (denyUnknownFields should route via OPA)');
-    assert.match(rego!.content, /"x-writ-rule": "opa-input-validation-403"/);
+    assert.match(rego!.content, /"x-x-security-rule": "opa-input-validation-403"/);
     // The Rego body must parse the request body and walk top-level keys.
     assert.match(rego!.content, /json\.unmarshal\(input\.attributes\.request\.http\.body\)/);
     // The allowed-set literal must list the schema keys (byte-stable, sorted).
@@ -347,11 +347,11 @@ describe('envoy: rbac native filter', () => {
     assert.ok(rego, 'opa/policy.rego artifact missing');
     // Marker class strings also appear in the header docstring, so we anchor
     // on the deny-response header literal that only shows up in branches.
-    const bflaIdx = rego!.content.indexOf('"x-writ-rule": "opa-bfla-403"');
-    const bolaIdx = rego!.content.indexOf('"x-writ-rule": "opa-bola-403"');
+    const bflaIdx = rego!.content.indexOf('"x-x-security-rule": "opa-bfla-403"');
+    const bolaIdx = rego!.content.indexOf('"x-x-security-rule": "opa-bola-403"');
     // `opa-default-403` appears in the `default allow` literal at the top of the
     // file AND in the terminal `else`. We want the terminal one — last occurrence.
-    const lastDefaultIdx = rego!.content.lastIndexOf('"x-writ-rule": "opa-default-403"');
+    const lastDefaultIdx = rego!.content.lastIndexOf('"x-x-security-rule": "opa-default-403"');
     assert.ok(bflaIdx > 0, 'opa-bfla-403 must appear');
     assert.ok(bolaIdx > 0, 'opa-bola-403 must appear');
     assert.ok(lastDefaultIdx > 0, 'opa-default-403 must appear');
@@ -378,15 +378,15 @@ describe('envoy: local_ratelimit native filter (per-route)', () => {
     const out = buildEnvoyYaml({ spec, luaSource: null });
     // chain-level shell filter present
     assert.match(out, /envoy\.filters\.http\.local_ratelimit/);
-    assert.match(out, /stat_prefix: writ_chain_ratelimit/);
+    assert.match(out, /stat_prefix: x_security_chain_ratelimit/);
     // per-route override
-    assert.match(out, /stat_prefix: writ_post_login_ratelimit/);
+    assert.match(out, /stat_prefix: x_security_post_login_ratelimit/);
     // W15-B: when `burst` is unset we synthesize burst headroom
     // (max(requests*3, requests+20)) so auth filters get a visible
     // rejection band before local_ratelimit short-circuits attacks.
     // For requests=5 → max_tokens=25, tokens_per_fill stays at 5.
     assert.match(out, /max_tokens: 25[\s\S]*tokens_per_fill: 5[\s\S]*fill_interval: 60s/);
-    assert.match(out, /x-writ-ratelimit/);
+    assert.match(out, /x-x-security-ratelimit/);
   });
 
   it('uses burst as max_tokens when burst > requests', () => {
@@ -410,9 +410,9 @@ describe('envoy: local_ratelimit native filter (per-route)', () => {
       ep('GET', '/list', { rateLimit: { requests: 60, window: '1m' } })
     ]);
     const out = buildEnvoyYaml({ spec, luaSource: null });
-    assert.match(out, /stat_prefix: writ_post_login_ratelimit[\s\S]*?max_tokens: 25[\s\S]*?tokens_per_fill: 5/);
-    assert.match(out, /stat_prefix: writ_post_create_ratelimit[\s\S]*?max_tokens: 30[\s\S]*?tokens_per_fill: 10/);
-    assert.match(out, /stat_prefix: writ_get_list_ratelimit[\s\S]*?max_tokens: 180[\s\S]*?tokens_per_fill: 60/);
+    assert.match(out, /stat_prefix: x_security_post_login_ratelimit[\s\S]*?max_tokens: 25[\s\S]*?tokens_per_fill: 5/);
+    assert.match(out, /stat_prefix: x_security_post_create_ratelimit[\s\S]*?max_tokens: 30[\s\S]*?tokens_per_fill: 10/);
+    assert.match(out, /stat_prefix: x_security_get_list_ratelimit[\s\S]*?max_tokens: 180[\s\S]*?tokens_per_fill: 60/);
   });
 
   it('W15-B: explicit burst still wins over synthesized headroom', () => {
@@ -639,8 +639,8 @@ describe('envoy: residual Lua', () => {
       endpoint: ep('POST', '/x', { request: { maxBodySize: '10KB', contentType: ['application/json'] } })
     });
     assert.ok(block);
-    assert.match(block!, /-- writ:POST:\/x:START/);
-    assert.match(block!, /-- writ:END/);
+    assert.match(block!, /-- xSecurity:POST:\/x:START/);
+    assert.match(block!, /-- xSecurity:END/);
     assert.match(block!, /:status"\]\s*=\s*"413"/);
     assert.match(block!, /:status"\]\s*=\s*"415"/);
     assert.match(block!, /cl > 10240/);
@@ -658,13 +658,13 @@ describe('envoy: residual Lua', () => {
     const out = buildLuaModule('t', '1', [], [
       { path: '/a', pattern: '^/a$', methods: ['GET', 'POST'] }
     ]);
-    assert.match(out, /-- writ:method-allowlist:START/);
-    assert.match(out, /-- writ:method-allowlist:END/);
+    assert.match(out, /-- xSecurity:method-allowlist:START/);
+    assert.match(out, /-- xSecurity:method-allowlist:END/);
     assert.match(out, /\{ pattern = "\^\/a\$", methods = \{ "GET", "POST" \} \}/);
     assert.match(out, /:status"\]\s*=\s*"405"/);
   });
 
-  it('generator omits writ.lua entirely when spec has no Lua-requiring fields', async () => {
+  it('generator omits x-security.lua entirely when spec has no Lua-requiring fields', async () => {
     const spec = specWith([
       ep('GET', '/x', {
         authentication: { type: 'bearer-jwt', jwksUri: 'https://x/jwks', allowedAlgorithms: ['RS256'] },
@@ -710,7 +710,7 @@ describe('envoy: generate() against example fixture', () => {
     // declares response.schema → ext_proc/response-schema.json scaffolding
     // (override-only; enforced by an operator-supplied ext_proc processor).
     const paths = arts.map((a) => a.path).sort();
-    assert.deepEqual(paths, ['envoy.yaml', 'ext_proc/response-schema.json', 'writ.lua']);
+    assert.deepEqual(paths, ['envoy.yaml', 'ext_proc/response-schema.json', 'x-security.lua']);
   });
 
   it('envoy.yaml is valid YAML and round-trips through js-yaml', async () => {
@@ -732,16 +732,16 @@ describe('envoy: generate() against example fixture', () => {
   it('contains rbac policies for both admin roles', async () => {
     const spec = await loadExample();
     const y = (await envoyGenerator.generate(spec)).find((a) => a.path === 'envoy.yaml')!.content;
-    assert.match(y, /"writ-rbac-listusers-admin":/);
-    assert.match(y, /"writ-rbac-listusers-super-admin":/);
+    assert.match(y, /"x-security-rbac-listusers-admin":/);
+    assert.match(y, /"x-security-rbac-listusers-super-admin":/);
   });
 
   it('contains per-route rate-limit buckets for each rateLimit endpoint', async () => {
     const spec = await loadExample();
     const y = (await envoyGenerator.generate(spec)).find((a) => a.path === 'envoy.yaml')!.content;
-    assert.match(y, /stat_prefix: writ_login_ratelimit/);
-    assert.match(y, /stat_prefix: writ_listusers_ratelimit/);
-    assert.match(y, /stat_prefix: writ_uploadfile_ratelimit/);
+    assert.match(y, /stat_prefix: x_security_login_ratelimit/);
+    assert.match(y, /stat_prefix: x_security_listusers_ratelimit/);
+    assert.match(y, /stat_prefix: x_security_uploadfile_ratelimit/);
   });
 
   it('contains a per-route CorsPolicy on the login route', async () => {
@@ -752,12 +752,12 @@ describe('envoy: generate() against example fixture', () => {
 
   it('residual Lua contains content-type + body-size enforcement only', async () => {
     const spec = await loadExample();
-    const lua = (await envoyGenerator.generate(spec)).find((a) => a.path === 'writ.lua')!.content;
-    assert.match(lua, /-- writ:POST:\/api\/auth\/login:START/);
+    const lua = (await envoyGenerator.generate(spec)).find((a) => a.path === 'x-security.lua')!.content;
+    assert.match(lua, /-- xSecurity:POST:\/api\/auth\/login:START/);
     // Lua MUST NOT carry the old auth-presence check (now native).
     assert.doesNotMatch(lua, /missing authorization header/);
     // Method-allowlist still present.
-    assert.match(lua, /-- writ:method-allowlist:START/);
+    assert.match(lua, /-- xSecurity:method-allowlist:START/);
   });
 
   it('emits envoy.filters.http.buffer with max_request_bytes at the smallest body cap', async () => {
@@ -822,7 +822,7 @@ describe('envoy W19-A: SSRF url-allowlist OPA emission', () => {
     const arts = await envoyGenerator.generate(ssrfSpec(['roottusk.com'], false));
     const rego = arts.find((a) => a.path === 'opa/policy.rego');
     assert.ok(rego, 'opa/policy.rego artifact missing (SSRF policy should route via OPA)');
-    assert.match(rego!.content, /"x-writ-rule": "opa-ssrf-403"/);
+    assert.match(rego!.content, /"x-x-security-rule": "opa-ssrf-403"/);
     // Allowlist host set is byte-stable, lowercased.
     assert.match(rego!.content, /allowed := \{"roottusk\.com"\}/);
     // Query-string extraction splits :path on '?' (OPA-Envoy doesn't expose
@@ -926,7 +926,7 @@ describe('envoy W22-A: ipPolicy (envoy.filters.http.rbac.ip)', () => {
       ep('GET', '/blocked', { ipPolicy: { deny: ['203.0.113.0/24'] } } as XSecurityPolicy)
     ]);
     assert.match(yaml, /action: DENY/);
-    assert.match(yaml, /writ-ip-deny:/);
+    assert.match(yaml, /x-security-ip-deny:/);
     assert.match(yaml, /address_prefix: "203\.0\.113\.0", prefix_len: 24/);
   });
 

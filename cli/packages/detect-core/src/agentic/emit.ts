@@ -8,8 +8,8 @@
 // (passes.ts) is responsible for setting reviewRequired=true and surfacing the
 // validation reasons — never a hardcoded fallback that hides the gap.
 
-import type { ParamSchema, XSecurityPolicy } from '@writ/schema';
-import { validateXSecurity } from '@writ/schema';
+import type { ParamSchema, XSecurityPolicy } from '@x-security/schema';
+import { validateXSecurity } from '@x-security/schema';
 import type { ControlHint, PolicyEmission } from './schema.js';
 
 // Lever 2a — perimeter tightness defaults (flag-gated; default OFF = identity).
@@ -31,7 +31,7 @@ import type { ControlHint, PolicyEmission } from './schema.js';
 // Deploy-bound placeholder for an authentication finding's JWKS endpoint. The
 // detection (route lacks auth) is real; the JWKS URL is the operator's secret,
 // so we emit a named ${var} they bind at deploy rather than fabricate one (D-1).
-const AUTH_JWKS_VAR = '${WRIT_AUTH_JWKS_URI}';
+const AUTH_JWKS_VAR = '${X_SECURITY_AUTH_JWKS_URI}';
 
 // Maps a controlHint authorization `location` to the x-security request segment
 // the ownership rule compares against. Without this the rule always targeted

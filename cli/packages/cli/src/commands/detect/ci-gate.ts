@@ -10,21 +10,21 @@ const AUDIT_SCRIPT = [
   '#!/usr/bin/env bash',
   '# Fail CI if any emitted control lost its byte-matching citation (Rule D-3).',
   'set -euo pipefail',
-  'OUT="$(npx --yes @writ/cli audit .)"',
+  'OUT="$(npx --yes @x-security/cli audit .)"',
   'echo "$OUT"',
   'CITE_BACKED="$(printf \'%s\' "$OUT" | node -e \'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(String(JSON.parse(s).citeBacked)))\')"',
   'if [ "$CITE_BACKED" != "true" ]; then',
-  '  echo "::error::Writ gate failed — an emitted control no longer cites your code." >&2',
+  '  echo "::error::x-security gate failed — an emitted control no longer cites your code." >&2',
   '  exit 1',
   'fi',
   '',
 ].join('\n');
 
 const GITHUB_WORKFLOW = [
-  'name: Writ gate',
+  'name: x-security gate',
   'on: [pull_request, push]',
   'jobs:',
-  '  writ-audit:',
+  '  x-security-audit:',
   '    runs-on: ubuntu-latest',
   '    steps:',
   '      - uses: actions/checkout@v4',
@@ -38,7 +38,7 @@ const GITHUB_WORKFLOW = [
 
 const GITLAB_SNIPPET = [
   '# Append to .gitlab-ci.yml',
-  'writ-audit:',
+  'x-security-audit:',
   '  image: node:20',
   '  script:',
   '    - bash .writ/ci/audit-gate.sh',

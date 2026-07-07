@@ -20,7 +20,7 @@
  *     (data exposure, API3).
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import {
   buildSchemaRules,
   buildBodyFieldAllowlistRules,
@@ -68,7 +68,7 @@ export function buildRequestSchemaRules(endpoint: EndpointIR): string[] {
   const ctx = {
     endpoint,
     base: ruleBase(endpoint),
-    tag: `writ/${endpoint.method} ${endpoint.path}`,
+    tag: `x-security/${endpoint.method} ${endpoint.path}`,
   };
   return buildSchemaRules(ctx, schema, MODSEC_NGINX_PROFILE);
 }
@@ -141,7 +141,7 @@ export function buildResponseSchemaRules(endpoint: EndpointIR): string[] {
 //
 // Each rule is a 3-link chain: method match → path match → field operator,
 // scoped to keep the false-positive surface low (explicit opt-in per field,
-// not blanket-on-all-args). Attributed to SSEC-INJECTION (a Writ-native
+// not blanket-on-all-args). Attributed to SSEC-INJECTION (a x-security-native
 // category), never to an OWASP-API cell.
 //
 // Selector: we match BOTH `ARGS:json.<field>` (JSON body, populated by the
@@ -162,8 +162,8 @@ interface SinkRule {
   /** stable per-sink offset so two sinks on one field never collide. */
   slot: number;
   /**
-   * Attribution tag. All sinks ride `writ-ssec-injection` (SSEC-INJECTION)
-   * EXCEPT `ai-prompt`, which is the distinct Writ-native SSEC-PROMPT
+   * Attribution tag. All sinks ride `x-security-ssec-injection` (SSEC-INJECTION)
+   * EXCEPT `ai-prompt`, which is the distinct x-security-native SSEC-PROMPT
    * class (schema v0.7). Defaults to the injection tag when omitted.
    */
   attrTag?: string;
@@ -231,13 +231,13 @@ function sinkRule(sink: string): SinkRule | null {
       };
     case 'ai-prompt':
       // LLM prompt-injection heuristic denylist. Attributed to SSEC-PROMPT (the
-      // distinct Writ-native class), NOT SSEC-INJECTION.
+      // distinct x-security-native class), NOT SSEC-INJECTION.
       return {
         operator:
           '@rx (?i)(?:ignore\\s+(?:all\\s+)?(?:previous|prior|above)\\s+instructions|disregard\\s+(?:the\\s+)?(?:previous|above|system)|system\\s+prompt|you\\s+are\\s+now\\s+|act\\s+as\\s+(?:a\\s+)?(?:dan|developer\\s+mode)|reveal\\s+(?:your\\s+)?(?:system\\s+)?prompt|new\\s+instructions?\\s*:)',
         msg: 'LLM prompt injection',
         slot: 8,
-        attrTag: 'writ-ssec-prompt',
+        attrTag: 'x-security-ssec-prompt',
       };
     default:
       return null;
@@ -247,7 +247,7 @@ function sinkRule(sink: string): SinkRule | null {
 export function buildInjectionGuardRules(endpoint: EndpointIR): string[] {
   const schema = endpoint.policy.request?.schema;
   if (!schema || Object.keys(schema).length === 0) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const out: string[] = [];
 
@@ -263,16 +263,16 @@ export function buildInjectionGuardRules(endpoint: EndpointIR): string[] {
       const seed = endpointHash(`${endpoint.method}|${endpoint.path}|${field}`, '');
       const id = INJECTION_GUARD_BASE_ID + ((seed % 1000) * 9) + def.slot;
       const selector = `ARGS:json.${field}|ARGS:${field}`;
-      const attrTag = def.attrTag ?? 'writ-ssec-injection';
-      const attrName = attrTag === 'writ-ssec-prompt' ? 'SSEC-PROMPT' : 'SSEC-INJECTION';
+      const attrTag = def.attrTag ?? 'x-security-ssec-injection';
+      const attrName = attrTag === 'x-security-ssec-prompt' ? 'SSEC-PROMPT' : 'SSEC-INJECTION';
       out.push(
         [
           header(
             `W19 injectionGuard[${sink}] on request.schema.${field} for ${endpoint.method} ${endpoint.path}\n` +
               `Native libmodsec3 operator on the declared sink field. Attributed to\n` +
-              `${attrName} (Writ-native), not an OWASP-API cell.`
+              `${attrName} (x-security-native), not an OWASP-API cell.`
           ),
-          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'Writ: ${esc(def.msg)} in ${esc(field)}',tag:'${esc(tag)}',tag:'${esc(attrTag)}',chain"`,
+          `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:403,msg:'x-security: ${esc(def.msg)} in ${esc(field)}',tag:'${esc(tag)}',tag:'${esc(attrTag)}',chain"`,
           `  SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "chain"`,
           `    SecRule ${selector} "${escRx(def.operator)}"${CHAIN_TERM}`,
         ].join('\n')
@@ -308,7 +308,7 @@ function redirectHostRx(domain: string): string {
 export function buildRedirectAllowlistRules(endpoint: EndpointIR): string[] {
   const schema = endpoint.policy.request?.schema;
   if (!schema || Object.keys(schema).length === 0) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const out: string[] = [];
 
@@ -326,7 +326,7 @@ export function buildRedirectAllowlistRules(endpoint: EndpointIR): string[] {
         header(
           `S-15 open-redirect: ${field} must match redirectAllowedDomains for ${endpoint.method} ${endpoint.path}`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'Writ: ${esc(field)} redirect target not in redirectAllowedDomains',tag:'${esc(tag)}',tag:'writ-rule-open-redirect-403',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:403,msg:'x-security: ${esc(field)} redirect target not in redirectAllowedDomains',tag:'${esc(tag)}',tag:'x-security-rule-open-redirect-403',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "chain"`,
         `    SecRule ARGS:${field}|ARGS:json.${field} "!@rx ${escRx(allowRx)}"${CHAIN_TERM}`,
       ].join('\n')
@@ -368,7 +368,7 @@ export function buildXxeRules(endpoint: EndpointIR): string[] {
   const disableEntities = req.disableExternalEntities === true;
   if (!disallowXml && !disableEntities) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const rx = pathRegex(endpoint.path);
   const seed = endpointHash(`${endpoint.method}|${endpoint.path}|xxe`, '');
   const id = XXE_BASE_ID + (seed % 9000);
@@ -382,7 +382,7 @@ export function buildXxeRules(endpoint: EndpointIR): string[] {
       header(
         `S-5 XXE: reject XML body for ${endpoint.method} ${endpoint.path}\n${reason}`
       ),
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:415,msg:'Writ: ${esc(reason)}',tag:'${esc(tag)}',tag:'writ-rule-xxe-415',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:415,msg:'x-security: ${esc(reason)}',tag:'${esc(tag)}',tag:'x-security-rule-xxe-415',chain"`,
       `  SecRule REQUEST_FILENAME "@rx ${escRx(rx)}" "chain"`,
       `    SecRule REQUEST_HEADERS:Content-Type "@rx ${escRx(XML_CONTENT_TYPE_RX)}"${CHAIN_TERM}`,
     ].join('\n'),
@@ -396,7 +396,7 @@ export function buildXxeRules(endpoint: EndpointIR): string[] {
 // transformations. When the spec opts in, we emit a phase:1 SecRule that denies
 // any request whose raw REQUEST_URI still differs from its normalised form —
 // i.e. it carries traversal (`../`, `..\`), double-slash, or percent-encoded
-// path separators. The normalised path is what every later Writ rule's
+// path separators. The normalised path is what every later x-security rule's
 // `@rx ^/path$` matches against, so this rule guarantees the canonical form
 // can't be bypassed with `/api/..//admin` style obfuscation.
 //
@@ -415,7 +415,7 @@ const PATH_TRAVERSAL_RX =
 
 export function buildPathCanonicalizationRules(endpoint: EndpointIR): string[] {
   if (endpoint.policy.request?.pathCanonicalization !== true) return [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const seed = endpointHash(`${endpoint.method}|${endpoint.path}|pathcanon`, '');
   const id = PATH_CANON_BASE_ID + (seed % 9000);
   return [
@@ -425,7 +425,7 @@ export function buildPathCanonicalizationRules(endpoint: EndpointIR): string[] {
           `Denies traversal / double-slash / percent-encoded separators so the\n` +
           `canonical path every later SecRule matches against can't be bypassed.`
       ),
-      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:400,msg:'Writ: non-canonical request path',tag:'${esc(tag)}',tag:'writ-rule-path-canon-400',chain"`,
+      `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:1,deny,status:400,msg:'x-security: non-canonical request path',tag:'${esc(tag)}',tag:'x-security-rule-path-canon-400',chain"`,
       `  SecRule REQUEST_URI "@rx ${escRx(PATH_TRAVERSAL_RX)}"${CHAIN_TERM}`,
     ].join('\n'),
   ];

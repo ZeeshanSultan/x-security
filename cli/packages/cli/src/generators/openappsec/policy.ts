@@ -1,7 +1,7 @@
 /**
  * OpenAppSec declarative policy builders.
  *
- * Maps Writ IR endpoints into OpenAppSec declarative YAML structure:
+ * Maps XSecurity IR endpoints into OpenAppSec declarative YAML structure:
  *   policies.default + per-endpoint schemaValidation rules, rate-limit
  *   practices, log triggers, and custom responses.
  *
@@ -10,13 +10,13 @@
  * IP policy) are emitted with comments / capability=partial when applicable.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import type {
   ParamSchema,
   RateLimit,
   RequestPolicy,
   XSecurityPolicy,
-} from '@writ/schema';
+} from '@x-security/schema';
 
 // SemanticType isn't re-exported from the package index; mirror the literal
 // union here. Kept in lockstep with packages/schema/src/types.ts.
@@ -39,7 +39,7 @@ type SemanticType = NonNullable<ParamSchema['type']>;
  * sub-block of a practice, accepting `configmap: [string]` or `files: [string]`
  * pointing at an OpenAPI spec, NOT inline property rules. See STATUS.md.
  *
- * `writ-extended` carries Writ's per-endpoint schema details so the
+ * `x-security-extended` carries XSecurity's per-endpoint schema details so the
  * intent isn't lost; open-appsec ignores unknown top-level keys without erroring.
  */
 export interface OpenAppSecDoc {
@@ -50,7 +50,7 @@ export interface OpenAppSecDoc {
   practices: OpenAppSecPractice[];
   'log-triggers': OpenAppSecTrigger[];
   'custom-responses': OpenAppSecCustomResponse[];
-  'writ-extended'?: {
+  'x-security-extended'?: {
     'schema-validation': OpenAppSecSchemaValidation[];
   };
 }
@@ -78,7 +78,7 @@ export interface OpenAppSecSpecificRule {
 }
 
 /**
- * `type:` is a Writ-internal hint used by buildDoc to group; open-appsec
+ * `type:` is a XSecurity-internal hint used by buildDoc to group; open-appsec
  * does not consume it. Real local_policy.yaml practices are tagged by which
  * sub-block they carry (web-attacks vs rate-limit vs openapi-schema-validation).
  */
@@ -190,10 +190,10 @@ export interface OpenAppSecPropertyRule {
 
 // ---------- Constants / canonical names ----------
 
-const DEFAULT_PRACTICE = 'writ-threat-prevention';
-const DEFAULT_RATE_LIMIT_PRACTICE = 'writ-rate-limit';
-const DEFAULT_TRIGGER = 'writ-log-trigger';
-const DEFAULT_RESPONSE = 'writ-blocked-response';
+const DEFAULT_PRACTICE = 'x-security-threat-prevention';
+const DEFAULT_RATE_LIMIT_PRACTICE = 'x-security-rate-limit';
+const DEFAULT_TRIGGER = 'x-security-log-trigger';
+const DEFAULT_RESPONSE = 'x-security-blocked-response';
 
 // ---------- Helpers ----------
 
@@ -321,7 +321,7 @@ export function buildDefaultResponse(): OpenAppSecCustomResponse {
 }
 
 /**
- * Path inside the open-appsec agent container where the Writ OpenAPI
+ * Path inside the open-appsec agent container where the XSecurity OpenAPI
  * schema fragment is mounted. The chain compose mounts the generator out dir
  * at /ext/appsec/, so policy.yaml lands at /ext/appsec/local_policy.yaml and
  * the schema fragment at /ext/appsec/openapi-schema.yaml. Operators deploying
@@ -508,7 +508,7 @@ export function buildDoc(spec: SpecIR, opts: BuildDocOptions = {}): OpenAppSecDo
   // matched a real `Host: api.example.com` header → every request fell
   // through to the default `assetName: Any` policy.
   //
-  // Wave-8: emit ONE specific-rule per unique host, attaching Writ's
+  // Wave-8: emit ONE specific-rule per unique host, attaching x-security's
   // practices. Per-path enforcement comes from the per-host openapi-schema
   // file (the OpenAPI fragment carries the per-path schemas the agent walks
   // when classifying inbound requests).
@@ -519,7 +519,7 @@ export function buildDoc(spec: SpecIR, opts: BuildDocOptions = {}): OpenAppSecDo
   if (hosts.size === 0) hosts.add('*');
 
   const specificRules: OpenAppSecSpecificRule[] = Array.from(hosts).map((host) => ({
-    name: `writ-asset-${sanitizeName(host) || 'default'}`,
+    name: `x-security-asset-${sanitizeName(host) || 'default'}`,
     host,
     triggers: [DEFAULT_TRIGGER],
     mode: 'prevent-learn',
@@ -540,7 +540,7 @@ export function buildDoc(spec: SpecIR, opts: BuildDocOptions = {}): OpenAppSecDo
     practices,
     'log-triggers': [buildDefaultTrigger()],
     'custom-responses': [buildDefaultResponse()],
-    'writ-extended': {
+    'x-security-extended': {
       'schema-validation': schemaValidations,
     },
   };
@@ -555,7 +555,7 @@ export function buildDoc(spec: SpecIR, opts: BuildDocOptions = {}): OpenAppSecDo
  * only walks `paths.*` and the inline schemas.
  *
  * This is the artifact `practices[].openapi-schema-validation.files:` points
- * at. Writ writes it as a sibling to local_policy.yaml.
+ * at. x-security writes it as a sibling to local_policy.yaml.
  */
 export interface OpenApiFragment {
   openapi: string;

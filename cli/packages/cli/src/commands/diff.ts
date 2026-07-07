@@ -4,7 +4,7 @@
 
 import * as yaml from 'js-yaml';
 import { diff as jdiff } from 'jsondiffpatch';
-import { loadSpec, buildResolverChain } from '@writ/core';
+import { loadSpec, buildResolverChain } from '@x-security/core';
 import { isKnownTarget, loadGenerator, type TargetName } from '../registry.js';
 
 export interface DiffOptions {

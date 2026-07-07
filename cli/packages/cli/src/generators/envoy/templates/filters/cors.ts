@@ -5,7 +5,7 @@
  * each route entry (see routes.ts).
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 
 export interface RouteCors {
   endpoint: EndpointIR;

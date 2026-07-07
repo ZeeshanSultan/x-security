@@ -25,8 +25,8 @@ test('dry-run plan uses unique container names per invocation (idempotent reruns
   const a = await runTest(SPEC, { target: 'kong', dryRun: true });
   const b = await runTest(SPEC, { target: 'kong', dryRun: true });
   // Container names embed pid + random suffix → never collide.
-  const nameA = a.composeYaml.match(/container_name: (writ-kong-gateway-\S+)/)?.[1];
-  const nameB = b.composeYaml.match(/container_name: (writ-kong-gateway-\S+)/)?.[1];
+  const nameA = a.composeYaml.match(/container_name: (x-security-kong-gateway-\S+)/)?.[1];
+  const nameB = b.composeYaml.match(/container_name: (x-security-kong-gateway-\S+)/)?.[1];
   assert.ok(nameA && nameB);
   assert.notEqual(nameA, nameB);
 });

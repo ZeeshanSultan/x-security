@@ -3,7 +3,7 @@
 // typed object) — when those are present, the v0.3 compilers take over and
 // the legacy emit is suppressed (see compileEndpoint in compile.ts).
 
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 import { and } from './expressions.js';
 import { decorate, isObserveMode, noteObserveMode, type V3Builder } from './v3-shared.js';
 

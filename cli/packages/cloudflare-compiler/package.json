@@ -1,5 +1,5 @@
 {
-  "name": "@writ/cloudflare-compiler",
+  "name": "@x-security/cloudflare-compiler",
   "version": "0.1.0",
   "description": "Compile x-security annotations to Cloudflare WAF Custom Rules + Rate Limit + Transform JSON",
   "license": "Apache-2.0",
@@ -14,9 +14,9 @@
     "test": "node --test --import tsx 'test/**/*.test.ts'"
   },
   "dependencies": {
-    "@writ/schema": "workspace:*",
-    "@writ/core": "workspace:*",
-    "@writ/shared": "workspace:*",
+    "@x-security/schema": "workspace:*",
+    "@x-security/core": "workspace:*",
+    "@x-security/shared": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {

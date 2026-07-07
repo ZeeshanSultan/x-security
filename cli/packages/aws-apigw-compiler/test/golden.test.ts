@@ -22,10 +22,10 @@ test('golden: auth + ratelimit on POST /api/login matches expected rule shape', 
   const r = compile(spec, { mode: 'shadow' });
   const expected = JSON.parse(readFileSync(join(here, 'fixtures/auth-and-ratelimit.expected.json'), 'utf8'));
 
-  const ruleTypes = r.webAclRules.map(x => x.writ.rule_type);
+  const ruleTypes = r.webAclRules.map(x => x.xSecurity.rule_type);
   assert.deepEqual(ruleTypes, expected.ruleTypes);
 
-  const rl = r.webAclRules.find(x => x.writ.rule_type === 'ratelimit-0');
+  const rl = r.webAclRules.find(x => x.xSecurity.rule_type === 'ratelimit-0');
   assert.equal(rl?.Statement.RateBasedStatement?.Limit, expected.rateBasedLimit);
   assert.equal(rl?.Statement.RateBasedStatement?.EvaluationWindowSec, expected.rateBasedWindowSec);
   assert.equal(rl?.Statement.RateBasedStatement?.AggregateKeyType, expected.rateBasedKey);

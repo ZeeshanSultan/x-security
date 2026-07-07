@@ -29,8 +29,8 @@ import {
   type ControlHint,
   type PolicyEmission,
   type Citation,
-} from '@writ/detect-core';
-import type { ParamSchema } from '@writ/schema';
+} from '@x-security/detect-core';
+import type { ParamSchema } from '@x-security/schema';
 
 export interface VerifyFinding {
   route: { method: string; path: string };

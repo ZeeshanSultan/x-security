@@ -14,13 +14,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import yaml from 'js-yaml';
-import type { SpecIR, EndpointIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/detect-core';
+import type { SpecIR, EndpointIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/detect-core';
 import { loadGenerator } from '../../registry.js';
 import { runAudit, type AuditResult } from './audit.js';
 import {
-  writDir,
-  policiesDir,
+  xSecurityDir,
+  resolvePoliciesDir,
   WAF_DIR,
   CI_DIR,
   REPORT_FILE,
@@ -46,7 +46,7 @@ interface LoadedPolicy {
 }
 
 async function loadPolicies(repoDir: string): Promise<LoadedPolicy[]> {
-  const dir = policiesDir(repoDir);
+  const dir = await resolvePoliciesDir(repoDir);
   let files: string[];
   try {
     files = (await fs.readdir(dir)).filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));
@@ -84,7 +84,7 @@ function toSpecIR(policies: LoadedPolicy[]): SpecIR {
   return {
     openapi: '3.1.0',
     dialect: '3.1',
-    info: { title: 'Writ BYO-agent policies', version: '0.0.0' },
+    info: { title: 'x-security BYO-agent policies', version: '0.0.0' },
     servers: [],
     endpoints,
     unprotectedEndpoints: [],
@@ -95,7 +95,7 @@ async function emitWaf(repoDir: string, policies: LoadedPolicy[]): Promise<strin
   const gen = await loadGenerator('bunkerweb');
   if (!gen) throw new Error('bunkerweb generator unavailable');
   const artifacts = await gen.generate(toSpecIR(policies));
-  const outDir = path.join(writDir(repoDir), WAF_DIR);
+  const outDir = path.join(xSecurityDir(repoDir), WAF_DIR);
   await fs.mkdir(outDir, { recursive: true });
   const written: string[] = [];
   for (const a of artifacts) {
@@ -108,14 +108,14 @@ async function emitWaf(repoDir: string, policies: LoadedPolicy[]): Promise<strin
 }
 
 async function emitReport(repoDir: string, audit: AuditResult, policies: LoadedPolicy[]): Promise<string[]> {
-  await fs.mkdir(writDir(repoDir), { recursive: true });
-  const dest = path.join(writDir(repoDir), REPORT_FILE);
+  await fs.mkdir(xSecurityDir(repoDir), { recursive: true });
+  const dest = path.join(xSecurityDir(repoDir), REPORT_FILE);
   await fs.writeFile(dest, renderReport(audit, policies.map((p) => ({ method: p.method, path: p.routePath }))), 'utf8');
   return [dest];
 }
 
 async function emitCi(repoDir: string): Promise<string[]> {
-  const outDir = path.join(writDir(repoDir), CI_DIR);
+  const outDir = path.join(xSecurityDir(repoDir), CI_DIR);
   await fs.mkdir(outDir, { recursive: true });
   const gate = renderCiGate();
   const written: string[] = [];

@@ -25,9 +25,9 @@ test('tools/list advertises exactly the 3 Writ tools', async () => {
   const tools = (resp.result as { tools: { name: string }[] }).tools;
   const names = tools.map((t) => t.name).sort();
   assert.deepEqual(names, [
-    'writ/check-endpoint',
-    'writ/lint-annotation',
-    'writ/propose-annotation'
+    'x-security/check-endpoint',
+    'x-security/lint-annotation',
+    'x-security/propose-annotation'
   ]);
   assert.deepEqual(listToolNames().sort(), names);
   for (const t of tools) {

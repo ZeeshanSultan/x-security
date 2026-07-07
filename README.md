@@ -109,7 +109,7 @@ How much of each class a target can **enforce natively**. 🟢 full · 🟡 part
 | API9 · Improper Inventory Management | 🔴 | 🔴 | 🟡 |
 | API10 · Unsafe Consumption of APIs | 🟡 | 🟡 | 🟡 |
 
-Only these three targets are independently **measured** today; Kong, Coraza, NGINX, Envoy and OpenAppSec compile the same policy but aren't yet published with a per-class measurement (⚪). Cells like **🔴→🟢** are the same control stateless vs. with a JWT identity wired — ownership checks (BOLA/BFLA) need to know who the caller is, so a stateless WAF can't enforce them. A **🟡** means the target enforces most of the class natively, not all. Full per-field matrix (incl. the Writ-native injection / prompt-injection / audit classes): **[usewaf.com/coverage](https://usewaf.com/coverage)**.
+Only these three targets are independently **measured** today; Kong, Coraza, NGINX, Envoy and OpenAppSec compile the same policy but aren't yet published with a per-class measurement (⚪). Cells like **🔴→🟢** are the same control stateless vs. with a JWT identity wired — ownership checks (BOLA/BFLA) need to know who the caller is, so a stateless WAF can't enforce them. A **🟡** means the target enforces most of the class natively, not all. Full per-field matrix (incl. the x-security-native injection / prompt-injection / audit classes): **[usewaf.com/coverage](https://usewaf.com/coverage)**.
 
 ## Contents
 

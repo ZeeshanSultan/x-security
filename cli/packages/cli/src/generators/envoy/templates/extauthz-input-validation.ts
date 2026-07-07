@@ -9,7 +9,7 @@
  *     the allowlist.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import type { BranchEmitDeps } from './extauthz-rego-util.js';
 
 export interface InputValidationEndpoint {

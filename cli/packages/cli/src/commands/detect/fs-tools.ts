@@ -19,7 +19,7 @@ import type {
   ReadFileResult,
   DefinitionHit,
   ReferenceHit,
-} from '@writ/detect-core';
+} from '@x-security/detect-core';
 
 // The grep-hit shape AgentTools.grep returns. detect-core's tool-types declares
 // this locally (and the index re-exports a same-named-but-different GrepHit from

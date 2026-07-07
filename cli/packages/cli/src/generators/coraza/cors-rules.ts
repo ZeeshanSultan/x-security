@@ -33,8 +33,8 @@
  * 339xxx simultaneously for the same endpoint. Verified disjoint by inspection.
  */
 
-import type { EndpointIR } from '@writ/core';
-import type { Cors } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { Cors } from '@x-security/schema';
 import { CORAZA_GO_PROFILE, type CorazaEngineProfile } from './profiles.js';
 import { endpointHash, pathRegex } from './rules.js';
 
@@ -93,7 +93,7 @@ export function buildCorsRules(
   if (!cors || !Array.isArray(cors.allowedOrigins) || cors.allowedOrigins.length === 0) {
     return [];
   }
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const pathRx = pathRegex(endpoint.path);
   const term = chainTerm(profile);
   const slot = endpointHash(endpoint.method, endpoint.path) % 1000;
@@ -113,7 +113,7 @@ export function buildCorsRules(
           `(scoring_lib/attribution.py) maps the firing to cors-policy regardless\n` +
           `of audit-log format (libmodsec3 writes [id "339NNN"], not id:339NNN).`
       ),
-      `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${originId},phase:1,deny,status:403,msg:'Writ id:339 CORS origin not allowed',tag:'${esc(tag)}',tag:'writ-cors-policy',chain"`,
+      `SecRule REQUEST_FILENAME "@rx ${pathRx}" "id:${originId},phase:1,deny,status:403,msg:'x-security id:339 CORS origin not allowed',tag:'${esc(tag)}',tag:'x-security-cors-policy',chain"`,
       `  SecRule &REQUEST_HEADERS:Origin "@gt 0" "chain"`,
       `    SecRule REQUEST_HEADERS:Origin "!@rx ${esc(originRx)}"${term}`,
     ].join('\n')
@@ -133,7 +133,7 @@ export function buildCorsRules(
           `phase:1 — on OPTIONS, deny when Access-Control-Request-Method is set\n` +
           `and not in allowedMethods. msg carries 'id:332' for attribution.`
       ),
-      `SecRule REQUEST_METHOD "@streq OPTIONS" "id:${preflightMethodId},phase:1,deny,status:403,msg:'Writ id:332 CORS preflight method not allowed',tag:'${esc(tag)}',tag:'writ-cors-policy',chain"`,
+      `SecRule REQUEST_METHOD "@streq OPTIONS" "id:${preflightMethodId},phase:1,deny,status:403,msg:'x-security id:332 CORS preflight method not allowed',tag:'${esc(tag)}',tag:'x-security-cors-policy',chain"`,
       `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
       `    SecRule REQUEST_HEADERS:Access-Control-Request-Method "!@rx ^(${methodAlt})$"${term}`,
     ].join('\n')
@@ -157,7 +157,7 @@ export function buildCorsRules(
             `anything other than a comma-list of allowedHeaders (case-insensitive).\n` +
             `RE2-safe: no negative lookahead — match the allow form and negate.`
         ),
-        `SecRule REQUEST_METHOD "@streq OPTIONS" "id:${preflightHeadersId},phase:1,deny,status:403,msg:'Writ id:332 CORS preflight header not allowed',tag:'${esc(tag)}',tag:'writ-cors-policy',chain"`,
+        `SecRule REQUEST_METHOD "@streq OPTIONS" "id:${preflightHeadersId},phase:1,deny,status:403,msg:'x-security id:332 CORS preflight header not allowed',tag:'${esc(tag)}',tag:'x-security-cors-policy',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
         `    SecRule REQUEST_HEADERS:Access-Control-Request-Headers "!@rx ${esc(allowedListRx)}" "t:lowercase${term ? ',t:none' : ''}"`,
       ].join('\n')
@@ -166,7 +166,7 @@ export function buildCorsRules(
 
   // ---- 333xxx / 334xxx / 335xxx: response-side CORS header advertisements.
   // These phase:3 SecActions setenv the response header value so the
-  // upstream proxy (`add_header $sent_http_x_writ_*`) can mint the
+  // upstream proxy (`add_header $sent_http_x_x_security_*`) can mint the
   // actual `Access-Control-*` header. Coraza/ModSec has no native
   // response-header-write primitive; setenv is the established idiom.
   // msg carries 'id:333' / 'id:334' / 'id:335' for scorer attribution.
@@ -178,7 +178,7 @@ export function buildCorsRules(
           `CORS credentials advertisement for ${endpoint.method} ${endpoint.path}\n` +
             `phase:3 — setenv Access-Control-Allow-Credentials:true for upstream add_header.`
         ),
-        `SecAction "id:${id},phase:3,pass,nolog,msg:'Writ id:333 CORS credentials true',tag:'${esc(tag)}',tag:'writ-cors-policy',setenv:Access-Control-Allow-Credentials=true"`,
+        `SecAction "id:${id},phase:3,pass,nolog,msg:'x-security id:333 CORS credentials true',tag:'${esc(tag)}',tag:'x-security-cors-policy',setenv:Access-Control-Allow-Credentials=true"`,
       ].join('\n')
     );
   }
@@ -192,7 +192,7 @@ export function buildCorsRules(
           `CORS expose-headers advertisement for ${endpoint.method} ${endpoint.path}\n` +
             `phase:3 — setenv Access-Control-Expose-Headers:<list> for upstream add_header.`
         ),
-        `SecAction "id:${id},phase:3,pass,nolog,msg:'Writ id:334 CORS expose-headers',tag:'${esc(tag)}',tag:'writ-cors-policy',setenv:Access-Control-Expose-Headers=${esc(list)}"`,
+        `SecAction "id:${id},phase:3,pass,nolog,msg:'x-security id:334 CORS expose-headers',tag:'${esc(tag)}',tag:'x-security-cors-policy',setenv:Access-Control-Expose-Headers=${esc(list)}"`,
       ].join('\n')
     );
   }
@@ -205,7 +205,7 @@ export function buildCorsRules(
           `CORS max-age advertisement for ${endpoint.method} ${endpoint.path}\n` +
             `phase:3 — setenv Access-Control-Max-Age:<seconds> for upstream add_header.`
         ),
-        `SecAction "id:${id},phase:3,pass,nolog,msg:'Writ id:335 CORS max-age',tag:'${esc(tag)}',tag:'writ-cors-policy',setenv:Access-Control-Max-Age=${cors.maxAge}"`,
+        `SecAction "id:${id},phase:3,pass,nolog,msg:'x-security id:335 CORS max-age',tag:'${esc(tag)}',tag:'x-security-cors-policy',setenv:Access-Control-Max-Age=${cors.maxAge}"`,
       ].join('\n')
     );
   }

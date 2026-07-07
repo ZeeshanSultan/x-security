@@ -12,7 +12,7 @@
  * declared a policy.
  */
 
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 
 export interface SsrfPolicyWarning {
   method: string;

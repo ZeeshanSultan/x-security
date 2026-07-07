@@ -2,7 +2,7 @@
 //
 // Single source of truth for "how well does the aws-apigw compiler enforce
 // this v0.3 x-security field?" — consumed by `capabilities()` for the
-// @writ/core `Generator` contract (the CLI feasibility/report registry).
+// @x-security/core `Generator` contract (the CLI feasibility/report registry).
 //
 // D-1 (security product): every level here MUST mirror what the compiler
 // genuinely emits. The provenance comment on each entry names the emitter

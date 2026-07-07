@@ -40,7 +40,7 @@ import type {
   Authorization,
   AuthorizationRule,
   AuthorizationRuleValue,
-} from '@writ/schema';
+} from '@x-security/schema';
 
 export interface SyntheticRequest {
   method: string;

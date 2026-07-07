@@ -13,8 +13,8 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import type { EndpointIR } from '@writ/core';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { EndpointIR } from '@x-security/core';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 import { buildCorsRules } from '../../src/generators/coraza/cors-rules.ts';
 import {
@@ -70,7 +70,7 @@ describe('coraza C-3: CORS enforcement', () => {
     assert.match(joined, /CORS origin not allowed/);
     // Wildcard expansion: `*.trusted.io` becomes `.*\.trusted\.io`.
     assert.match(joined, /\.\*.*trusted/);
-    assert.match(joined, /writ-cors-policy/);
+    assert.match(joined, /x-security-cors-policy/);
   });
 
   it('emits id:332 preflight method check', () => {
@@ -136,7 +136,7 @@ describe('coraza C-2A: output sanitization (id:268)', () => {
     assert.match(joined, /phase:4/);
     assert.match(joined, /stack trace leak/);
     assert.match(joined, /Traceback/);
-    assert.match(joined, /writ-output-sanitization/);
+    assert.match(joined, /x-security-output-sanitization/);
   });
 
   it('emits id:268 for stripServerHeaders + genericMessages', () => {
@@ -197,7 +197,7 @@ describe('coraza C-2B: data-exposure PII filter (id:428)', () => {
     assert.match(joined, /access_token/);
     assert.match(joined, /ssn/);
     assert.doesNotMatch(joined, /"name"\\\\s/); // no rule for non-sensitive field
-    assert.match(joined, /writ-data-exposure/);
+    assert.match(joined, /x-security-data-exposure/);
   });
 
   it('recognizes camelCase sensitive names (creditCard, apiKey)', () => {
@@ -235,6 +235,6 @@ describe('coraza C-2B: data-exposure PII filter (id:428)', () => {
     assert.match(joined, /nationalId/);
     assert.match(joined, /dob/);
     assert.doesNotMatch(joined, /displayName/);
-    assert.match(joined, /writ-data-exposure/);
+    assert.match(joined, /x-security-data-exposure/);
   });
 });

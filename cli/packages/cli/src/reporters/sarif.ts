@@ -36,7 +36,7 @@ function buildLog(toolName: string, rules: SarifRule[], results: SarifResult[]):
         tool: {
           driver: {
             name: toolName,
-            informationUri: 'https://github.com/writ/writ',
+            informationUri: 'https://github.com/ZeeshanSultan/x-security',
             rules
           }
         },
@@ -74,7 +74,7 @@ export function driftToSarif(r: DriftReport, specPath: string): string {
       properties: { severity: i.severity }
     };
   });
-  return buildLog('writ-drift', Array.from(ruleSet.values()), results);
+  return buildLog('x-security-drift', Array.from(ruleSet.values()), results);
 }
 
 export function owaspToSarif(r: OwaspCoverageReport, specPath: string): string {
@@ -97,5 +97,5 @@ export function owaspToSarif(r: OwaspCoverageReport, specPath: string): string {
       }
     ]
   }));
-  return buildLog('writ-owasp', rules, results);
+  return buildLog('x-security-owasp', rules, results);
 }

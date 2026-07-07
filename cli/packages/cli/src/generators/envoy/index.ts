@@ -7,11 +7,11 @@
  *                      with typed_per_filter_config overrides, native filter
  *                      chain (jwt_authn → rbac → local_ratelimit → cors →
  *                      lua → router), and the upstream + JWKS clusters.
- *   - `writ.lua` Residual Lua. Only emitted when at least one endpoint
+ *   - `x-security.lua` Residual Lua. Only emitted when at least one endpoint
  *                      uses a field with no native filter equivalent
  *                      (request.contentType, maxBodySize, headerInjectionGuard,
  *                      duplicateParamPolicy, request.signature). Contains the
- *                      `-- writ:<METHOD>:<path>:*` sentinel markers the
+ *                      `-- xSecurity:<METHOD>:<path>:*` sentinel markers the
  *                      drift detector and verify reader key off.
  *
  * Field-coverage migration (wave-7 → wave-9):
@@ -25,7 +25,7 @@
  * headerInjectionGuard, signature, method-allowlist (405).
  */
 
-import type { ConfigArtifact, EndpointIR, Generator, SpecIR, CapabilityMatrix } from '@writ/core';
+import type { ConfigArtifact, EndpointIR, Generator, SpecIR, CapabilityMatrix } from '@x-security/core';
 import { buildEnvoyYaml, smallestBodyLimit } from './templates/envoy-yaml.js';
 import {
   buildEndpointBlock,
@@ -56,7 +56,7 @@ export interface EnvoyGenerator extends Generator {
 
 const VERSION = '0.3.0';
 const ENVOY_PATH = 'envoy.yaml';
-const LUA_PATH = 'writ.lua';
+const LUA_PATH = 'x-security.lua';
 const OPA_POLICY_PATH = 'opa/policy.rego';
 const RESPONSE_SCHEMA_PATH = 'ext_proc/response-schema.json';
 
@@ -81,7 +81,7 @@ function buildMethodAllowlist(endpoints: EndpointIR[]): MethodAllowlistEntry[] {
 /**
  * Build the residual Lua source. Returns null when no endpoint declares a
  * Lua-requiring field — in that case the generator omits the Lua filter and
- * the `writ.lua` artifact entirely.
+ * the `x-security.lua` artifact entirely.
  */
 function buildLuaSource(spec: SpecIR): string | null {
   const anyLua = spec.endpoints.some(endpointNeedsLua);
@@ -171,7 +171,7 @@ export const envoyGenerator: EnvoyGenerator = {
     // response.schema / response.stripUnknownFields → ext_proc scaffolding.
     // The filter + cluster are emitted into envoy.yaml; this JSON is the typed
     // per-route constraint contract the operator-supplied processor consumes.
-    // Status is override-only: Writ does not ship the processor, so this
+    // Status is override-only: x-security does not ship the processor, so this
     // config does not enforce on its own (Rule D-1 — no false 'full').
     if (needsExtProc(spec)) {
       const respSchema = buildResponseSchemaConfig(
@@ -259,7 +259,7 @@ export const envoyGenerator: EnvoyGenerator = {
         // ext_proc scaffolding: envoy.filters.http.ext_proc + processing
         // cluster + ext_proc/response-schema.json (typed per-field constraints,
         // stripUnknownFields). The body IS delivered to a processor that does a
-        // real JSON.parse — NO regex over raw bytes. But Writ does not
+        // real JSON.parse — NO regex over raw bytes. But x-security does not
         // ship the processor (the opa_grpc sidecar is ext_authz-only; ext_proc
         // is an unmerged upstream PR on a different port). Enforcement depends
         // on an operator-supplied gRPC ExternalProcessor, so the honest status
@@ -274,7 +274,7 @@ export const envoyGenerator: EnvoyGenerator = {
         // carry a per-route `forbidArrayRoot` flag the operator processor reads).
         // Envoy ships no native response-body shape inspector and a Lua regex for
         // a leading '[' over raw bytes is the Rule D-1 masked-quality shortcut.
-        // Writ does NOT ship the processor → override-only, never full.
+        // x-security does NOT ship the processor → override-only, never full.
         'response.forbidArrayRoot':            'override-only',
         'response.headers.csp':                'full',         // wave-22: per-route response_headers_to_add
         'response.headers.hsts':               'full',
@@ -289,7 +289,7 @@ export const envoyGenerator: EnvoyGenerator = {
         // cannot evaluate per-operation/per-resolver authorization. The only
         // honest path is the same ext_proc handoff as response.schema — stream
         // the GraphQL POST body to an operator-supplied GraphQL-aware processor
-        // that parses the query and enforces authz. Writ ships NO such
+        // that parses the query and enforces authz. x-security ships NO such
         // processor, so this is override-only, NEVER full. (Schema pins this
         // override-only on every target.) No scaffolding is emitted this wave —
         // the matrix is honest so --strict-fidelity/--feasible flag the gap.

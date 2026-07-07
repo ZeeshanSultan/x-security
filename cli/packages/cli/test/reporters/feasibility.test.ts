@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { evaluateFeasibility, type FeasibilityContext } from '../../src/reporters/feasibility.js';
-import type { XSecurityPolicy } from '@writ/schema';
+import type { XSecurityPolicy } from '@x-security/schema';
 
 // Build a FeasibilityContext from literal per-target matrices, bypassing
 // generator loading so we can pin the rollup/normalization semantics directly.

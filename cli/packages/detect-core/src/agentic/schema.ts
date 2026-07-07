@@ -10,7 +10,7 @@ import { z } from 'zod';
 import type {
   XSecurityPolicy,
   RuleRef,
-} from '@writ/schema';
+} from '@x-security/schema';
 
 export const ProfileNameSchema = z.enum([
   'auth-endpoint',

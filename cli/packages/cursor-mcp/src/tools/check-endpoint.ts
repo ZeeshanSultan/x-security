@@ -1,4 +1,4 @@
-// Look up an existing endpoint analysis from the Writ API. Requires an
+// Look up an existing endpoint analysis from the x-security API. Requires an
 // API key — if neither the input nor the WRIT_API_KEY env var carries
 // one, the tool returns a soft hint instead of failing, so zero-config installs
 // still work for the local-only tools.
@@ -59,10 +59,10 @@ export async function checkEndpoint(
   input: CheckEndpointInput,
   fetcher: Fetcher = defaultFetcher
 ): Promise<CheckEndpointResult> {
-  const apiKey = input.apiKey ?? process.env.WRIT_API_KEY;
+  const apiKey = input.apiKey ?? process.env.X_SECURITY_API_KEY ?? process.env.WRIT_API_KEY;
   // apiUrl is pinned to env / default (Slice 5 Medium). Caller-supplied
   // override removed to prevent token capture via attacker-controlled URL.
-  const apiUrl = process.env.WRIT_API_URL ?? DEFAULT_API_URL;
+  const apiUrl = process.env.X_SECURITY_API_URL ?? process.env.WRIT_API_URL ?? DEFAULT_API_URL;
 
   if (!apiKey) {
     return {
@@ -87,7 +87,7 @@ export async function checkEndpoint(
     const res = await fetcher(url, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        'User-Agent': '@writ/cursor-mcp/0.1.0',
+        'User-Agent': '@x-security/cursor-mcp/0.1.0',
         Accept: 'application/json'
       }
     });
@@ -98,9 +98,9 @@ export async function checkEndpoint(
 }
 
 export const checkEndpointTool: McpTool = {
-  name: 'writ/check-endpoint',
+  name: 'x-security/check-endpoint',
   description:
-    'Look up an endpoint in the Writ scan history. Returns existing analysis ' +
+    'Look up an endpoint in the x-security scan history. Returns existing analysis ' +
     '(annotations, OWASP coverage, prior findings) if WRIT_API_KEY is configured.',
   inputSchema,
   handler: async (raw) => {

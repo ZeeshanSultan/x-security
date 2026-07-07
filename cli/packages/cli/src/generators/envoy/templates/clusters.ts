@@ -8,7 +8,7 @@
 import type { JwtProvider } from './filters/jwt_authn.js';
 import { urlHostPort, yamlString } from './yaml-util.js';
 
-export const UPSTREAM_CLUSTER = 'writ_upstream';
+export const UPSTREAM_CLUSTER = 'x_security_upstream';
 export const JWKS_CLUSTER = 'jwks_cluster';
 
 export function emitUpstreamCluster(lines: string[], upstreamHost: string, upstreamPort: number): void {

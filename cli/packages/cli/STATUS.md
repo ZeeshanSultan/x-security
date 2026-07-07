@@ -1,4 +1,4 @@
-# @writ/cli — STATUS
+# @x-security/cli — STATUS
 
 CLI binary, command dispatch, drift detector, Docker test harness, reporters.
 Generators (`src/generators/*`) are owned by other agents and only consumed here.
@@ -14,10 +14,10 @@ Generators (`src/generators/*`) are owned by other agents and only consumed here
 | `report --coverage [--format <fmt>] <spec>` | full | R2.11 | Same formats (SARIF restricted to `--owasp`) |
 | `diff --target <t> [--format <fmt>] <old> <new>` | full | R2.12 | Uses `jsondiffpatch` on each generated artifact; output `human` or `json` |
 | `init <spec> [--defaults] [--target <t>] [--dry-run]` | full | R2.15 | Adds empty `x-security: {}` blocks (or a baseline policy with `--defaults`) to every operation that lacks one |
-| `verify-bundle <tarball> [--public-key <pem-path>]` | full | R2.17 | Verifies a signed release bundle: extracts the tarball, recomputes sha256 of each file in `manifest.json` (exit 2 on mismatch), then checks the Ed25519 detached signature in `writ.sig` against the manifest bytes using `@writ/crypto` (exit 3 on mismatch). Defaults to an embedded release pubkey (placeholder until production substitution). Prints the public-key fingerprint (first 16 hex of sha256(PEM)) on success. |
+| `verify-bundle <tarball> [--public-key <pem-path>]` | full | R2.17 | Verifies a signed release bundle: extracts the tarball, recomputes sha256 of each file in `manifest.json` (exit 2 on mismatch), then checks the Ed25519 detached signature in `writ.sig` against the manifest bytes using `@x-security/crypto` (exit 3 on mismatch). Defaults to an embedded release pubkey (placeholder until production substitution). Prints the public-key fingerprint (first 16 hex of sha256(PEM)) on success. |
 
 Variable resolution (R2.10) is plumbed through a chain assembled by
-`buildResolverChain` in `@writ/core/resolvers`. The chain always
+`buildResolverChain` in `@x-security/core/resolvers`. The chain always
 includes `EnvResolver` and opts into remote backends via CLI flags:
 
 - `--vault` — enables `VaultResolver` (HashiCorp Vault, KV v1 + v2). Credentials
@@ -42,7 +42,7 @@ deduped, and resolved concurrently per spec load.
 
 `--strict` is the default for `generate`; `report` / `validate` / `diff` run
 in lenient mode so partially-annotated specs still work. The legacy
-in-memory `StubVaultResolver` is preserved in `@writ/core` for tests.
+in-memory `StubVaultResolver` is preserved in `@x-security/core` for tests.
 
 ## Files
 
@@ -102,7 +102,7 @@ which renders to JUnit XML for CI consumption.
 ## Running tests
 
 ```bash
-pnpm --filter @writ/cli test
+pnpm --filter @x-security/cli test
 ```
 
 Runs all unit tests. **Does not require Docker.** As of writing: 75/75 pass.
@@ -145,7 +145,7 @@ force-removed before re-creation as a belt-and-braces guard.
 ## Smoke check
 
 ```bash
-pnpm --filter @writ/cli build
+pnpm --filter @x-security/cli build
 node packages/cli/dist/bin/lazy.js report --owasp fixtures/specs/example.yaml
 ```
 

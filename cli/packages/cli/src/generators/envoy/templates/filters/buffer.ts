@@ -8,7 +8,7 @@
  * max_request_bytes.
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import { parseByteSize } from '../../../coraza/rules.js';
 
 /** Compute the smallest declared maxBodySize across endpoints (or null). */

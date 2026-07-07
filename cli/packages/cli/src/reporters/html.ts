@@ -1,7 +1,7 @@
 // Minimal self-contained HTML reporter for OWASP coverage. Designed for
 // dropping into a static-site / artifact viewer — no external assets.
 
-import type { OwaspId } from '@writ/schema';
+import type { OwaspId } from '@x-security/schema';
 import type {
   AnnotationCoverageReport,
   OwaspCoverageReport,

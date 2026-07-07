@@ -56,28 +56,28 @@ export interface WrapperScript {
 export function loadWrapperScripts(): WrapperScript[] {
   return [
     {
-      filename: 'writ-resolve.sh',
-      content: read('writ-resolve.sh'),
+      filename: 'x-security-resolve.sh',
+      content: read('x-security-resolve.sh'),
       format: 'text',
     },
     {
-      filename: 'writ-refresh.sh',
-      content: read('writ-refresh.sh'),
+      filename: 'x-security-refresh.sh',
+      content: read('x-security-refresh.sh'),
       format: 'text',
     },
     {
-      filename: 'writ-refresh.service',
-      content: read('writ-refresh.service'),
+      filename: 'x-security-refresh.service',
+      content: read('x-security-refresh.service'),
       format: 'conf',
     },
     {
-      filename: 'writ-refresh.timer',
-      content: read('writ-refresh.timer'),
+      filename: 'x-security-refresh.timer',
+      content: read('x-security-refresh.timer'),
       format: 'conf',
     },
     {
-      filename: 'writ.logrotate',
-      content: read('writ.logrotate'),
+      filename: 'x-security.logrotate',
+      content: read('x-security.logrotate'),
       format: 'conf',
     },
     {

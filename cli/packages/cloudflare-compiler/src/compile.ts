@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
-import type { EndpointIR, SpecIR } from '@writ/core';
+import type { EndpointIR, SpecIR } from '@x-security/core';
 import type {
   Authentication,
   Cors,
   IpPolicy,
   RequestPolicy,
   XSecurityPolicy
-} from '@writ/schema';
+} from '@x-security/schema';
 import {
   endpointHash,
   endpointId,
@@ -67,9 +67,9 @@ export function compile(spec: SpecIR, options: CompileOptions = {}): CompileResu
   const schemaVersion = options.schemaVersion ?? SCHEMA_VERSION_DEFAULT;
   const version = options.version ?? 1;
   const defaultPrefix =
-    mode === 'enforce' ? 'writ'
-    : mode === 'shadow' ? 'writ-shadow'
-    : 'writ-observe';
+    mode === 'enforce' ? 'x-security'
+    : mode === 'shadow' ? 'x-security-shadow'
+    : 'x-security-observe';
   const prefix = options.namePrefix ?? defaultPrefix;
   const planTier = options.planTier ?? 'free';
   const managedRulesAllowed = planTier === 'business' || planTier === 'enterprise';
@@ -154,28 +154,28 @@ export function compile(spec: SpecIR, options: CompileOptions = {}): CompileResu
   const rulesets: CompiledRuleset[] = [];
   pushRulesetIfNonEmpty(rulesets, {
     name: `${prefix}-custom-v${version}`,
-    description: 'Writ Custom Rules (auth/cors/body/idor)',
+    description: 'x-security Custom Rules (auth/cors/body/idor)',
     kind: 'zone',
     phase: 'http_request_firewall_custom',
     rules: customRules
   });
   pushRulesetIfNonEmpty(rulesets, {
     name: `${prefix}-ratelimit-v${version}`,
-    description: 'Writ Rate Limit Rules',
+    description: 'x-security Rate Limit Rules',
     kind: 'zone',
     phase: 'http_ratelimit',
     rules: rateLimitRules
   });
   pushRulesetIfNonEmpty(rulesets, {
     name: `${prefix}-req-transform-v${version}`,
-    description: 'Writ Request Transform Rules',
+    description: 'x-security Request Transform Rules',
     kind: 'zone',
     phase: 'http_request_late_transform',
     rules: reqTransformRules
   });
   pushRulesetIfNonEmpty(rulesets, {
     name: `${prefix}-resp-transform-v${version}`,
-    description: 'Writ Response Header Transform Rules',
+    description: 'x-security Response Header Transform Rules',
     kind: 'zone',
     phase: 'http_response_headers_transform',
     rules: respTransformRules
@@ -453,15 +453,15 @@ function buildRule(b: RuleBuilder, args: BuildRuleArgs): CompiledRule {
   const isNonBlocking = args.action === 'rewrite';
   const forceLog = args.forceLog === true || (isObserveMode(b.mode) && !isNonBlocking);
   const action: RuleAction = forceLog ? 'log' : args.action;
-  const id = `writ-${modePrefix(b.mode)}-${b.ehash}-${args.kind}`;
+  const id = `x-security-${modePrefix(b.mode)}-${b.ehash}-${args.kind}`;
   const rule: CompiledRule = {
     id,
-    description: `[writ] ${args.description}`,
+    description: `[x-security] ${args.description}`,
     expression: args.expression,
     action,
     enabled: true,
     mode: b.mode,
-    writ: {
+    xSecurity: {
       endpoint_id: b.eid,
       rule_type: args.kind,
       source_field: args.sourceField,

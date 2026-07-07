@@ -3,7 +3,7 @@
 // runtime bundler) but for the FULL CLI surface:
 //
 //   npm-dist/bin/lazy.mjs   ← esbuild bundle of src/bin/npm-entry.ts
-//                             (all @writ/* workspace deps inlined;
+//                             (all @x-security/* workspace deps inlined;
 //                              registry deps left external — they ship as
 //                              real npm dependencies)
 //   npm-dist/bin/scripts/   ← firewall wrapper assets, resolved by the
@@ -16,7 +16,7 @@
 // The normal dist build (tsc → dist/bin/lazy.js) is untouched; e2e tests and
 // scripts/build-plugins.sh keep consuming it as-is. Publish flow:
 //
-//   pnpm --filter @writ/cli build   # workspace deps must be built
+//   pnpm --filter @x-security/cli build   # workspace deps must be built
 //   node scripts/bundle-npm.mjs
 //   cd npm-dist && npm publish
 
@@ -39,13 +39,13 @@ const manifest = JSON.parse(readFileSync(join(PKG, 'package.json'), 'utf8'));
 // ship as normal npm dependencies (dockerode/ssh2 carry dynamic requires that
 // don't survive bundling, and externals keep the artifact small).
 const externalDeps = Object.fromEntries(
-  Object.entries(manifest.dependencies).filter(([name]) => !name.startsWith('@writ/')),
+  Object.entries(manifest.dependencies).filter(([name]) => !name.startsWith('@x-security/')),
 );
 
 // Same LLM-free guard as scripts/bundle-runtime.mjs: the published CLI must
 // never pull in the LLM layer or a provider SDK (Rule G-2).
 const BANNED_IMPORTS = [
-  /^@writ\/llm-agent(\/|$)/,
+  /^@x-security\/llm-agent(\/|$)/,
   /^openai(\/|$)/,
   /^@anthropic-ai\/sdk(\/|$)/,
   /^@google\/.*genai/i,

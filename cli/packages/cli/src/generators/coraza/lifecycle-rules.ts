@@ -23,7 +23,7 @@
  * upstream hookup.
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import { CORAZA_GO_PROFILE, type CorazaEngineProfile } from './profiles.js';
 import { endpointHash } from './rules.js';
 
@@ -45,7 +45,7 @@ export function buildLifecycleRules(
 ): string[] {
   const policy = endpoint.policy;
   const rules: string[] = [];
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const slot = endpointHash(endpoint.method, endpoint.path) % 1000;
 
   if (policy.deprecated === true) {
@@ -55,9 +55,9 @@ export function buildLifecycleRules(
         header(
           `lifecycle: endpoint deprecated for ${endpoint.method} ${endpoint.path}\n` +
             `phase:1 — deny with HTTP 410 Gone per RFC 8594 deprecation disposition.\n` +
-            `msg carries 'id:269' substring for scorer attribution (writ-lifecycle-410).`
+            `msg carries 'id:269' substring for scorer attribution (x-security-lifecycle-410).`
         ),
-        `SecAction "id:${id},phase:1,deny,status:410,msg:'Writ id:269 endpoint deprecated',tag:'${esc(tag)}',tag:'writ-lifecycle-410'"`,
+        `SecAction "id:${id},phase:1,deny,status:410,msg:'x-security id:269 endpoint deprecated',tag:'${esc(tag)}',tag:'x-security-lifecycle-410'"`,
       ].join('\n')
     );
   }
@@ -69,9 +69,9 @@ export function buildLifecycleRules(
         header(
           `lifecycle: Sunset header for ${endpoint.method} ${endpoint.path}\n` +
             `phase:3 — setenv:Sunset=<iso> so the upstream proxy can add_header it.\n` +
-            `msg carries 'id:270' substring (writ-lifecycle-sunset).`
+            `msg carries 'id:270' substring (x-security-lifecycle-sunset).`
         ),
-        `SecAction "id:${id},phase:3,pass,nolog,msg:'Writ id:270 sunset header',tag:'${esc(tag)}',tag:'writ-lifecycle-sunset',setenv:Sunset=${esc(policy.sunsetDate)}"`,
+        `SecAction "id:${id},phase:3,pass,nolog,msg:'x-security id:270 sunset header',tag:'${esc(tag)}',tag:'x-security-lifecycle-sunset',setenv:Sunset=${esc(policy.sunsetDate)}"`,
       ].join('\n')
     );
   }
@@ -85,9 +85,9 @@ export function buildLifecycleRules(
         header(
           `lifecycle: Link successor-version for ${endpoint.method} ${endpoint.path}\n` +
             `phase:3 — setenv:Link=<replacement>; rel="successor-version" per RFC 8594.\n` +
-            `msg carries 'id:271' substring (writ-lifecycle-replacement).`
+            `msg carries 'id:271' substring (x-security-lifecycle-replacement).`
         ),
-        `SecAction "id:${id},phase:3,pass,nolog,msg:'Writ id:271 replacement endpoint',tag:'${esc(tag)}',tag:'writ-lifecycle-replacement',setenv:Link=${esc(linkValue)}"`,
+        `SecAction "id:${id},phase:3,pass,nolog,msg:'x-security id:271 replacement endpoint',tag:'${esc(tag)}',tag:'x-security-lifecycle-replacement',setenv:Link=${esc(linkValue)}"`,
       ].join('\n')
     );
   }

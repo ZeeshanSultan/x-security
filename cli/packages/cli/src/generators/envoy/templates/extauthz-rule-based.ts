@@ -14,8 +14,8 @@
  *     not a RuleRef) only the bola fallback branch is emitted.
  */
 
-import type { EndpointIR, SpecIR } from '@writ/core';
-import type { AuthorizationRule } from '@writ/schema';
+import type { EndpointIR, SpecIR } from '@x-security/core';
+import type { AuthorizationRule } from '@x-security/schema';
 import {
   ALLOW_LITERAL,
   paramSplitIndex,

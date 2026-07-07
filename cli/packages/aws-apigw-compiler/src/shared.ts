@@ -55,7 +55,7 @@ export function pushRule(b: RuleEmitContext, args: PushRuleArgs): void {
       MetricName: name.replace(/[^A-Za-z0-9]/g, '').slice(0, 128)
     },
     mode: b.mode,
-    writ: {
+    xSecurity: {
       endpoint_id: b.eid,
       rule_type: args.kind,
       source_field: args.sourceField,

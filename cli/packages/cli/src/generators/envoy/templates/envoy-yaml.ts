@@ -44,7 +44,7 @@
  * Rule G-1 500-line cap. This module is now pure orchestration.
  */
 
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import { UPSTREAM_CLUSTER, emitJwksCluster, emitUpstreamCluster } from './clusters.js';
 import {
   collectBflaAdmin,
@@ -100,8 +100,8 @@ export function buildEnvoyYaml(opts: BuildEnvoyYamlOptions): string {
   const lines: string[] = [];
 
   // ── Header ─────────────────────────────────────────────────────────────
-  lines.push('# Writ → Envoy — auto-generated. DO NOT EDIT BY HAND.');
-  lines.push(`# generator: writ-envoy v${VERSION}`);
+  lines.push('# x-security → Envoy — auto-generated. DO NOT EDIT BY HAND.');
+  lines.push(`# generator: x-security-envoy v${VERSION}`);
   lines.push(`# source: ${spec.info.title} ${spec.info.version}`);
   lines.push('');
 
@@ -137,7 +137,7 @@ export function buildEnvoyYaml(opts: BuildEnvoyYamlOptions): string {
 
   lines.push('static_resources:');
   lines.push('  listeners:');
-  lines.push('    - name: writ_listener');
+  lines.push('    - name: x_security_listener');
   lines.push('      address:');
   lines.push(`        socket_address: { address: 0.0.0.0, port_value: ${listenerPort} }`);
   lines.push('      filter_chains:');
@@ -145,7 +145,7 @@ export function buildEnvoyYaml(opts: BuildEnvoyYamlOptions): string {
   lines.push('            - name: envoy.filters.network.http_connection_manager');
   lines.push('              typed_config:');
   lines.push('                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager');
-  lines.push('                stat_prefix: writ_hcm');
+  lines.push('                stat_prefix: x_security_hcm');
   // NOTE: request body size cap is enforced by the buffer HTTP filter
   // (envoy.filters.http.buffer) emitted first in the http_filters chain.
   // It is NOT a valid HCM-scoped field on Envoy v1.28+.
@@ -155,9 +155,9 @@ export function buildEnvoyYaml(opts: BuildEnvoyYamlOptions): string {
   // so the golden fixture does not drift.
   emitAccessLog(lines, spec);
   lines.push('                route_config:');
-  lines.push('                  name: writ_routes');
+  lines.push('                  name: x_security_routes');
   lines.push('                  virtual_hosts:');
-  lines.push('                    - name: writ_vhost');
+  lines.push('                    - name: x_security_vhost');
   lines.push('                      domains: ["*"]');
   lines.push('                      routes:');
 

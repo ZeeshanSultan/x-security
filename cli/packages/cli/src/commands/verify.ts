@@ -11,6 +11,8 @@ export interface VerifyCliOptions {
   engine?: string;
   format?: string;
   threshold?: number;
+  /** Abort outbound gateway HTTP requests after this many ms. Unset = no timeout. */
+  timeoutMs?: number;
 }
 
 export interface VerifyCliResult {
@@ -58,6 +60,7 @@ export async function runVerifyCli(specPath: string, opts: VerifyCliOptions): Pr
   };
   if (engine) runOpts.engine = engine;
   if (opts.threshold !== undefined) runOpts.thresholdPct = opts.threshold;
+  if (opts.timeoutMs !== undefined) runOpts.timeoutMs = opts.timeoutMs;
 
   const r: VerifyRunResult = await runVerify(specPath, runOpts);
   return { rendered: r.rendered, exitCode: r.exitCode, passed: r.report.passed };

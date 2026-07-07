@@ -8,11 +8,11 @@
  *     - `schemaValidation[]` entries, matched by `binding.method` + `binding.path`.
  *       Diff `schemas.request` (contentType, maxBodySizeBytes, properties, required).
  *     - `practices[]`, matched by `name`. The interesting practice is
- *       `writ-rate-limit` — compare its rate-limit rules by URI.
+ *       `x-security-rate-limit` — compare its rate-limit rules by URI.
  */
 import { readFile } from 'node:fs/promises';
 import yaml from 'js-yaml';
-import type { SpecIR } from '@writ/core';
+import type { SpecIR } from '@x-security/core';
 import type { DriftIssue, DriftReport, DriftSeverity } from '../reporters/types.js';
 import { openappsecGenerator } from '../generators/openappsec/index.js';
 import type {
@@ -150,7 +150,7 @@ function diffRateLimitPractice(
   if (!actual) {
     issues.push({
       endpoint: '*',
-      field: 'practices.writ-rate-limit',
+      field: 'practices.x-security-rate-limit',
       severity: 'CRITICAL',
       expected: 'present',
       actual: 'missing',
@@ -217,12 +217,12 @@ export async function detectOpenAppSecDrift(
 
   const issues: DriftIssue[] = [];
 
-  // schemaValidation diff — moved under `writ-extended` in wave-7 because
+  // schemaValidation diff — moved under `x-security-extended` in wave-7 because
   // open-appsec's flat policy format does not consume top-level `schemaValidation:`.
   const expSV: OpenAppSecSchemaValidation[] =
-    expectedDoc['writ-extended']?.['schema-validation'] ?? [];
+    expectedDoc['x-security-extended']?.['schema-validation'] ?? [];
   const actSV: OpenAppSecSchemaValidation[] =
-    actualDoc['writ-extended']?.['schema-validation'] ?? [];
+    actualDoc['x-security-extended']?.['schema-validation'] ?? [];
   const actByKey = new Map(actSV.map((s) => [svKey(s), s]));
   for (const e of expSV) {
     const key = svKey(e);
@@ -255,8 +255,8 @@ export async function detectOpenAppSecDrift(
   // practices diff (only the rate-limit practice is interesting)
   const expPractices = expectedDoc.practices ?? [];
   const actPractices = actualDoc.practices ?? [];
-  const expRL = expPractices.find((p) => p.name === 'writ-rate-limit');
-  const actRL = actPractices.find((p) => p.name === 'writ-rate-limit');
+  const expRL = expPractices.find((p) => p.name === 'x-security-rate-limit');
+  const actRL = actPractices.find((p) => p.name === 'x-security-rate-limit');
   issues.push(...diffRateLimitPractice(expRL, actRL));
 
   return {

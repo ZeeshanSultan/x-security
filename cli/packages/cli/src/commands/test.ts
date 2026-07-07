@@ -4,7 +4,7 @@
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { loadSpec, buildResolverChain } from '@writ/core';
+import { loadSpec, buildResolverChain } from '@x-security/core';
 import { isKnownTarget, loadGenerator } from '../registry.js';
 import { buildComposePlan, bringUp, validateUpstreamUrl } from '../test-harness/docker-compose.js';
 import { runAllAssertions } from '../test-harness/assertions.js';
@@ -25,6 +25,8 @@ export interface TestOptions {
   vault?: boolean;
   awsSecrets?: boolean;
   vaultKvVersion?: 1 | 2;
+  /** Abort outbound HTTP probe/admin requests after this many ms. Unset = no timeout. */
+  timeoutMs?: number;
 }
 
 export interface TestRunResult {
@@ -71,7 +73,7 @@ export async function runTest(specPath: string, opts: TestOptions): Promise<Test
   const artifacts = await gen.generate(spec);
 
   // Write artifacts to a temp dir for mounting.
-  const tmpDir = path.join(os.tmpdir(), `writ-${target}-${Date.now()}-${process.pid}`);
+  const tmpDir = path.join(os.tmpdir(), `x-security-${target}-${Date.now()}-${process.pid}`);
   await mkdir(tmpDir, { recursive: true });
   for (const a of artifacts) {
     const full = path.join(tmpDir, a.path);
@@ -107,20 +109,20 @@ export async function runTest(specPath: string, opts: TestOptions): Promise<Test
     await handle.ready();
     // Post-boot load-coverage gate (Workstream C / Open-8). Catches the
     // wave-3 §3 class of bug where the gateway is healthy but loaded ZERO
-    // of the artifacts Writ wrote. Coverage failures here invalidate
+    // of the artifacts x-security wrote. Coverage failures here invalidate
     // every traffic-based assertion that follows.
-    const coverageOk = await verifyCoverageOrSkip(specPath, target, handle);
+    const coverageOk = await verifyCoverageOrSkip(specPath, target, handle, opts.timeoutMs);
     if (coverageOk === false) {
       cases.push({
         endpoint: '(gateway)',
         rule: 'load-coverage',
         verdict: 'FAIL',
-        message: 'Writ-emitted artifacts are not loaded by the gateway (lazy verify reported <90%). Aborting traffic phase — the results would be unattributable.',
+        message: 'x-security-emitted artifacts are not loaded by the gateway (xsecurity verify reported <90%). Aborting traffic phase — the results would be unattributable.',
         durationMs: 0
       });
     } else {
       for (const e of spec.endpoints) {
-        cases.push(...(await runAllAssertions(handle.gatewayUrl, e)));
+        cases.push(...(await runAllAssertions(handle.gatewayUrl, e, opts.timeoutMs)));
       }
     }
   } finally {
@@ -153,21 +155,24 @@ export async function runTest(specPath: string, opts: TestOptions): Promise<Test
 async function verifyCoverageOrSkip(
   specPath: string,
   target: 'kong' | 'coraza' | 'bunkerweb' | 'openappsec',
-  handle: { gatewayUrl: string; gatewayContainerName: string }
+  handle: { gatewayUrl: string; gatewayContainerName: string },
+  timeoutMs?: number
 ): Promise<boolean | null> {
+  const timeoutOpt = timeoutMs !== undefined ? { timeoutMs } : {};
   try {
     if (target === 'kong') {
       // Kong admin port convention: proxy on +0, admin on +1 — matches
       // buildComposePlan's exposure. Use the gateway URL and swap port.
       const adminUrl = handle.gatewayUrl.replace(/:(\d+)$/, (_, p) => `:${Number(p) + 1}`);
-      const r = await runVerify(specPath, { target: 'kong', gateway: adminUrl });
+      const r = await runVerify(specPath, { target: 'kong', gateway: adminUrl, ...timeoutOpt });
       return r.exitCode === 0;
     }
     if (target === 'coraza') {
       const r = await runVerify(specPath, {
         target: 'coraza',
         engine: 'modsec-nginx',
-        gateway: `docker:${handle.gatewayContainerName}`
+        gateway: `docker:${handle.gatewayContainerName}`,
+        ...timeoutOpt
       });
       return r.exitCode === 0;
     }
@@ -177,14 +182,16 @@ async function verifyCoverageOrSkip(
       // here — it isn't a hard gate.
       const r = await runVerify(specPath, {
         target: 'bunkerweb',
-        gateway: `docker:${handle.gatewayContainerName}`
+        gateway: `docker:${handle.gatewayContainerName}`,
+        ...timeoutOpt
       });
       return r.exitCode === 0;
     }
     if (target === 'openappsec') {
       const r = await runVerify(specPath, {
         target: 'openappsec',
-        gateway: `docker:${handle.gatewayContainerName}`
+        gateway: `docker:${handle.gatewayContainerName}`,
+        ...timeoutOpt
       });
       return r.exitCode === 0;
     }

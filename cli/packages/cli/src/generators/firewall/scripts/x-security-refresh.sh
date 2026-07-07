@@ -1,15 +1,15 @@
 #!/bin/sh
-# writ-refresh.sh — periodic re-resolution + apply for Writ rules.
+# x-security-refresh.sh — periodic re-resolution + apply for XSecurity rules.
 #
 # Designed to run from a systemd timer (every 5 min by default). On each
 # tick:
-#   1. Resolve /etc/writ/rules.template via writ-resolve.sh
-#      into /etc/writ/rules.current.
-#   2. Diff against /etc/writ/rules.applied — if unchanged, no-op.
+#   1. Resolve /etc/x-security/rules.template via x-security-resolve.sh
+#      into /etc/x-security/rules.current.
+#   2. Diff against /etc/x-security/rules.applied — if unchanged, no-op.
 #   3. If changed, apply via `iptables-restore` and snapshot
-#      /etc/writ/rules.applied.
+#      /etc/x-security/rules.applied.
 #   4. Flap detection: if the resolved output changes more than
-#      $WRIT_FLAP_MAX times within $WRIT_FLAP_WINDOW seconds,
+#      $X_SECURITY_FLAP_MAX times within $X_SECURITY_FLAP_WINDOW seconds,
 #      hold the previous rules (do NOT apply the new ones) and warn.
 #      This protects against DNS instability (round-robin churn,
 #      misconfigured TTLs, or active DNS attacks).
@@ -21,7 +21,7 @@
 
 set -eu
 
-CONF_DIR="${WRIT_CONF_DIR:-/etc/writ}"
+CONF_DIR="${X_SECURITY_CONF_DIR:-/etc/x-security}"
 TEMPLATE="${CONF_DIR}/rules.template"
 TEMPLATE6="${CONF_DIR}/rules6.template"
 CURRENT="${CONF_DIR}/rules.current"
@@ -29,13 +29,13 @@ CURRENT6="${CONF_DIR}/rules6.current"
 APPLIED="${CONF_DIR}/rules.applied"
 APPLIED6="${CONF_DIR}/rules6.applied"
 FLAP_LOG="${CONF_DIR}/.flap-history"
-LOG_FILE="${WRIT_LOG:-/var/log/writ-resolve.log}"
+LOG_FILE="${X_SECURITY_LOG:-/var/log/x-security-resolve.log}"
 
 # Flap thresholds.
-FLAP_MAX="${WRIT_FLAP_MAX:-5}"
-FLAP_WINDOW="${WRIT_FLAP_WINDOW:-900}"  # 15 minutes default
+FLAP_MAX="${X_SECURITY_FLAP_MAX:-5}"
+FLAP_WINDOW="${X_SECURITY_FLAP_WINDOW:-900}"  # 15 minutes default
 
-RESOLVER="${WRIT_RESOLVER:-/usr/local/sbin/writ-resolve.sh}"
+RESOLVER="${X_SECURITY_RESOLVER:-/usr/local/sbin/x-security-resolve.sh}"
 IPTABLES_RESTORE="${IPTABLES_RESTORE:-/sbin/iptables-restore}"
 IP6TABLES_RESTORE="${IP6TABLES_RESTORE:-/sbin/ip6tables-restore}"
 

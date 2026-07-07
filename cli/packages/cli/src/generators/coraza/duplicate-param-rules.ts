@@ -14,7 +14,7 @@
  * ID range: 275000..275999 (hash-keyed `(endpoint, field)`).
  */
 
-import type { EndpointIR } from '@writ/core';
+import type { EndpointIR } from '@x-security/core';
 import { CORAZA_GO_PROFILE, type CorazaEngineProfile } from './profiles.js';
 import { endpointHash, pathRegex } from './rules.js';
 
@@ -40,7 +40,7 @@ export function buildDuplicateParamRules(
   if (!req || req.duplicateParamPolicy !== 'reject') return [];
   if (!req.schema) return [];
 
-  const tag = `writ/${endpoint.method} ${endpoint.path}`;
+  const tag = `x-security/${endpoint.method} ${endpoint.path}`;
   const pathRx = pathRegex(endpoint.path);
   const term = chainTerm(profile);
   const rules: string[] = [];
@@ -55,9 +55,9 @@ export function buildDuplicateParamRules(
         header(
           `request.duplicateParamPolicy=reject for ${endpoint.method} ${endpoint.path} field=${field}\n` +
             `phase:2 — deny when ARGS:${field} appears more than once (HPP defense).\n` +
-            `msg carries 'id:275' substring (writ-hpp-reject).`
+            `msg carries 'id:275' substring (x-security-hpp-reject).`
         ),
-        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'Writ id:275 duplicate parameter ${esc(field)}',tag:'${esc(tag)}',tag:'writ-hpp-reject',chain"`,
+        `SecRule REQUEST_METHOD "@streq ${endpoint.method}" "id:${id},phase:2,deny,status:400,msg:'x-security id:275 duplicate parameter ${esc(field)}',tag:'${esc(tag)}',tag:'x-security-hpp-reject',chain"`,
         `  SecRule REQUEST_FILENAME "@rx ${pathRx}" "chain"`,
         `    SecRule &ARGS:${field} "@gt 1"${term}`,
       ].join('\n')

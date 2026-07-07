@@ -1,9 +1,9 @@
 // Integration test: boot a minimal modsec-nginx container with a deliberately
-// broken 5-rule Writ fixture, point `verify` at it, assert the right
+// broken 5-rule x-security fixture, point `verify` at it, assert the right
 // reasons surface. Skipped automatically when docker isn't available.
 //
 // This is the closest mirror of the wave-3 §3 showstopper: the container is
-// healthy, returns 200s, but the Writ rules don't load. Verify must
+// healthy, returns 200s, but the x-security rules don't load. Verify must
 // catch that the rules file isn't Include'd (or that parse errors fire on
 // the right lines) and FAIL.
 
@@ -29,11 +29,11 @@ SecAction "id:990005,phase:1,pass,nolog"
 `;
 
 test('integration: modsec-nginx with un-included writ.conf → all 5 rules flagged', { skip: !dockerAvailable() }, async () => {
-  const tmp = mkdtempSync(path.join(os.tmpdir(), 'writ-verify-it-'));
+  const tmp = mkdtempSync(path.join(os.tmpdir(), 'x-security-verify-it-'));
   try {
     writeFileSync(path.join(tmp, 'writ.conf'), BROKEN_CONF);
-    const containerName = `writ-verify-it-${Date.now()}`;
-    // Boot with the conf mounted under /etc/modsecurity.d/writ/ but
+    const containerName = `x-security-verify-it-${Date.now()}`;
+    // Boot with the conf mounted under /etc/modsecurity.d/x-security/ but
     // NOT Include'd — this mirrors the wave-3 chain's actual state.
     const up = spawnSync('docker', [
       'run', '-d',
