@@ -1,0 +1,21 @@
+{
+  "_comment": "Mirrors the top-level consumers/jwt_secrets/acls in kong.yml. The kong-deploy-team's generator owns the source-of-truth emission; this checked-in copy lets the provisioner sidecar work end-to-end before that generator flag lands. Once the generator emits consumers.json natively, replace this file.",
+  "consumers": [
+    { "username": "role_admin", "tags": ["writ_role=admin"] },
+    { "username": "role_user",  "tags": ["writ_role=user"]  }
+  ],
+  "jwt_secrets": [
+    { "consumer": "role_admin", "key": "x#admin", "algorithm": "HS256",
+      "secret": "admin_jwt_secret_8a7a0d6b4e6eacfc" },
+    { "consumer": "role_user",  "key": "x#user",  "algorithm": "HS256",
+      "secret": "user_jwt_secret_de4f1c2a9b6e7081" }
+  ],
+  "hmacauth_credentials": [
+    { "consumer": "role_admin", "username": "admin",
+      "secret": "admin_hmac_secret_18bf449d9b01a0f8" }
+  ],
+  "acls": [
+    { "consumer": "role_admin", "group": "admin" },
+    { "consumer": "role_user",  "group": "user"  }
+  ]
+}
