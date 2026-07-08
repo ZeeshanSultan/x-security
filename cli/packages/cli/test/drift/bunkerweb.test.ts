@@ -8,7 +8,7 @@ import { bunkerwebGenerator } from '../../src/generators/bunkerweb/index.js';
 const SPEC = path.resolve(import.meta.dirname!, '../../../../fixtures/specs/example.yaml');
 
 // wave-8: bunkerweb output reshaped (wave-6) — assertions updated to new
-// configs/modsec/writ.conf layout (commented `# KEY=value` env hints +
+// configs/modsec/x-security.conf layout (commented `# KEY=value` env hints +
 // SecRule blocks). The original env-var-YAML check is dead.
 
 test('bunkerweb drift: matching config has zero drift', async () => {

@@ -28,17 +28,17 @@ SecRule REQUEST_HEADERS:Content-Type "@streq application/json" "id:990004,phase:
 SecAction "id:990005,phase:1,pass,nolog"
 `;
 
-test('integration: modsec-nginx with un-included writ.conf → all 5 rules flagged', { skip: !dockerAvailable() }, async () => {
+test('integration: modsec-nginx with un-included x-security.conf → all 5 rules flagged', { skip: !dockerAvailable() }, async () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), 'x-security-verify-it-'));
   try {
-    writeFileSync(path.join(tmp, 'writ.conf'), BROKEN_CONF);
+    writeFileSync(path.join(tmp, 'x-security.conf'), BROKEN_CONF);
     const containerName = `x-security-verify-it-${Date.now()}`;
     // Boot with the conf mounted under /etc/modsecurity.d/x-security/ but
     // NOT Include'd — this mirrors the wave-3 chain's actual state.
     const up = spawnSync('docker', [
       'run', '-d',
       '--name', containerName,
-      '-v', `${tmp}:/etc/modsecurity.d/writ:ro`,
+      '-v', `${tmp}:/etc/modsecurity.d/x-security:ro`,
       '-e', 'BACKEND=http://example.com',
       '-e', 'MODSEC_RULE_ENGINE=On',
       '-e', 'PARANOIA=1',

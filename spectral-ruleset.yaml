@@ -8,7 +8,7 @@ functions:
   - nonceCacheRequiresHeader
   - urlParamNeedsSsrfPolicy
 rules:
-  lazysecurity-x-security-valid:
+  x-security-x-security-valid:
     description: x-security block must validate against the x-security JSON Schema
     message: "{{error}}"
     severity: error
@@ -19,7 +19,7 @@ rules:
         schema:
           $ref: "./src/x-security.schema.json"
 
-  lazysecurity-no-unprotected-mutations:
+  x-security-no-unprotected-mutations:
     description: Mutating endpoints (POST/PUT/PATCH/DELETE) must declare authentication
     severity: error
     given: "$.paths[*][post,put,patch,delete]"
@@ -27,7 +27,7 @@ rules:
       field: "x-security.authentication"
       function: truthy
 
-  lazysecurity-rate-limit-on-auth-endpoints:
+  x-security-rate-limit-on-auth-endpoints:
     description: Authentication endpoints should declare rate limits
     severity: warn
     given: "$.paths[?(@property.match(/login|signin|auth|token/i))][post]"
@@ -35,7 +35,7 @@ rules:
       field: "x-security.rateLimit"
       function: truthy
 
-  lazysecurity-no-wildcard-cors-with-credentials:
+  x-security-no-wildcard-cors-with-credentials:
     description: CORS wildcard origin with credentials is insecure
     severity: error
     given: "$.paths[*][*].x-security.cors"

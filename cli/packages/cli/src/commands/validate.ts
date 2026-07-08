@@ -82,7 +82,7 @@ export async function runValidate(specPath: string, opts: ValidateOptions): Prom
       report = await detectFirewallDrift(spec, { filePath: opts.gateway });
       break;
     case 'envoy':
-      if (isHttp) throw new Error('envoy drift is file-mode only — pass a path to the deployed envoy.yaml or a directory containing envoy.yaml + writ.lua.');
+      if (isHttp) throw new Error('envoy drift is file-mode only — pass a path to the deployed envoy.yaml or a directory containing envoy.yaml + x-security.lua.');
       report = await detectEnvoyDrift(spec, { filePath: opts.gateway });
       break;
     default:

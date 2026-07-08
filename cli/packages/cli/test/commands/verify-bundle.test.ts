@@ -22,13 +22,13 @@ function buildBundle(): {
 } {
   const { privateKeyPem, publicKeyPem } = generateEd25519Keypair();
 
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'writ-bundle-test-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'x-security-bundle-test-'));
   const workdir = path.join(tmp, 'bundle');
   fs.mkdirSync(workdir, { recursive: true });
   fs.mkdirSync(path.join(workdir, 'config'), { recursive: true });
 
   const kongYml = '_format_version: "3.0"\nservices: []\n';
-  const readme = '# Writ bundle\n';
+  const readme = '# x-security bundle\n';
   fs.writeFileSync(path.join(workdir, 'config', 'kong.yml'), kongYml);
   fs.writeFileSync(path.join(workdir, 'README.md'), readme);
 
@@ -48,12 +48,12 @@ function buildBundle(): {
   fs.writeFileSync(path.join(workdir, 'manifest.json'), manifestBytes);
 
   const sig = signEd25519(privateKeyPem, manifestBytes);
-  fs.writeFileSync(path.join(workdir, 'writ.sig'), sig);
+  fs.writeFileSync(path.join(workdir, 'x-security.sig'), sig);
 
   const pubKeyPath = path.join(tmp, 'pubkey.pem');
   fs.writeFileSync(pubKeyPath, publicKeyPem);
 
-  const tarball = path.join(tmp, 'writ-bundle-kong-deadbeef.tar.gz');
+  const tarball = path.join(tmp, 'x-security-bundle-kong-deadbeef.tar.gz');
   const result = spawnSync('tar', ['-czf', tarball, '-C', workdir, '.'], {
     stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -117,7 +117,7 @@ test('verify-bundle: tampered manifest with stale signature -> exit 3', async ()
 
 test('verify-bundle: tampered signature -> exit 3', async () => {
   const { tarball, workdir, pubKeyPath } = buildBundle();
-  const sigPath = path.join(workdir, 'writ.sig');
+  const sigPath = path.join(workdir, 'x-security.sig');
   const sig = fs.readFileSync(sigPath);
   const tampered = Buffer.from(sig);
   tampered[0] = (tampered[0]! ^ 0x01) & 0xff;
@@ -129,6 +129,6 @@ test('verify-bundle: tampered signature -> exit 3', async () => {
 });
 
 test('verify-bundle: missing tarball -> exit 1', async () => {
-  const r = await runVerifyBundle('/nonexistent/writ-bundle.tar.gz');
+  const r = await runVerifyBundle('/nonexistent/x-security-bundle.tar.gz');
   assert.equal(r.exitCode, 1);
 });

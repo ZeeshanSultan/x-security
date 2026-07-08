@@ -14,7 +14,7 @@ Generators (`src/generators/*`) are owned by other agents and only consumed here
 | `report --coverage [--format <fmt>] <spec>` | full | R2.11 | Same formats (SARIF restricted to `--owasp`) |
 | `diff --target <t> [--format <fmt>] <old> <new>` | full | R2.12 | Uses `jsondiffpatch` on each generated artifact; output `human` or `json` |
 | `init <spec> [--defaults] [--target <t>] [--dry-run]` | full | R2.15 | Adds empty `x-security: {}` blocks (or a baseline policy with `--defaults`) to every operation that lacks one |
-| `verify-bundle <tarball> [--public-key <pem-path>]` | full | R2.17 | Verifies a signed release bundle: extracts the tarball, recomputes sha256 of each file in `manifest.json` (exit 2 on mismatch), then checks the Ed25519 detached signature in `writ.sig` against the manifest bytes using `@x-security/crypto` (exit 3 on mismatch). Defaults to an embedded release pubkey (placeholder until production substitution). Prints the public-key fingerprint (first 16 hex of sha256(PEM)) on success. |
+| `verify-bundle <tarball> [--public-key <pem-path>]` | full | R2.17 | Verifies a signed release bundle: extracts the tarball, recomputes sha256 of each file in `manifest.json` (exit 2 on mismatch), then checks the Ed25519 detached signature in `x-security.sig` against the manifest bytes using `@x-security/crypto` (exit 3 on mismatch). Defaults to an embedded release pubkey (placeholder until production substitution). Prints the public-key fingerprint (first 16 hex of sha256(PEM)) on success. |
 
 Variable resolution (R2.10) is plumbed through a chain assembled by
 `buildResolverChain` in `@x-security/core/resolvers`. The chain always
@@ -26,7 +26,7 @@ includes `EnvResolver` and opts into remote backends via CLI flags:
   Enterprise. KV version defaults to 2; override with `--vault-kv-version=1`
   or `VAULT_KV_VERSION=1`. Reads are cached in-process for the secret's
   `lease_duration`, falling back to 5 minutes. Reference syntax:
-  `$vault.<engine>/<path>#<key>` (e.g. `$vault.kv/writ#jwks`). Without
+  `$vault.<engine>/<path>#<key>` (e.g. `$vault.kv/x-security#jwks`). Without
   `#key` the entire secret is returned as JSON. Network failures surface as
   `Vault unreachable at <addr>: ...`.
 - `--aws-secrets` — enables `AwsSecretsResolver` (AWS Secrets Manager). Uses
@@ -70,8 +70,8 @@ Per-target file-mode contracts:
 | `coraza` | Generator's `coraza.yml` (top-level `directives:` block) | Tokenize directives; locate per-endpoint rule blocks via the deterministic `ruleBase + SLOT` id scheme in `generators/coraza/rules.ts`; diff per slot |
 | `bunkerweb` | Generator's `bunkerweb.yml` (`services: { <host>: { <KEY>: <value> } }`) | Per-host key-by-key compare with nginx-rate / size-aware semantics |
 | `openappsec` | Generator's `openappsec/policy.yaml` | Match `schemaValidation[]` by `binding.method`+`binding.path`; match `practices[].rate-limit.rules[]` by URI |
-| `firewall` | Single `iptables-save` / `.rules` file OR a directory containing `iptables.rules`+`ip6tables.rules` | Extract `# writ:`-tagged (comment, rule) pairs; pair by tag + destination CIDR/FQDN |
-| `envoy` | Single `envoy.yaml` (Lua inlined under `inline_code: \|`) OR a directory containing `envoy.yaml` + `writ.lua` | Extract `-- writ:<METHOD>:<path>:START` / `-- writ:END` blocks from the Lua source; diff per-endpoint signals (auth/413/415/rate-limit-breadcrumb); compare deployed `rate_limit_descriptors` keys against expected |
+| `firewall` | Single `iptables-save` / `.rules` file OR a directory containing `iptables.rules`+`ip6tables.rules` | Extract `# x-security:`-tagged (comment, rule) pairs; pair by tag + destination CIDR/FQDN |
+| `envoy` | Single `envoy.yaml` (Lua inlined under `inline_code: \|`) OR a directory containing `envoy.yaml` + `x-security.lua` | Extract `-- x-security:<METHOD>:<path>:START` / `-- x-security:END` blocks from the Lua source; diff per-endpoint signals (auth/413/415/rate-limit-breadcrumb); compare deployed `rate_limit_descriptors` keys against expected |
 
 Severity rules apply uniformly across targets:
 
@@ -109,16 +109,16 @@ Runs all unit tests. **Does not require Docker.** As of writing: 75/75 pass.
 
 ### Docker integration tests
 
-Live container tests are gated behind `WRIT_DOCKER_TESTS=1` and use the
+Live container tests are gated behind `X_SECURITY_DOCKER_TESTS=1` and use the
 `--test-only-names docker` node test runner flag:
 
 ```bash
-WRIT_DOCKER_TESTS=1 node --test --import tsx \
+X_SECURITY_DOCKER_TESTS=1 node --test --import tsx \
   --test-only-names docker 'test/**/*.test.ts'
 ```
 
 `test/test-harness/lifecycle.test.ts` is the live Kong lifecycle test. It is
-skipped (with a clear "skip: WRIT_DOCKER_TESTS=1 not set" message) when
+skipped (with a clear "skip: X_SECURITY_DOCKER_TESTS=1 not set" message) when
 the flag is absent. When set with a reachable Docker daemon, it generates the
 config, brings up `kong:3.4` + `mendhak/http-https-echo:36` on a private
 bridge network, waits for Kong to answer HTTP, exercises the rate-limit

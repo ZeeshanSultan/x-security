@@ -1,4 +1,4 @@
-# Deploying Writ rules on Apache httpd + ModSecurity (modsec-apache)
+# Deploying x-security rules on Apache httpd + ModSecurity (modsec-apache)
 
 Same libmodsecurity3 backend as `modsec-nginx`. Identical directive surface,
 different loading mechanism.
@@ -19,17 +19,17 @@ lazy generate \
 # /etc/apache2/mods-enabled/security2.conf
 <IfModule security2_module>
     SecRuleEngine On
-    Include /etc/modsecurity/writ.conf
+    Include /etc/modsecurity/x-security.conf
 </IfModule>
 ```
 
-Drop `writ.conf` into `/etc/modsecurity/` (or wherever your distro's
+Drop `x-security.conf` into `/etc/modsecurity/` (or wherever your distro's
 ModSecurity vhost include points). Reload Apache: `apachectl -t && apachectl graceful`.
 
 ## Verify
 
 ```bash
-tail -F /var/log/apache2/error.log | grep -E "(ModSecurity|writ)"
+tail -F /var/log/apache2/error.log | grep -E "(ModSecurity|x-security)"
 tail -F /var/log/apache2/modsec_audit.log | grep 'ruleId:'
 ```
 

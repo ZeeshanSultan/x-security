@@ -93,7 +93,7 @@ const SERVICE_SPECIFIC: string[] = [
 ];
 
 /**
- * Combined paths to redact across Writ services. Pass directly as
+ * Combined paths to redact across x-security services. Pass directly as
  * `pino({ redact: redactConfig })` or as `pino({ redact: { paths: ..., censor: ... } })`.
  */
 export const REDACT_PATHS: readonly string[] = Object.freeze([
@@ -135,7 +135,7 @@ export function scrubString(s: string): string {
       // Anthropic + OpenAI prefixed keys.
       .replace(/\bsk-ant-[A-Za-z0-9_\-]{20,}/g, "[Redacted anthropic key]")
       .replace(/\bsk-[A-Za-z0-9]{20,}/g, "[Redacted openai key]")
-      // Writ internal key prefix
+      // x-security internal key prefix
       .replace(/\bsk_session_[A-Za-z0-9]{20,}/g, "[Redacted session key]")
       .replace(/\bsk_dev_[A-Za-z0-9]{20,}/g, "[Redacted dev key]")
   );

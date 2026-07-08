@@ -1,5 +1,5 @@
 // Spectral custom function for the `xsec-replacement-endpoint-exists` rule
-// (S-7 from the Writ schema spec).
+// (S-7 from the x-security schema spec).
 //
 // Asserts that the value of an `x-security.replacementEndpoint` field points
 // to a path actually declared in the same OpenAPI document. Spectral's

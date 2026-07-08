@@ -1,13 +1,13 @@
 openapi: 3.0.3
 info:
-  title: "vAPI (Vulnerable API) \u2014 Writ-annotated spec"
+  title: "vAPI (Vulnerable API) \u2014 x-security-annotated spec"
   description: "OpenAPI spec for the vAPI training target (roottusk/vapi), annotated\
     \ with\nWrit x-security extensions. Each route has an x-security policy\
     \ that,\nif enforced by a gateway/WAF, would block the corresponding OWASP API\n\
     Security Top 10 (2023) class. Coverage note: vAPI uses a custom\nAuthorization-Token\
     \ header rather than a standard Bearer JWT \u2014 we model\nthis with bearer-jwt\
     \ + headerName, since the schema does not expose a\n\"custom-token\" auth type.\
-    \ JWKS / algorithm allowlist therefore reflect the\n*target* policy Writ\
+    \ JWKS / algorithm allowlist therefore reflect the\n*target* policy x-security\
     \ would enforce, not vAPI's actual behavior.\n"
   version: 1.0.0
 servers:

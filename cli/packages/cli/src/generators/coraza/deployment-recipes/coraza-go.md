@@ -1,4 +1,4 @@
-# Deploying Writ rules on Coraza WAF v3 (Go binary)
+# Deploying x-security rules on Coraza WAF v3 (Go binary)
 
 For Go services embedding `github.com/corazawaf/coraza/v3` directly.
 
@@ -49,7 +49,7 @@ and grep for `ruleId:` (same convention as libmodsecurity3).
 
 ## Capability surface
 
-Full feature parity with the Writ schema:
+Full feature parity with the x-security schema:
 - All `rateLimit.identifier` modes (`ip`, `user-id`, `api-key`, `header:X`,
   `fingerprint`) emit a `user` collection where appropriate — no downgrades.
 - Engine globals (`SecRuleEngine On`, `SecDefaultAction`, body-size limits)

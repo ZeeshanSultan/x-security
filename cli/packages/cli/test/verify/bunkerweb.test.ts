@@ -17,8 +17,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const fix = (p: string): string => path.join(here, '__fixtures__', 'bunkerweb', p);
 
 test('bunkerweb verify: parseBunkerwebGateway accepts single docker target', () => {
-  const r = parseBunkerwebGateway('docker:writ-bunkerweb-1');
-  assert.equal(r.bunkerweb, 'writ-bunkerweb-1');
+  const r = parseBunkerwebGateway('docker:x-security-bunkerweb-1');
+  assert.equal(r.bunkerweb, 'x-security-bunkerweb-1');
   assert.equal(r.scheduler, undefined);
 });
 
@@ -33,7 +33,7 @@ test('bunkerweb verify: parseBunkerwebGateway rejects non-docker addrs', () => {
 });
 
 test('bunkerweb verify: scanBunkerwebRules extracts rule ids from fixture conf', async () => {
-  const conf = await readFile(fix('writ.conf'), 'utf8');
+  const conf = await readFile(fix('x-security.conf'), 'utf8');
   const rules = scanBunkerwebRules(conf);
   const ids = new Set(rules.map((r) => r.id));
   assert.ok(ids.has('299740'));
@@ -47,7 +47,7 @@ test('bunkerweb verify: scanBunkerwebRules extracts rule ids from fixture conf',
 });
 
 test('bunkerweb verify: scanBunkerwebRules attributes rules to source endpoints', async () => {
-  const conf = await readFile(fix('writ.conf'), 'utf8');
+  const conf = await readFile(fix('x-security.conf'), 'utf8');
   const rules = scanBunkerwebRules(conf);
   const byId = new Map(rules.map((r) => [r.id, r.endpoint]));
   assert.equal(byId.get('299743'), 'GET /vapi/api1/user/{id}');
@@ -55,7 +55,7 @@ test('bunkerweb verify: scanBunkerwebRules attributes rules to source endpoints'
 });
 
 test('bunkerweb verify: reconcile marks all-loaded when every id is present', async () => {
-  const conf = await readFile(fix('writ.conf'), 'utf8');
+  const conf = await readFile(fix('x-security.conf'), 'utf8');
   const emitted = scanBunkerwebRules(conf).map((r) => ({
     id: r.id,
     kind: 'coraza-rule' as const,
@@ -76,7 +76,7 @@ test('bunkerweb verify: reconcile marks all-loaded when every id is present', as
 });
 
 test('bunkerweb verify: reconcile flags every emitted rule when nginx -T returns nothing', async () => {
-  const conf = await readFile(fix('writ.conf'), 'utf8');
+  const conf = await readFile(fix('x-security.conf'), 'utf8');
   const emitted = scanBunkerwebRules(conf).map((r) => ({
     id: r.id,
     kind: 'coraza-rule' as const,
@@ -88,7 +88,7 @@ test('bunkerweb verify: reconcile flags every emitted rule when nginx -T returns
     {
       id: '__empty-dump__',
       kind: 'coraza-rule' as const,
-      rejectionReason: 'nginx -T returned no Writ rule ids'
+      rejectionReason: 'nginx -T returned no x-security rule ids'
     }
   ];
   const { rows, diagnostics } = bunkerwebReader.reconcile(emitted, loaded);
@@ -96,7 +96,7 @@ test('bunkerweb verify: reconcile flags every emitted rule when nginx -T returns
     assert.equal(r.loaded, 0);
     assert.equal(r.status, 'failed');
   }
-  assert.ok(diagnostics.some((d) => /no Writ rule ids/i.test(d)));
+  assert.ok(diagnostics.some((d) => /no x-security rule ids/i.test(d)));
 });
 
 test('bunkerweb verify: reconcile flags sync-skew when scheduler has more rules than bunkerweb', () => {

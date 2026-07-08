@@ -1,4 +1,4 @@
-# Canonical "loaded" capture: contents of /shared/writ.conf as
+# Canonical "loaded" capture: contents of /shared/x-security.conf as
 # Include'd by coraza-spoa.yaml after the spoa-init sidecar slices the
 # directives block out of the generator's coraza.yml.
 # ════════════════════════════════════════════════════════════

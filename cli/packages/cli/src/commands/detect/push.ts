@@ -1,6 +1,6 @@
 // `lazy push <repoDir>` — Phase 4 SaaS upsell.
 //
-// Bundles the locally-generated, CLI-verified policies under .writ/ and
+// Bundles the locally-generated, CLI-verified policies under .x-security/ and
 // POSTs them to the x-security SaaS import endpoint. This is the ONLY verb that
 // leaves the user's machine, so it carries three hard gates:
 //
@@ -10,11 +10,11 @@
 //        reason locally instead of a 400 round-trip — and never leak an
 //        incomplete bundle that the server might accept under a looser build.
 //
-//   G-2 (secrets): the API token is read from WRIT_API_TOKEN ONLY. Never
+//   G-2 (secrets): the API token is read from X_SECURITY_API_TOKEN ONLY. Never
 //        a CLI flag (shell history / process list leak), never logged.
 //
 //   G-4 (trust boundaries): the API host defaults to a FIXED constant. The
-//        WRIT_API_URL override is honored ONLY if its host is on the
+//        X_SECURITY_API_URL override is honored ONLY if its host is on the
 //        allowlist. An arbitrary host is REFUSED — otherwise an attacker who
 //        controls the env (or a poisoned .env) redirects the Bearer token to
 //        their own server. Precedent: packages/cursor-mcp/src/tools/check-endpoint.ts.
@@ -119,9 +119,9 @@ const defaultPoster: Poster = async (url, init) => {
 };
 
 /** Resolve + validate the API base. Refuses any host not on the allowlist so a
- * poisoned WRIT_API_URL can't redirect the Bearer token (G-4). */
+ * poisoned X_SECURITY_API_URL can't redirect the Bearer token (G-4). */
 export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
-  const override = (env.X_SECURITY_API_URL ?? env.WRIT_API_URL)?.trim();
+  const override = (env.X_SECURITY_API_URL ?? env.X_SECURITY_API_URL)?.trim();
   if (!override) return DEFAULT_API_URL;
 
   let parsed: URL;
@@ -129,14 +129,14 @@ export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
     parsed = new URL(override);
   } catch {
     throw new PushError(
-      `WRIT_API_URL is not a valid URL: "${override}". ` +
+      `X_SECURITY_API_URL is not a valid URL: "${override}". ` +
         `Unset it to use the default ${DEFAULT_API_URL}.`,
     );
   }
 
   if (parsed.protocol !== 'https:' && !LOCAL_HOSTS.has(parsed.hostname)) {
     throw new PushError(
-      `WRIT_API_URL must use https (got "${parsed.protocol}//${parsed.hostname}"). ` +
+      `X_SECURITY_API_URL must use https (got "${parsed.protocol}//${parsed.hostname}"). ` +
         `Refusing to send the API token over an insecure transport.`,
     );
   }
@@ -147,7 +147,7 @@ export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
   if (!allowed) {
     throw new PushError(
       `Refusing to send the API token to "${host}". ` +
-        `WRIT_API_URL must be the x-security SaaS ` +
+        `X_SECURITY_API_URL must be the x-security SaaS ` +
         `(host ending in ${HOST_ALLOWLIST_SUFFIXES.join(' or ')}, or localhost for dev). ` +
         `This guard prevents token exfiltration to an attacker-controlled host.`,
     );
@@ -160,11 +160,11 @@ export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
 /** Read the token from env ONLY (G-2). Returns the raw value; the caller never
  * logs it. Absent token is an abort. */
 export function resolveToken(env: NodeJS.ProcessEnv): string {
-  const token = (env.X_SECURITY_API_TOKEN ?? env.WRIT_API_TOKEN)?.trim();
+  const token = (env.X_SECURITY_API_TOKEN ?? env.X_SECURITY_API_TOKEN)?.trim();
   if (!token) {
     throw new PushError(
-      'WRIT_API_TOKEN is not set. Export your x-security API key ' +
-        '(WRIT_API_TOKEN=...) — push reads it from the environment only, ' +
+      'X_SECURITY_API_TOKEN is not set. Export your x-security API key ' +
+        '(X_SECURITY_API_TOKEN=...) — push reads it from the environment only, ' +
         'never from a flag.',
     );
   }
@@ -218,7 +218,7 @@ export async function resolveRepoIdentity(
   return { repoUrl: normalizeRemoteUrl(remote), commitSha };
 }
 
-/** Load every compiled policy + its cite sidecar from .writ/policies/.
+/** Load every compiled policy + its cite sidecar from .x-security/policies/.
  * Both files must be present and parseable; a policy without its sidecar is a
  * bundle that audit would already have flagged, so we treat it as a hard error
  * rather than uploading an unbacked control (D-1). */
@@ -229,12 +229,12 @@ async function loadPolicies(repoDir: string): Promise<PushPolicy[]> {
     files = (await fs.readdir(dir)).filter((f) => f.endsWith('.yaml') || f.endsWith('.yml'));
   } catch {
     throw new PushError(
-      `No policies found under ${path.join('.writ', 'policies')}. ` +
+      `No policies found under ${path.join('.x-security', 'policies')}. ` +
         'Run the detection flow (lazy compile) before pushing.',
     );
   }
   if (files.length === 0) {
-    throw new PushError('No policies to push — .writ/policies/ is empty.');
+    throw new PushError('No policies to push — .x-security/policies/ is empty.');
   }
 
   const out: PushPolicy[] = [];
@@ -340,7 +340,7 @@ export async function runPush(repoDir: string, opts: PushOptions = {}): Promise<
   const env = opts.env ?? process.env;
   const dryRun = opts.dryRun === true;
 
-  // Resolve the host first so an arbitrary WRIT_API_URL is refused even on
+  // Resolve the host first so an arbitrary X_SECURITY_API_URL is refused even on
   // a dry run (the user is asking "where would this go" — answer honestly).
   const apiUrl = resolveApiUrl(env);
   const payload = await buildPayload(repoDir);

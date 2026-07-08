@@ -16,7 +16,7 @@
  *      http_req_rate(<window>)` (and optionally `http_req_rate(1s)` when
  *      `burst` is declared).
  *
- *   2. A trailing `# === WRIT FRONTEND SNIPPET ===` block containing
+ *   2. A trailing `# === X-SECURITY FRONTEND SNIPPET ===` block containing
  *      the `acl/http-request track-sc0/http-request deny` lines the operator
  *      pastes into their existing frontend (or, in the harness, the spoa-init
  *      sidecar merges automatically).
@@ -388,7 +388,7 @@ export function buildHaproxyStickTables(
   out.push('#   1. Append every `backend st_x_security_*` block below to your');
   out.push('#      haproxy.cfg (they are self-contained — no listener needed).');
   out.push('#   2. Inside your existing `frontend` block, paste the ACL/track/deny');
-  out.push('#      snippet from the "WRIT FRONTEND SNIPPET" section.');
+  out.push('#      snippet from the "X-SECURITY FRONTEND SNIPPET" section.');
   out.push('#   3. Reload HAProxy. The counters live in-process; for HA fleets,');
   out.push('#      configure a `peers` block — see DEPLOYMENT.md.');
   out.push('');
@@ -416,7 +416,7 @@ export function buildHaproxyStickTables(
   }
 
   out.push('# ════════════════════════════════════════════════════════════════');
-  out.push('# === WRIT FRONTEND SNIPPET ===');
+  out.push('# === X-SECURITY FRONTEND SNIPPET ===');
   out.push('# Paste the lines below into your existing `frontend` block. The');
   out.push('# harness preflight-spoa.sh script does this automatically.');
   out.push('# ════════════════════════════════════════════════════════════════');

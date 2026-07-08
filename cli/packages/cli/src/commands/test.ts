@@ -84,7 +84,7 @@ export async function runTest(specPath: string, opts: TestOptions): Promise<Test
   const plan = buildComposePlan({
     target,
     configMountSourceDir: tmpDir,
-    configMountTargetDir: '/etc/writ',
+    configMountTargetDir: '/etc/x-security',
     ...(opts.upstreamPort !== undefined ? { upstreamPort: opts.upstreamPort } : {}),
     ...(opts.gatewayPort !== undefined ? { gatewayPort: opts.gatewayPort } : {}),
     ...(opts.upstreamUrl !== undefined ? { upstreamUrl: opts.upstreamUrl } : {})

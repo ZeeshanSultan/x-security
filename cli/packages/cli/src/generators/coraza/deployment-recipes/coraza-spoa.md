@@ -1,4 +1,4 @@
-# Deploying Writ rules on Coraza-SPOA (HAProxy bridge)
+# Deploying x-security rules on Coraza-SPOA (HAProxy bridge)
 
 [coraza-spoa](https://github.com/corazawaf/coraza-spoa) is a SPOE agent
 that speaks the HAProxy Stream Processing Offload Protocol and embeds
@@ -35,7 +35,7 @@ flat file keeps the SPOA config tiny and human-diffable. Extract the
 generator's directives block on the host:
 
 ```bash
-python3 - <<'PY' out/coraza/coraza.yml /etc/coraza/writ.conf
+python3 - <<'PY' out/coraza/coraza.yml /etc/coraza/x-security.conf
 import sys, yaml
 src, dst = sys.argv[1], sys.argv[2]
 with open(src) as f: doc = yaml.safe_load(f)
@@ -55,7 +55,7 @@ default_application: api
 applications:
   - name: api
     directives: |
-      Include /etc/coraza/writ.conf
+      Include /etc/coraza/x-security.conf
     response_check: false
     transaction_ttl_ms: 60000
     log_level: info
@@ -96,7 +96,7 @@ Per-request denials are logged with the rule id, e.g.:
 
 ```
 {"level":"error","message":"[client \"...\"] Coraza: Access denied (phase 1).
-  Writ: missing Authorization header [file \"/etc/coraza/writ.conf\"]
+  x-security: missing Authorization header [file \"/etc/coraza/x-security.conf\"]
   [line \"46\"] [id \"265333\"] ..."}
 ```
 

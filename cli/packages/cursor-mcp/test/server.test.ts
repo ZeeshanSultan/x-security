@@ -19,7 +19,7 @@ test('initialize returns protocol version 2024-11-05 and serverInfo', async () =
   assert.ok(r.capabilities);
 });
 
-test('tools/list advertises exactly the 3 Writ tools', async () => {
+test('tools/list advertises exactly the 3 x-security tools', async () => {
   const resp = await handleMessage({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
   assert.ok(resp && 'result' in resp);
   const tools = (resp.result as { tools: { name: string }[] }).tools;

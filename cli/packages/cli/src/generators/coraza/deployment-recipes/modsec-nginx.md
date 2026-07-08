@@ -1,7 +1,7 @@
-# Deploying Writ rules on `owasp/modsecurity-crs:nginx` (modsec-nginx)
+# Deploying x-security rules on `owasp/modsecurity-crs:nginx` (modsec-nginx)
 
-The default `--coraza-engine` target. Emits `writ.conf` (plain
-ModSecurity directives) plus a `writ-include.conf` snippet.
+The default `--coraza-engine` target. Emits `x-security.conf` (plain
+ModSecurity directives) plus a `x-security-include.conf` snippet.
 
 ## Generate
 
@@ -16,8 +16,8 @@ lazy generate \
 Produces:
 
 ```
-out/coraza/writ.conf          # the rules
-out/coraza/writ-include.conf  # the include directive
+out/coraza/x-security.conf          # the rules
+out/coraza/x-security-include.conf  # the include directive
 out/coraza/WARNINGS.md              # only if downgrades occurred
 ```
 
@@ -26,7 +26,7 @@ out/coraza/WARNINGS.md              # only if downgrades occurred
 The `owasp/modsecurity-crs:nginx` image regenerates `setup.conf` and
 `modsecurity-override.conf` at every container start, so you cannot
 durably persist an `Include` line by mounting those files directly. The
-correct strategy is to mount `writ.conf` into `/etc/modsecurity.d/`
+correct strategy is to mount `x-security.conf` into `/etc/modsecurity.d/`
 and add the `Include` AFTER the template regeneration runs — via a thin
 entrypoint wrapper:
 
@@ -35,21 +35,21 @@ services:
   waf:
     image: owasp/modsecurity-crs:nginx
     volumes:
-      - ./out/coraza/writ.conf:/etc/modsecurity.d/writ.conf:ro
-      - ./entrypoint-writ.sh:/usr/local/bin/entrypoint-writ.sh:ro
-    entrypoint: /usr/local/bin/entrypoint-writ.sh
+      - ./out/coraza/x-security.conf:/etc/modsecurity.d/x-security.conf:ro
+      - ./entrypoint-x-security.sh:/usr/local/bin/entrypoint-x-security.sh:ro
+    entrypoint: /usr/local/bin/entrypoint-x-security.sh
     environment:
       BACKEND: http://upstream:8080
 ```
 
-`entrypoint-writ.sh`:
+`entrypoint-x-security.sh`:
 
 ```sh
 #!/bin/sh
 set -e
 for f in /docker-entrypoint.d/*.sh; do sh "$f"; done
 echo "" >> /etc/modsecurity.d/setup.conf
-echo "Include /etc/modsecurity.d/writ.conf" >> /etc/modsecurity.d/setup.conf
+echo "Include /etc/modsecurity.d/x-security.conf" >> /etc/modsecurity.d/setup.conf
 exec nginx -g 'daemon off;'
 ```
 
@@ -69,7 +69,7 @@ Status codes alone aren't proof — they can come from CRS PL1 anomaly
 scores, vAPI's own errors, or auth deflection. Read the error log:
 
 ```bash
-docker compose logs waf 2>&1 | grep -E "(Rules error|modsecurity|writ)"
+docker compose logs waf 2>&1 | grep -E "(Rules error|modsecurity|x-security)"
 ```
 
 A clean load shows zero `Rules error` lines. To confirm a specific rule

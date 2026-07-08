@@ -1,7 +1,7 @@
 // BunkerWeb reader.
 //
 // BunkerWeb's topology is two containers:
-//   - bw-scheduler: owns /data/configs/modsec/<service>/writ.conf
+//   - bw-scheduler: owns /data/configs/modsec/<service>/x-security.conf
 //   - bunkerweb (nginx + libmodsec): the data-plane process that actually
 //     parses + evaluates rules. The scheduler rsyncs its configs into
 //     /etc/nginx/modsec*/ inside the bunkerweb container at reload time.
@@ -12,7 +12,7 @@
 // means the bunkerweb instance is enforcing something different.
 //
 // Strategy (mirrors wave-4 modsec-nginx reader):
-//   1. EMITTED: ask the bunkerweb generator for `configs/modsec/writ.conf`
+//   1. EMITTED: ask the bunkerweb generator for `configs/modsec/x-security.conf`
 //      and scan it for `id:NNNNNN` directives. Group by `# Source endpoints:`
 //      comments which the generator emits before each rule block.
 //   2. LOADED: `docker exec <bunkerweb> nginx -T`, then scan the resolved
@@ -79,12 +79,12 @@ export function dumpNginxConfig(container: string): string {
   return (r.stdout || '') + '\n' + (r.stderr || '');
 }
 
-/** Read the scheduler-side writ.conf for sync-skew diagnostics. Best-
+/** Read the scheduler-side x-security.conf for sync-skew diagnostics. Best-
  *  effort: returns '' if not available. */
 export function readSchedulerConf(container: string): string {
   const r = spawnSync(
     'docker',
-    ['exec', container, 'sh', '-c', 'cat /data/configs/modsec/*/writ.conf /data/configs/modsec/writ.conf 2>/dev/null'],
+    ['exec', container, 'sh', '-c', 'cat /data/configs/modsec/*/x-security.conf /data/configs/modsec/x-security.conf 2>/dev/null'],
     { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }
   );
   if (r.error || r.status !== 0) return '';
@@ -157,8 +157,8 @@ export const bunkerwebReader: GatewayReader = {
     const gen = await loadGenerator('bunkerweb');
     if (!gen) throw new Error('bunkerweb generator not available — cannot determine emitted artifacts');
     const arts = await gen.generate(spec);
-    const conf = arts.find((a) => a.path.endsWith('configs/modsec/writ.conf'));
-    if (!conf) throw new Error('bunkerweb generator did not emit configs/modsec/writ.conf');
+    const conf = arts.find((a) => a.path.endsWith('configs/modsec/x-security.conf'));
+    if (!conf) throw new Error('bunkerweb generator did not emit configs/modsec/x-security.conf');
     return scanBunkerwebRules(conf.content).map((r) => ({
       id: r.id,
       kind: 'coraza-rule' as const,

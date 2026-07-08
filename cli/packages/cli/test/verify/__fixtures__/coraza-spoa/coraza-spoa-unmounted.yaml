@@ -1,6 +1,6 @@
 # "Unmounted" SPOA config: no inline directives, no Include — the
 # spoa-init sidecar never ran, so the daemon booted with a config that
-# references zero Writ rule sources.
+# references zero x-security rule sources.
 bind: 0.0.0.0:9000
 log_level: info
 default_application: vapi
@@ -8,5 +8,5 @@ default_application: vapi
 applications:
   - name: vapi
     directives: |
-      # (no SecRules, no Include — engine has nothing Writ wrote)
+      # (no SecRules, no Include — engine has nothing x-security wrote)
     response_check: false

@@ -460,8 +460,8 @@ registerExtras(program);
 program
   .command('push <repoDir>')
   .description(
-    'Upload the verified .writ/ policies to the x-security SaaS. ' +
-      'Aborts if the local audit is not 100% cite-backed. Token from WRIT_API_TOKEN env only.',
+    'Upload the verified .x-security/ policies to the x-security SaaS. ' +
+      'Aborts if the local audit is not 100% cite-backed. Token from X_SECURITY_API_TOKEN env only.',
   )
   .option('--dry-run', 'Assemble + validate the payload and print a summary WITHOUT sending.')
   .action(async (repoDir: string, opts: { dryRun?: boolean }) => {

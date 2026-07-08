@@ -1,5 +1,5 @@
 // Shared registration of the BYO-agent core verbs: routes, verify-finding,
-// compile, audit, emit. Both the full `writ` bin and the trimmed `byo`
+// compile, audit, emit. Both the full `x-security` bin and the trimmed `byo`
 // bin call registerByoCommands(program) so the action logic lives in exactly
 // one place (no duplication between the two entrypoints).
 //
@@ -110,7 +110,7 @@ export function registerByoCommands(program: Command): void {
   program
     .command('compile')
     .description("Compile a route's verified findings into an x-security policy. Reads JSON on stdin.")
-    .option('--write <repoDir>', 'Persist the policy + cite sidecar under <repoDir>/.writ/policies/.')
+    .option('--write <repoDir>', 'Persist the policy + cite sidecar under <repoDir>/.x-security/policies/.')
     .action(async (opts: { write?: string }) => {
       try {
         const input = await readStdinJson<CompileInput>();
@@ -129,7 +129,7 @@ export function registerByoCommands(program: Command): void {
   // ---------------------------------------------------------- audit
   program
     .command('audit <repoDir>')
-    .description('Re-validate every .writ/policies/ control + prove cite-coverage. citeBacked=false if ANY control lacks a byte-matching cite.')
+    .description('Re-validate every .x-security/policies/ control + prove cite-coverage. citeBacked=false if ANY control lacks a byte-matching cite.')
     .action(async (repoDir: string) => {
       try {
         const r = await runAudit(repoDir);
@@ -144,7 +144,7 @@ export function registerByoCommands(program: Command): void {
   // ---------------------------------------------------------- emit
   program
     .command('emit <repoDir>')
-    .description('Render compiled policies to an artifact. --target waf|report|ci, written under .writ/.')
+    .description('Render compiled policies to an artifact. --target waf|report|ci, written under .x-security/.')
     .requiredOption('--target <name>', 'waf|report|ci')
     .action(async (repoDir: string, opts: { target: string }) => {
       try {

@@ -9,13 +9,13 @@ import { AwsSecretsResolver } from '../../src/resolvers/aws-secrets.js';
 
 test('extracts a JSON key from SecretString', async () => {
   const sm = mockClient(SecretsManagerClient);
-  sm.on(GetSecretValueCommand, { SecretId: 'writ/prod' }).resolves({
+  sm.on(GetSecretValueCommand, { SecretId: 'x-security/prod' }).resolves({
     SecretString: JSON.stringify({ JWKS_ENDPOINT: 'https://i/.well-known/jwks.json', other: 'x' })
   });
   const client = new SecretsManagerClient({ region: 'us-east-1' });
   const r = new AwsSecretsResolver({ client });
   assert.equal(
-    await r.resolve('$aws.writ/prod#JWKS_ENDPOINT'),
+    await r.resolve('$aws.x-security/prod#JWKS_ENDPOINT'),
     'https://i/.well-known/jwks.json'
   );
   sm.restore();

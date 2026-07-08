@@ -7,7 +7,7 @@ import * as yaml from 'js-yaml';
 import { runMigrate } from '../../src/commands/migrate.js';
 
 async function tmpDir(): Promise<string> {
-  return mkdtemp(path.join(os.tmpdir(), 'writ-migrate-'));
+  return mkdtemp(path.join(os.tmpdir(), 'x-security-migrate-'));
 }
 
 async function writeSpec(dir: string, name: string, doc: unknown): Promise<string> {

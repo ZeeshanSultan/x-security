@@ -4,7 +4,7 @@
 //   routes, verify-finding, compile, audit, emit
 //
 // This is the bundle entry for the LLM-free runtime (dist/runtime/cli.mjs). It
-// deliberately does NOT import the full `writ` bin, the test harness
+// deliberately does NOT import the full `x-security` bin, the test harness
 // (dockerode), or the generate/validate/test/diff/migrate/push/verify-bundle
 // verbs — so none of those (and none of an LLM provider SDK) enter the bundle.
 // The verb logic is shared with the full bin via registerByoCommands().
@@ -24,7 +24,7 @@ registerGenerator('bunkerweb', bunkerwebGenerator);
 const program = new Command();
 
 program
-  .name('writ')
+  .name('x-security')
   .description('x-security BYO-agent runtime: deterministic verify/compile/audit/emit. LLM-free.')
   .version('0.1.0');
 

@@ -10,7 +10,7 @@ import { firewallGenerator } from '../../src/generators/firewall/index.js';
 const SPEC = path.resolve(import.meta.dirname!, '../../../../fixtures/specs/example.yaml');
 
 async function makeFixtureDir(v4: string, v6: string): Promise<string> {
-  const dir = await mkdtemp(path.join(tmpdir(), 'writ-firewall-'));
+  const dir = await mkdtemp(path.join(tmpdir(), 'x-security-firewall-'));
   await writeFile(path.join(dir, 'iptables.rules'), v4, 'utf8');
   await writeFile(path.join(dir, 'ip6tables.rules'), v6, 'utf8');
   return dir;
@@ -52,7 +52,7 @@ test('firewall drift: missing default-deny terminator flagged as CRITICAL', asyn
   const v6 = artifacts.find((a) => a.path.endsWith('ip6tables.rules'))!.content;
   const weakenedV4 = v4
     .split(/\r?\n/)
-    .filter((l) => !l.includes('writ/default-deny'))
+    .filter((l) => !l.includes('x-security/default-deny'))
     .filter((l) => !l.includes('default-deny --'))
     .join('\n');
   const dir = await makeFixtureDir(weakenedV4, v6);

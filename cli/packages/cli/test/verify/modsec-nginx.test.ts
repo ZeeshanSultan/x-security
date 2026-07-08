@@ -78,11 +78,11 @@ test('reconcile flags every rule rejected when Include is missing', () => {
   assert.ok(diagnostics.some((d) => /not Include/.test(d)));
 });
 
-test('xSecurityRulesAreIncluded: direct literal Include with "writ" in path returns true', () => {
+test('xSecurityRulesAreIncluded: direct literal Include with "x-security" in path returns true', () => {
   const dump = `
     http {
       Include /etc/nginx/conf.d/*.conf;
-      Include /etc/modsecurity.d/writ-rules.conf;
+      Include /etc/modsecurity.d/x-security-rules.conf;
     }
   `;
   // No container needed — direct literal hit.
@@ -105,9 +105,9 @@ test('xSecurityRulesAreIncluded: glob Include with no container and no literal m
   assert.equal(xSecurityRulesAreIncluded(dump), false);
 });
 
-test('xSecurityRulesAreIncluded: directive whose path literal mentions writ via glob parent returns true', () => {
-  // e.g. `Include /etc/modsecurity.d/writ/*.conf` — substring hit.
-  const dump = `Include /etc/modsecurity.d/writ/*.conf;`;
+test('xSecurityRulesAreIncluded: directive whose path literal mentions x-security via glob parent returns true', () => {
+  // e.g. `Include /etc/modsecurity.d/x-security/*.conf` — substring hit.
+  const dump = `Include /etc/modsecurity.d/x-security/*.conf;`;
   assert.equal(xSecurityRulesAreIncluded(dump), true);
 });
 

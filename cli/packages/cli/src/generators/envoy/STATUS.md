@@ -65,12 +65,12 @@ fields with no native equivalent.
 | Artefact          | When emitted | Purpose |
 | ----------------- | ------------ | ------- |
 | `envoy.yaml`      | always       | Full Envoy v3 bootstrap. Runnable as-is (defaults: listener :8080, admin :9901, upstream cluster `upstream:80`). |
-| `writ.lua`  | when at least one endpoint uses a Lua-only field | Residual Lua module. Loaded inline via `inline_code` in the bootstrap; the standalone file is identical for operators who prefer ConfigMap mounts. |
+| `x-security.lua`  | when at least one endpoint uses a Lua-only field | Residual Lua module. Loaded inline via `inline_code` in the bootstrap; the standalone file is identical for operators who prefer ConfigMap mounts. |
 
 ## Drift contract
 File-mode. The drift detector regenerates the bootstrap from the SpecIR and
 compares against the deployed `envoy.yaml`. Block identity for Lua-handled
-fields is keyed by the `-- writ:<METHOD>:<path>` sentinel; native-filter
+fields is keyed by the `-- x-security:<METHOD>:<path>` sentinel; native-filter
 identity is keyed by:
 - filter `name:` (e.g. `envoy.filters.http.jwt_authn`)
 - jwt_authn rule path regex
@@ -80,8 +80,8 @@ identity is keyed by:
 
 ## Verification
 ```
-pnpm --filter @writ/cli build
-pnpm --filter @writ/cli test -- --test-name-pattern envoy
+pnpm --filter @x-security/cli build
+pnpm --filter @x-security/cli test -- --test-name-pattern envoy
 ```
 
 ## E2E status (wave-9)
@@ -95,7 +95,7 @@ generator emits the full bootstrap.
 | Generator output shape | Full runnable bootstrap (admin + listeners + filter chain + clusters) |
 | `jwt_authn` blocks unauthenticated requests | Access log shows `RESPONSE_CODE_DETAILS=jwt_authn_failed` (was `lua_response` in wave-7) |
 | `rbac` blocks wrong-role JWTs | Access log shows `RESPONSE_CODE_DETAILS=rbac_access_denied_matched_policy[...]` |
-| `local_ratelimit` per-route enforcement | `/stats` exposes `http.writ_hcm.http_local_rate_limit.<stat_prefix>.rate_limited` counters |
+| `local_ratelimit` per-route enforcement | `/stats` exposes `http.x_security_hcm.http_local_rate_limit.<stat_prefix>.rate_limited` counters |
 | `cors` preflight | OPTIONS request returns 200 with `Access-Control-Allow-Origin` |
 | Residual Lua | Only loaded when needed; sentinel markers preserved for drift detection |
 | `lazy verify --target envoy` | Reconciles each native filter independently (jwt rules, rbac policies, ratelimit prefixes, cors routes, lua sentinels) |

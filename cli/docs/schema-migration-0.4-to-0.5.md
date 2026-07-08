@@ -50,7 +50,7 @@ If a target can't natively express a v0.5 field (common: TLS floor on a layer-7 
 
 The schema has advanced to **v0.8.0** (`SCHEMA_VERSION` in `packages/schema/src/index.ts`). Each release since v0.5 is purely additive. Highlights:
 
-- **v0.6** — `request.schema.<field>.injectionGuard` injection primitive (sinks `sql`/`nosql`/`os-command`/`xpath`/`ldap`/`code-eval`, then `xss`) with the Writ-native `SSEC-INJECTION` attribution.
+- **v0.6** — `request.schema.<field>.injectionGuard` injection primitive (sinks `sql`/`nosql`/`os-command`/`xpath`/`ldap`/`code-eval`, then `xss`) with the x-security-native `SSEC-INJECTION` attribution.
 - **v0.7** — `injectionGuard` gains `deserialization` and `ai-prompt` (the latter → `SSEC-PROMPT`); `authentication.passwordPolicy`/`accountLockout` enforcement; `response.forbidArrayRoot` (JSON-hijacking); `request.idempotencyKey`; `logging` (`SSEC-AUDIT`).
 - **v0.8** — `graphql.operations[]` (per-operation authz/cost, override-only); `request.serializeBy` + `request.concurrencyLimit` (edge serialization, partial); `request.dataAtRest` (advisory-only, `SSEC-STORAGE`).
 

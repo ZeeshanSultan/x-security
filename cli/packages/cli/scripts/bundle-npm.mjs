@@ -127,7 +127,7 @@ function assemble(name, cmd) {
 
 async function main() {
   // Publish name may be overridden when the preferred scope is unavailable:
-  //   node scripts/bundle-npm.mjs --name writ-cli
+  //   node scripts/bundle-npm.mjs --name x-security-cli
   const nameFlag = process.argv.indexOf('--name');
   const name = nameFlag !== -1 ? process.argv[nameFlag + 1] : manifest.name;
   // The published command defaults to the unscoped package name (e.g.

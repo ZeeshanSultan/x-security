@@ -404,7 +404,7 @@ describe('coraza-engines: W11 HAProxy stick-tables for coraza-spoa', () => {
     assert.match(cfg!.content, /backend st_x_security_post_login/);
     assert.match(cfg!.content, /stick-table type ip size 100k expire 1m store http_req_rate\(1m\)/);
     // Frontend snippet — ACL/track/deny lines for /login (5/min).
-    assert.match(cfg!.content, /=== WRIT FRONTEND SNIPPET ===/);
+    assert.match(cfg!.content, /=== X-SECURITY FRONTEND SNIPPET ===/);
     assert.match(cfg!.content, /http-request track-sc0 src table st_x_security_post_login/);
     assert.match(cfg!.content, /http-request deny deny_status 429 .* sc0_http_req_rate\(st_x_security_post_login\) gt 5/);
   });

@@ -21,7 +21,7 @@ test('resolveArtifactDir prefers canonical .x-security/', async () => {
   assert.equal(await resolveArtifactDir(repo), xSecurityDir(repo));
 });
 
-test('resolveArtifactDir falls back to legacy .writ/ when canonical absent', async () => {
+test('resolveArtifactDir falls back to legacy .x-security/ when canonical absent', async () => {
   const repo = await tmpRepo();
   await fs.mkdir(legacyWritDir(repo), { recursive: true });
   assert.equal(await resolveArtifactDir(repo), legacyWritDir(repo));
@@ -39,7 +39,7 @@ test('resolveArtifactDir defaults to canonical when neither exists', async () =>
   assert.equal(await resolveArtifactDir(repo), xSecurityDir(repo));
 });
 
-test('resolvePoliciesDir reads policies seeded under legacy .writ/policies/', async () => {
+test('resolvePoliciesDir reads policies seeded under legacy .x-security/policies/', async () => {
   const repo = await tmpRepo();
   const legacyPolicies = path.join(legacyWritDir(repo), POLICIES_DIR);
   await fs.mkdir(legacyPolicies, { recursive: true });

@@ -50,7 +50,7 @@ test("scrubString redacts Anthropic + OpenAI keys", () => {
   assert.match(scrubString("sk-" + "y".repeat(40)), /\[Redacted openai key\]|\[Redacted anthropic key\]/);
 });
 
-test("scrubString redacts Writ session keys", () => {
+test("scrubString redacts x-security session keys", () => {
   assert.match(scrubString("sk_session_" + "z".repeat(40)), /\[Redacted session key\]/);
 });
 

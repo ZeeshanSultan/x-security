@@ -212,7 +212,7 @@ export const openappsecReader: GatewayReader = {
     // presence in the on-agent text.
     // We treat each unique "x-security-*" token as a present id.
     const presence = new Set<string>();
-    const reToken = /\b((?:x-security|writ)[-A-Za-z0-9_]+|(?:get|post|put|delete|patch|head|options)-[A-Za-z0-9_-]+)\b/gi;
+    const reToken = /\b((?:x-security)[-A-Za-z0-9_]+|(?:get|post|put|delete|patch|head|options)-[A-Za-z0-9_-]+)\b/gi;
     let m: RegExpExecArray | null;
     while ((m = reToken.exec(confBlob)) !== null) presence.add(m[1]!);
     for (const tok of presence) out.push({ id: tok, kind: 'envoy-endpoint-policy' });

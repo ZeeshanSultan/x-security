@@ -1,11 +1,11 @@
-# Writ BYO-Agent Plugin
+# x-security BYO-Agent Plugin
 
 One command turns your codebase into **verified** API-security policies, WAF
 rules, a human report, and a CI gate — using **your own** top-tier coding agent
 (Claude Code, Codex, or Cursor) as the detection brain.
 
-Writ ships a **free, complete** plugin: schema + prompts/skills + a
-deterministic CLI + an agent-neutral MCP server. There is **no Writ-hosted
+x-security ships a **free, complete** plugin: schema + prompts/skills + a
+deterministic CLI + an agent-neutral MCP server. There is **no x-security-hosted
 inference and no detection API key** — detection runs on the host agent's model
 (your own subscription). The hosted SaaS (monitoring, team dashboards) is an
 optional, separate upsell; the plugin is fully complete on its own.
@@ -21,7 +21,7 @@ host agent (your Opus / GPT / Cursor model)  ──drives──►  detection lo
                                                           cite byte-match · compile ·
                                                           WAF · report · CI
                                                                 │
-                                                       writes ► .writ/
+                                                       writes ► .x-security/
 ```
 
 The model may **propose** anything; only CLI-verified, code-cited controls reach
@@ -67,21 +67,21 @@ already-verified policies are reused, which keeps the CI gate cheap.
 
 ## What it emits
 
-Everything lands under `.writ/` in the scanned repo:
+Everything lands under `.x-security/` in the scanned repo:
 
 | Path                          | What it is                                                                          |
 | ----------------------------- | ----------------------------------------------------------------------------------- |
-| `.writ/policies/*.yaml` | Per-route x-security policies (`<method>__<path>.yaml`)                              |
-| `.writ/waf/`            | Deployable WAF / edge rules compiled from the verified policies                     |
-| `.writ/report.md`       | Human report — every control with its `file:line` cite, plus `reviewRequired` items |
-| `.writ/ci/`             | CI gate config that re-audits on future commits (incremental)                       |
+| `.x-security/policies/*.yaml` | Per-route x-security policies (`<method>__<path>.yaml`)                              |
+| `.x-security/waf/`            | Deployable WAF / edge rules compiled from the verified policies                     |
+| `.x-security/report.md`       | Human report — every control with its `file:line` cite, plus `reviewRequired` items |
+| `.x-security/ci/`             | CI gate config that re-audits on future commits (incremental)                       |
 
 ## Install & run per agent
 
 ### Claude Code
 
 ```bash
-claude plugin install writ   # (once published to a marketplace)
+claude plugin install x-security   # (once published to a marketplace)
 # today, from a checkout:
 claude --plugin-dir /path/to/packages/claude-plugin
 ```
@@ -101,13 +101,13 @@ Adapter: `packages/codex-adapter/` (see its `INSTALL.md`).
 
 ```bash
 # 1. register the MCP server
-codex mcp add writ -- npx -y @x-security/mcp
+codex mcp add x-security -- npx -y @x-security/mcp
 
 # 2. install the shared skills (symlink the canonical SKILL.md files)
 #    SKILLS_DIR = packages/claude-plugin/skills in your checkout
-SKILLS_DIR=/path/to/writ/packages/claude-plugin/skills
+SKILLS_DIR=/path/to/x-security/packages/claude-plugin/skills
 mkdir -p .agents/skills
-for s in writ-inventory writ-detect writ-compile-emit; do
+for s in x-security-inventory x-security-detect x-security-compile-emit; do
   ln -s "$SKILLS_DIR/$s" ".agents/skills/$s"
 done
 
@@ -115,7 +115,7 @@ done
 cp packages/codex-adapter/AGENTS.md ./AGENTS.md
 ```
 
-Then in Codex: "run a Writ scan on this repo." Codex Skills use the same
+Then in Codex: "run a x-security scan on this repo." Codex Skills use the same
 `SKILL.md` standard as Claude Code, so the skills are shared, not forked.
 
 ### Cursor
@@ -129,7 +129,7 @@ cp -r packages/cursor-adapter/.cursor ./.cursor
 
 This gives you `.cursor/rules/lazy-scan.mdc` (the orchestrator rule) and
 `.cursor/mcp.json` (registers `@x-security/mcp`). Reload Cursor, then ask it to
-"run a Writ scan on this repo."
+"run a x-security scan on this repo."
 
 > Cursor's adapter points at the **agent-neutral `@x-security/mcp`** server — not
 > the older `packages/cursor-mcp`, which is a separate code-gen-time annotation
@@ -138,7 +138,7 @@ This gives you `.cursor/rules/lazy-scan.mdc` (the orchestrator rule) and
 
 ## Accuracy: zero hallucinated rules
 
-**Every rule Writ emits byte-matches a real `file:line` in your code.** The
+**Every rule x-security emits byte-matches a real `file:line` in your code.** The
 model may propose anything, but only findings that pass the deterministic
 `verify` gate — schema-valid, tightness-checked, and with a citation that
 substring-matches the file — compile into a rule. Anything the gate cannot verify
@@ -154,14 +154,14 @@ The guarantee is precise and bounded:
 - **Not a clean bill of health.** The report is a cited *starting point*. We never
   say "100% secure" or "100% recall."
 
-This discipline is the product: it operationalizes Writ's detection rules
+This discipline is the product: it operationalizes x-security's detection rules
 (every finding cites `file:line`; no placeholder scores; no shortcuts that mask a
 quality gap) as an enforced gate rather than a hope.
 
 ## Positioning: free and complete, SaaS optional
 
 - **Bring your own subscription.** Detection runs on your Claude Code / Codex /
-  Cursor model. Writ never calls a paid LLM on your behalf and holds no
+  Cursor model. x-security never calls a paid LLM on your behalf and holds no
   detection API key.
 - **Free and complete locally.** The plugin produces the final verified policies +
   WAF + report + CI gate on your machine, fully offline. Nothing is held back

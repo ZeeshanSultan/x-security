@@ -92,7 +92,7 @@ export function renderSarif(r: VerifyReport): string {
   for (const row of r.rows) {
     for (const rej of row.rejected) {
       results.push({
-        ruleId: rej.id ?? 'writ.verify.load-failure',
+        ruleId: rej.id ?? 'x-security.verify.load-failure',
         level: 'error',
         message: { text: `${row.endpoint}: ${rej.reason}` },
         locations: rej.line
@@ -112,7 +112,7 @@ export function renderSarif(r: VerifyReport): string {
             informationUri: 'https://github.com/ZeeshanSultan/x-security',
             rules: [
               {
-                id: 'writ.verify.load-failure',
+                id: 'x-security.verify.load-failure',
                 name: 'GatewayLoadFailure',
                 shortDescription: { text: 'Emitted artifact did not load in the gateway.' }
               }

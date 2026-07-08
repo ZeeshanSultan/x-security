@@ -100,7 +100,7 @@ test('buildDoc emits one schemaValidation per request-bearing endpoint', async (
   const ir = await loadSpec(exampleSpec, { resolver });
   const doc = buildDoc(ir);
   // login + upload have request bodies; admin/listUsers has neither request nor response → skipped.
-  // Per-endpoint schema details live under the Writ-internal `x-security-extended`
+  // Per-endpoint schema details live under the x-security-internal `x-security-extended`
   // key — open-appsec does not consume per-property rules in its flat policy format.
   assert.equal(doc['x-security-extended']?.['schema-validation'].length, 2);
   assert.equal(doc.policies.default.mode, 'prevent-learn');

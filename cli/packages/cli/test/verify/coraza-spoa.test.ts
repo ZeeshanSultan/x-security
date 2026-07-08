@@ -128,9 +128,9 @@ test('coraza-spoa verify (W12-C): extractIncludesAndInline picks up Include line
   const yamlText = await readFile(fix('coraza-spoa-loaded.yaml'), 'utf8');
   const { inline, includes } = extractIncludesAndInline(yamlText);
   assert.equal(includes.length, 1);
-  assert.equal(includes[0], '/shared/writ.conf');
+  assert.equal(includes[0], '/shared/x-security.conf');
   assert.equal(inline.length, 1);
-  assert.ok(inline[0]!.includes('Include /shared/writ.conf'));
+  assert.ok(inline[0]!.includes('Include /shared/x-security.conf'));
 });
 
 test('coraza-spoa verify (W12-C): extractRuleIds pulls SecRule + SecAction ids from a flat conf', async () => {
@@ -188,7 +188,7 @@ test('coraza-spoa verify (W12-C): reconcile partial — SPOA config holds api1 i
   assert.match(rejReason, /not present in SPOA loaded config/);
 });
 
-test('coraza-spoa verify (W12-C): reconcile completely-unmounted — config readable but holds no Writ ids', () => {
+test('coraza-spoa verify (W12-C): reconcile completely-unmounted — config readable but holds no x-security ids', () => {
   // The "unmounted" scenario: SPOA daemon booted with a config whose
   // directives block contains no SecRules and no Include — the spoa-init
   // sidecar never landed the rule file.

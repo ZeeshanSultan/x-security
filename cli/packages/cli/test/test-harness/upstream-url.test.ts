@@ -32,7 +32,7 @@ test('--upstream-url rewrites spec.servers to point at the external URL', async 
   const plan = buildComposePlan({
     target: 'kong',
     configMountSourceDir: '/tmp/x',
-    configMountTargetDir: '/etc/writ',
+    configMountTargetDir: '/etc/x-security',
     upstreamUrl: 'https://staging.example.com'
   });
   assert.equal(plan.externalUpstreamUrl, 'https://staging.example.com');

@@ -127,7 +127,7 @@ export function xSecurityRulesAreIncluded(nginxDump: string, container?: string)
     if (m && m[1]) includes.push(m[1]);
   }
   // (1) Direct hit: any Include path text contains "x-security".
-  if (includes.some((i) => /x-security|writ/i.test(i))) return true;
+  if (includes.some((i) => /x-security/i.test(i))) return true;
 
   // (2) Glob hit: any glob Include whose resolved files include either a
   // file named *x-security* OR a file with our header marker. Only doable
@@ -136,7 +136,7 @@ export function xSecurityRulesAreIncluded(nginxDump: string, container?: string)
   const globs = includes.filter((i) => /[*?[]/.test(i));
   for (const glob of globs) {
     const matched = listGlobInContainer(container, glob);
-    if (matched.some((p) => /x-security|writ/i.test(p))) return true;
+    if (matched.some((p) => /x-security/i.test(p))) return true;
     for (const p of matched) {
       if (fileHasWritHeader(container, p)) return true;
     }

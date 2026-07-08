@@ -50,7 +50,7 @@ function normalizeRuleLine(line: string): string {
 function destOf(rule: string): string {
   const cidr = /-d\s+(\S+)/.exec(rule);
   if (cidr && cidr[1]) return cidr[1];
-  const fqdn = /@@(?:X_SECURITY|WRIT)_RESOLVE:([^@]+)@@/.exec(rule);
+  const fqdn = /@@(?:X_SECURITY|X-SECURITY)_RESOLVE:([^@]+)@@/.exec(rule);
   if (fqdn && fqdn[1]) return `fqdn:${fqdn[1]}`;
   return '';
 }

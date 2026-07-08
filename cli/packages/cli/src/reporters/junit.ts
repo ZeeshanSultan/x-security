@@ -23,17 +23,17 @@ export function testToJunit(r: TestReport): string {
       const name = xmlEscape(`${c.endpoint} :: ${c.rule}`);
       const time = (c.durationMs / 1000).toFixed(3);
       if (c.verdict === 'PASS') {
-        return `    <testcase classname="writ" name="${name}" time="${time}"/>`;
+        return `    <testcase classname="x-security" name="${name}" time="${time}"/>`;
       }
       if (c.verdict === 'SKIP') {
-        return `    <testcase classname="writ" name="${name}" time="${time}"><skipped/></testcase>`;
+        return `    <testcase classname="x-security" name="${name}" time="${time}"><skipped/></testcase>`;
       }
-      return `    <testcase classname="writ" name="${name}" time="${time}"><failure message="${xmlEscape(c.message)}"/></testcase>`;
+      return `    <testcase classname="x-security" name="${name}" time="${time}"><failure message="${xmlEscape(c.message)}"/></testcase>`;
     })
     .join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="writ" tests="${total}" failures="${failures}" skipped="${skipped}" time="${totalDuration.toFixed(3)}">
+<testsuites name="x-security" tests="${total}" failures="${failures}" skipped="${skipped}" time="${totalDuration.toFixed(3)}">
   <testsuite name="${xmlEscape(r.target)}" tests="${total}" failures="${failures}" skipped="${skipped}" time="${totalDuration.toFixed(3)}">
 ${cases}
   </testsuite>

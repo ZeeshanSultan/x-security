@@ -5,15 +5,15 @@ flavour is selected via `--coraza-engine`:
 
 | Engine | File ext | Engine globals | Legal collections | JSON body ctl |
 |---|---|---|---|---|
-| `modsec-nginx`  (default) | `writ.conf` | skipped (host owns them) | `ip`, `global`, `resource` | emitted (per-endpoint) + bundled id:200001 |
-| `modsec-apache` | `writ.conf` | skipped | `ip`, `global`, `resource` | emitted (per-endpoint) + bundled id:200001 |
+| `modsec-nginx`  (default) | `x-security.conf` | skipped (host owns them) | `ip`, `global`, `resource` | emitted (per-endpoint) + bundled id:200001 |
+| `modsec-apache` | `x-security.conf` | skipped | `ip`, `global`, `resource` | emitted (per-endpoint) + bundled id:200001 |
 | `coraza-go`     | `coraza.yml`      | emitted | `tx` | emitted (wave-8, required for SPOE/Go body inspection) |
 | `coraza-spoa`   | `coraza.yml`      | emitted | `tx` | emitted (wave-8, required for SPOE/Go body inspection) |
 
 The libmodsecurity3 engines (`modsec-nginx`, `modsec-apache`) reject
 `SecDefaultAction` if it's already been called (crs-setup.conf calls it),
 and refuse any `initcol:` collection outside `{ip, global, resource}`.
-Writ's emitter handles both quirks without operator intervention.
+x-security's emitter handles both quirks without operator intervention.
 
 See `deployment-recipes/<engine>.md` for the per-engine mount + load instructions.
 
@@ -99,11 +99,11 @@ acceptable; if not, switch to the `coraza-go`/`coraza-spoa` profile.
 ## Emission strategy: response-body inspection (C-1, API3 BOPLA)
 
 When any endpoint declares `response.schema` with `maxLength` / `pattern`
-field constraints, **or** `response.stripUnknownFields: true`, Writ
+field constraints, **or** `response.stripUnknownFields: true`, x-security
 emits phase-4 `SecRule`s that inspect `RESPONSE_BODY` and deny the response
 on violation. This closes the API3 BOPLA / data-exposure gap.
 
-**Engine globals**: Writ toggles `SecResponseBodyAccess On` (plus
+**Engine globals**: x-security toggles `SecResponseBodyAccess On` (plus
 `SecResponseBodyMimeType application/json`, `SecResponseBodyLimit 524288`,
 `SecResponseBodyLimitAction ProcessPartial`) at the top of the artifact when
 at least one endpoint needs response inspection. For libmodsecurity3 engines
@@ -117,8 +117,8 @@ standard engine-globals block when needed.
 ```
 SecRule REQUEST_URI "@rx ^/api3/comment$" \
   "id:420NNN,phase:4,deny,status:500,
-   msg:'Writ: response.<field> exceeds maxLength=<N> (data exposure)',
-   tag:'writ/...',tag:'writ-api3-bopla',chain"
+   msg:'x-security: response.<field> exceeds maxLength=<N> (data exposure)',
+   tag:'x-security/...',tag:'x-security-api3-bopla',chain"
   SecRule REQUEST_METHOD "@streq GET" "chain"
     SecRule RESPONSE_BODY "@rx \"<field>\"\s*:\s*\"[^\"]{<N+1>,}\""
 ```
@@ -141,7 +141,7 @@ SecRule REQUEST_URI "@rx ^/api3/comment$" \
 - **Perf cost**: enabling phase-4 inspection runs the engine over the response
   body. On libmodsecurity3 (Trustwave benchmarks) this adds ~10–15%
   throughput cost; Coraza-SPOA adds an extra SPOE round-trip on the
-  response path. Writ emits a `downgrade` warning every time C-1
+  response path. x-security emits a `downgrade` warning every time C-1
   fires so the operator sees the trade-off.
 
 ## Emission strategy: JSON body processor (wave-8)
@@ -155,7 +155,7 @@ NOT agree on whether this routing is automatic:
   `/etc/modsecurity.d/setup.conf` ships rule id:200001 which sets
   `ctl:requestBodyProcessor=JSON` at phase 1 for any `Content-Type:
   application/json` request. This is why body-allowlist worked end-to-end
-  on the nginx target in wave-4 without any extra emission from Writ.
+  on the nginx target in wave-4 without any extra emission from x-security.
 - **coraza-go / coraza-spoa:** the Coraza-Go runtime does not auto-inject
   this routing. SPOE in particular streams headers and body to the agent
   separately and never invokes the JSON parser unless explicitly told to.
@@ -164,7 +164,7 @@ NOT agree on whether this routing is automatic:
 
 **Fix (this generator emits, all engines):** for every endpoint whose
 `request.contentType` declares a JSON variant (`application/json` or a
-`vnd.+json` structured-syntax-suffix variant), Writ emits a phase-1
+`vnd.+json` structured-syntax-suffix variant), x-security emits a phase-1
 chained `SecRule` that triggers `ctl:requestBodyProcessor=JSON`:
 
 ```
@@ -176,7 +176,7 @@ SecRule REQUEST_METHOD "@streq POST" "id:NNNNNN,phase:1,pass,nolog,tag:'...',cha
 This unlocks the body-allowlist on coraza-spoa and coraza-go. On
 libmodsecurity3 it duplicates the bundled id:200001 — setting the same
 processor twice is idempotent, so the redundancy is harmless and keeps
-the artifact engine-portable (an operator who moves a `writ.conf`
+the artifact engine-portable (an operator who moves a `x-security.conf`
 between modsec-nginx and a Coraza-SPOA deployment shouldn't need to also
 patch the bundled setup.conf).
 
@@ -207,7 +207,7 @@ The following 13 fields previously listed as `unsupported` now emit. ID ranges
 **modsec-nginx server-side artifact**: when the profile is `modsec-nginx` and
 at least one endpoint declares a nginx-routable directive (timeout / tls /
 deprecated / sunsetDate / replacementEndpoint), the generator emits an
-additional `nginx-server.conf` artifact alongside `writ.conf`. The
+additional `nginx-server.conf` artifact alongside `x-security.conf`. The
 operator merges that file inside their `server { ... }` block. **Only emitted
 for modsec-nginx**: coraza-go / coraza-spoa / modsec-apache deployments don't
 get a stray nginx conf (the SecAction lifecycle path on those engines still
@@ -219,7 +219,7 @@ covers the `deprecated` 410 enforcement, just without nginx-level timeouts).
   honor it differently). Soft-deprecation (still serve, advertise Sunset) is
   expressed by setting `sunsetDate` / `replacementEndpoint` WITHOUT setting
   `deprecated:true`.
-- *CSRF double-submit token*: cookie value is captured to `TX:writ_csrf_<slot>`
+- *CSRF double-submit token*: cookie value is captured to `TX:x_security_csrf_<slot>`
   via `capture,setvar:tx.<var>=%{MATCHED_VAR}`; verification chains a
   `!@streq %{TX.<var>}` comparison against the header. RE2-safe (no
   lookaheads, no backreferences). `custom-header` only verifies header
@@ -265,15 +265,15 @@ with a regex compile error.
 
 Replacement (two chained rules):
 ```
-# Rule A: capture the field value into TX:writ_<field>
+# Rule A: capture the field value into TX:x_security_<field>
 SecRule REQUEST_URI "@rx <pathRx>" "id:N,phase:4,pass,nolog,chain"
   SecRule REQUEST_METHOD "@streq <METHOD>" "chain"
     SecRule RESPONSE_BODY "@rx \"<field>\"\s*:\s*\"([^\"]*)\"" \
-      "capture,setvar:tx.writ_<field>=%{TX.1}"
+      "capture,setvar:tx.x_security_<field>=%{TX.1}"
 
 # Rule B: deny when the captured value does NOT match the required pattern
-SecRule TX:writ_<field> "!@rx <pattern>" \
-  "id:N+1,phase:4,deny,status:500,msg:'...',tag:'writ-api3-bopla'"
+SecRule TX:x_security_<field> "!@rx <pattern>" \
+  "id:N+1,phase:4,deny,status:500,msg:'...',tag:'x-security-api3-bopla'"
 ```
 
 `response.stripUnknownFields: true` still uses a negative-lookahead regex
@@ -296,8 +296,8 @@ expressible through Coraza directives on these engines.
 **W11 resolution:** when `--coraza-engine` is `coraza-spoa` or `coraza-go`
 AND any endpoint declares `rateLimit`, the generator emits a sibling
 `haproxy-stick-tables.cfg` artifact containing one `backend
-st_writ_<slug>` per endpoint with a `stick-table` declaration plus a
-`# === WRIT FRONTEND SNIPPET ===` block of `acl/track-sc0/deny` lines.
+st_x_security_<slug>` per endpoint with a `stick-table` declaration plus a
+`# === X-SECURITY FRONTEND SNIPPET ===` block of `acl/track-sc0/deny` lines.
 The operator merges this into their existing `haproxy.cfg`; the chain
 harness `preflight-spoa.sh` script does the merge automatically.
 
@@ -334,7 +334,7 @@ operators to the HAProxy artifact.
 POST /vapi/api2/user/login with spec'd `10/min IP` — sent 15 rapid POSTs:
 requests 1-10 reach the vAPI backend (503/200/401 — backend semantics),
 requests 11-15 return `429 Too Many Requests` with response headers
-`ratelimit-by: src` and `ratelimit-backend: st_writ_post_vapi_api2_user_login`,
+`ratelimit-by: src` and `ratelimit-backend: st_x_security_post_vapi_api2_user_login`,
 proving HAProxy stick-table attribution. HAProxy access log shows
 `default/<NOSRV> 429` (denied at frontend before backend selection).
 
@@ -406,7 +406,7 @@ scrubber: ModSec/Coraza has no body-rewrite primitive, so the response is
 `buildResponseInspectionRules` range (420000-428999) via a different hash
 seed.
 
-**Schema gap noted**: Writ's `ParamSchema` does not currently carry
+**Schema gap noted**: x-security's `ParamSchema` does not currently carry
 an explicit `sensitive` / `pii` boolean tag — we infer from field names.
 A future schema extension (`ParamSchema.pii?: boolean`) would let
 spec-authors opt in / out explicitly. The id:420 substring (the broader
@@ -439,7 +439,7 @@ node --test --import tsx test/generators/coraza-c2-c3.test.ts
 
 IDs hash into 970000-979999 via `970000 + (endpointHash % 100) * 100 + offset`.
 Slot 0 reproduces the exact W13-C IDs (970010/11/20/21) used in the
-chain fixture's `writ-identity.conf`. The scorer's intent-attribution
+chain fixture's `x-security-identity.conf`. The scorer's intent-attribution
 table (`scoring_lib/attribution.py`, key `id:970`) maps any rule with the
 `id:970…` prefix to the `identity-aware-authz` defense class.
 

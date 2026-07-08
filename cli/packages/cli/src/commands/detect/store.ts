@@ -1,6 +1,6 @@
-// On-disk layout for the .writ/ artifact store.
+// On-disk layout for the .x-security/ artifact store.
 //
-// A compiled route is two files under .writ/policies/:
+// A compiled route is two files under .x-security/policies/:
 //   <id>.yaml        — the x-security policy (schema-valid on its own)
 //   <id>.cites.json  — the detection metadata: the file:line:quote citations
 //                      that back each control. Kept OUT of the policy because
@@ -42,12 +42,12 @@ export function xSecurityDir(repoDir: string): string {
 
 /** Legacy artifact dir (pre-rebrand). Reads fall back to it for back-compat. */
 export function legacyWritDir(repoDir: string): string {
-  return path.join(repoDir, '.writ');
+  return path.join(repoDir, '.x-security');
 }
 
 /**
  * Resolve the artifact dir to READ from: prefer the canonical `.x-security/`,
- * fall back to a pre-existing legacy `.writ/` (emitting a one-line deprecation
+ * fall back to a pre-existing legacy `.x-security/` (emitting a one-line deprecation
  * warning), else default to canonical. Writers always use {@link xSecurityDir}.
  */
 export async function resolveArtifactDir(repoDir: string): Promise<string> {
@@ -56,7 +56,7 @@ export async function resolveArtifactDir(repoDir: string): Promise<string> {
   const legacy = legacyWritDir(repoDir);
   try {
     await fs.access(legacy);
-    console.warn('[x-security] reading legacy .writ/ artifact dir; run a compile to migrate to .x-security/');
+    console.warn('[x-security] reading legacy .x-security/ artifact dir; run a compile to migrate to .x-security/');
     return legacy;
   } catch { /* fall through */ }
   return canonical;
@@ -67,12 +67,12 @@ export function policiesDir(repoDir: string): string {
   return path.join(xSecurityDir(repoDir), POLICIES_DIR);
 }
 
-/** Policies dir to READ from, honoring the legacy `.writ/` fallback. */
+/** Policies dir to READ from, honoring the legacy `.x-security/` fallback. */
 export async function resolvePoliciesDir(repoDir: string): Promise<string> {
   return path.join(await resolveArtifactDir(repoDir), POLICIES_DIR);
 }
 
-/** Persist a compiled policy + its cite sidecar under .writ/policies/.
+/** Persist a compiled policy + its cite sidecar under .x-security/policies/.
  * Used by `compile --write`. The sidecar carries the detection provenance the
  * audit step byte-matches; it is written ONLY when there are cites to record
  * (an empty sidecar would let audit pass a control with no citation — D-3). */

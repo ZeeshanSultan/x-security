@@ -6,7 +6,7 @@
 //     manifest.json   { target, specHash, generatorVersion, timestamp, files: { "<rel>": "sha256:<hex>" } }
 //     config/         generator output (one or more files)
 //     README.md
-//     writ.sig  raw Ed25519 detached signature over the exact UTF-8
+//     x-security.sig  raw Ed25519 detached signature over the exact UTF-8
 //                     bytes of manifest.json as packed in the tarball.
 //
 // Exit codes:
@@ -48,7 +48,7 @@ interface Manifest {
 }
 
 const MANIFEST = 'manifest.json';
-const SIG = 'writ.sig';
+const SIG = 'x-security.sig';
 
 /**
  * Verify a x-security release bundle. Library-style entrypoint: never throws

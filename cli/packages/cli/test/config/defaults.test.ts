@@ -7,7 +7,7 @@ import { Command } from 'commander';
 import { loadConfig, applyConfigDefaults } from '../../src/config/defaults.js';
 
 function tmp(): string {
-  return mkdtempSync(path.join(os.tmpdir(), 'writ-cfg-'));
+  return mkdtempSync(path.join(os.tmpdir(), 'x-security-cfg-'));
 }
 
 test('loadConfig reads a project .xsecurityrc.yaml', () => {

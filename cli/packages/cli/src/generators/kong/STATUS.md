@@ -15,7 +15,7 @@
 | `standalone` | `spec.servers[0].url` | n/a | — |
 | `with-coraza` | `http://coraza:8080` (every service) | n/a | The v3 chain-demo `sed` patch is gone. Kong → Coraza → upstream. |
 | `with-istio` | `http://localhost:15001` (every service) | n/a | Envoy sidecar inbound port. |
-| `behind-proxy` | `spec.servers[0].url` | **operator must set `KONG_TRUSTED_IPS`** | The generator emits a `_writ_warnings` entry reminding operators to set it; declarative-config alone cannot configure kong.conf-level server settings. |
+| `behind-proxy` | `spec.servers[0].url` | **operator must set `KONG_TRUSTED_IPS`** | The generator emits a `_x_security_warnings` entry reminding operators to set it; declarative-config alone cannot configure kong.conf-level server settings. |
 
 ## limit_by auto-switch (REPORT-v3 Open-4 fix)
 
@@ -25,7 +25,7 @@ NEVER accumulate, which is why API2 credential-stuffing was UNBLOCKED in
 the v3 attack matrix.
 
 The generator now forces `limit_by: ip` (and records a structured warning
-in `_writ_warnings`) whenever **any** of these hold:
+in `_x_security_warnings`) whenever **any** of these hold:
 
 - `rateLimit.when === "unauthenticated"`
 - `authentication.type === "none"` or `authentication` is absent
@@ -36,14 +36,14 @@ in `_writ_warnings`) whenever **any** of these hold:
 Authenticated endpoints with `identifier: user-id` still get
 `limit_by: consumer` (unchanged).
 
-## _writ_warnings block
+## _x_security_warnings block
 
 Every spec→runtime divergence appears in the generated `kong.yml` under a
-top-level `_writ_warnings:` array, AND in a `# WARNING: ...` comment
+top-level `_x_security_warnings:` array, AND in a `# WARNING: ...` comment
 header at the top of the file. Format:
 
 ```yaml
-_writ_warnings:
+_x_security_warnings:
   - field: authentication.allowedAlgorithms
     endpoint: getProfile
     declared: RS256
@@ -60,7 +60,7 @@ What gets recorded:
 - `targetOverrides.kong.edition: enterprise` on an OSS run → enterprise-only plugins suppressed.
 - `deployment: behind-proxy` → `KONG_TRUSTED_IPS` not auto-configured.
 
-Operators audit with `grep _writ_warnings kong.yml` or
+Operators audit with `grep _x_security_warnings kong.yml` or
 `grep '^# WARNING' kong.yml`.
 
 ## OSS limits (honest)
@@ -137,31 +137,31 @@ Kong OSS does NOT do, regardless of flags:
 - `authorization.rule-based` (K-1, W10-4, W10-11) — compiled into a Kong
   `pre-function` Lua snippet attached to the route. Runs in the `access`
   phase **before** the upstream is contacted; on rule violation it
-  `kong.response.exit(403)`s with a Writ tag
-  (`writ-rule-bola-403`) and a `kong.log.warn(...)` line so the block
+  `kong.response.exit(403)`s with a x-security tag
+  (`x-security-rule-bola-403`) and a `kong.log.warn(...)` line so the block
   is attributable in access logs.
   - **W10-4 attribution (pcall everywhere)**: every external call
     (`require("resty.http")`, `httpc:request_uri`, `cjson.decode`) is wrapped
-    in `pcall`. Any failure returns a structured **403 with a Writ tag
+    in `pcall`. Any failure returns a structured **403 with a x-security tag
     and a `reason` code** (`lookup_failed`, `decode_failed`,
     `resty_http_missing`) — never an opaque 500. `kong.log.warn` lines
-    include the `[writ-bola]` prefix so `docker logs <kong> | grep
-    writ-bola` is the audit grep. Before W10-4 a hostname blip or
+    include the `[x-security-bola]` prefix so `docker logs <kong> | grep
+    x-security-bola` is the audit grep. Before W10-4 a hostname blip or
     non-JSON response leaked a 500 that the scorer could not attribute as
-    `writ-attributable`.
+    `x-security-attributable`.
   - **W10-11 shared_dict cache**: a synchronous HTTP call per request does
-    not scale. The Lua now consults `ngx.shared.writ_bola_cache`
+    not scale. The Lua now consults `ngx.shared.x_security_bola_cache`
     keyed on `<principal>:<resource_id>` first; cache hits skip the HTTP
     roundtrip entirely (`cache_hit` log line). Cache misses do the lookup
     and populate the dict with the resolved `ownerId` for
     `SS_BOLA_CACHE_TTL_SECONDS` (default 60s).
     - **Operator action required**: declarative kong.yml cannot configure
-      nginx-level directives. Set `KONG_NGINX_HTTP_LUA_SHARED_DICT="writ_bola_cache 10m"`
+      nginx-level directives. Set `KONG_NGINX_HTTP_LUA_SHARED_DICT="x_security_bola_cache 10m"`
       on the Kong container env so the dict exists. The Lua is nil-safe —
       when the dict is missing it falls through to the per-request HTTP
       path so the rule still enforces (correctness preserved, perf
       regresses). A structured warning records this requirement in the
-      `_writ_warnings` block whenever a `pre-function` is emitted.
+      `_x_security_warnings` block whenever a `pre-function` is emitted.
     - **TTL tradeoff (honest)**: cache TTL means owner changes
       (transfers, deletes) take up to TTL seconds to propagate. 60s is
       conservative — operators can tune via
@@ -180,7 +180,7 @@ Kong OSS does NOT do, regardless of flags:
     `kong:latest` (the OSS image), so no operator action is required for the
     standard distributions. For minimal images (`kong:alpine`, custom
     builds) operators must ensure `lua-resty-http` is on the runtime
-    `lua_package_path` — the Lua fails closed (500 with the Writ tag)
+    `lua_package_path` — the Lua fails closed (500 with the x-security tag)
     if `require("resty.http")` errors.
   - **v0.5 namespace handling**: `principal.id` is a synonym for `jwt.sub`
     (Kong's consumer model is JWT-shaped); `header.X-...` reads via
@@ -210,18 +210,18 @@ implementation-gaps on Kong OSS. W26 closes them via Kong's bundled
 
 | DSL field | Builder | Marker | Mechanism |
 |---|---|---|---|
-| `response.stripUnknownFields` | `buildResponseStripUnknownPlugins` | `writ-response-strip-unknown` | post-function body_filter: `cjson.decode` → drop keys outside `response.schema` → re-encode |
-| `response.errorScrubbing.stripStackTraces` | `buildResponseStripTracesPlugins` | `writ-response-strip-traces` | post-function: `gsub` Lua patterns covering Java/JS/Python/Ruby/C++ stack frames on 4xx/5xx |
-| `response.errorScrubbing.genericMessages` | `buildResponseGenericErrorPlugins` | `writ-response-generic-error` | post-function: replaces 5xx body with `{"message":"Internal server error",...}` envelope |
-| `response.schema.<f>.maxLength` | `buildResponseMaxLengthPlugins` | `writ-response-maxlength` | post-function: truncates string response fields exceeding declared `maxLength` |
-| `rateLimit.identifier=fingerprint` | `buildRateLimitFingerprintPlugins` | `writ-rate-limit-fingerprint` | pre-function: composite key = client_ip + sha1(user-agent)\[0..16\]; written to `kong.ctx.shared.writ_fp` and `X-Writ-Fingerprint` header |
-| `botProtection` | `buildBotProtectionPlugins` | `writ-bot-detected` | pre-function: curated UA blocklist (curl/wget/headless-chrome/sqlmap/...) + JS-challenge cookie gate when `mode: enforce` |
+| `response.stripUnknownFields` | `buildResponseStripUnknownPlugins` | `x-security-response-strip-unknown` | post-function body_filter: `cjson.decode` → drop keys outside `response.schema` → re-encode |
+| `response.errorScrubbing.stripStackTraces` | `buildResponseStripTracesPlugins` | `x-security-response-strip-traces` | post-function: `gsub` Lua patterns covering Java/JS/Python/Ruby/C++ stack frames on 4xx/5xx |
+| `response.errorScrubbing.genericMessages` | `buildResponseGenericErrorPlugins` | `x-security-response-generic-error` | post-function: replaces 5xx body with `{"message":"Internal server error",...}` envelope |
+| `response.schema.<f>.maxLength` | `buildResponseMaxLengthPlugins` | `x-security-response-maxlength` | post-function: truncates string response fields exceeding declared `maxLength` |
+| `rateLimit.identifier=fingerprint` | `buildRateLimitFingerprintPlugins` | `x-security-rate-limit-fingerprint` | pre-function: composite key = client_ip + sha1(user-agent)\[0..16\]; written to `kong.ctx.shared.x_security_fp` and `X-x-security-Fingerprint` header |
+| `botProtection` | `buildBotProtectionPlugins` | `x-security-bot-detected` | pre-function: curated UA blocklist (curl/wget/headless-chrome/sqlmap/...) + JS-challenge cookie gate when `mode: enforce` |
 
-All six emit `kong.log.warn("[<marker>] ...")` lines so `docker logs <kong> | grep writ-` is the audit grep, and tag the plugin so `kong.yml` self-documents.
+All six emit `kong.log.warn("[<marker>] ...")` lines so `docker logs <kong> | grep x-security-` is the audit grep, and tag the plugin so `kong.yml` self-documents.
 Honest caveats:
 - response-body plugins require Kong OSS to buffer the response (default for non-streaming upstreams); large bodies see a memory hit.
 - `botProtection` provider= field is recorded but the CAPTCHA verification API call is provider-side (Turnstile/reCAPTCHA/hCaptcha clients); the heuristic gate runs in-Kong without that round-trip.
-- `rateLimit.identifier=fingerprint` populates the composite key — pair it with `limit_by: header` + `header_name: X-Writ-Fingerprint` (or a `targetOverrides.kong` lua-resty-limit-req block) for the bucketing.
+- `rateLimit.identifier=fingerprint` populates the composite key — pair it with `limit_by: header` + `header_name: X-x-security-Fingerprint` (or a `targetOverrides.kong` lua-resty-limit-req block) for the bucketing.
 
 Still unsupported:
 - `response.schema` type/min/pattern enforcement (only maxLength is covered).
@@ -263,10 +263,10 @@ Still unsupported:
    `policy: local` for `redis`), a deep-merge mode is needed.
 
 ## Verification
-- `pnpm --filter @writ/cli test -- --test-name-pattern='kong generator'` → 7 / 7 pass
+- `pnpm --filter @x-security/cli test -- --test-name-pattern='kong generator'` → 7 / 7 pass
 - Snapshot test: `fixtures/configs/kong/example.expected.yml` matches generator output (parsed YAML deep-equal)
 - Isolated typecheck of `src/generators/kong/**` under strict + `exactOptionalPropertyTypes` passes clean
-- **Note:** workspace-level `pnpm --filter @writ/cli build` currently fails
-  due to a pre-existing missing `Timeout` re-export in `@writ/schema`
+- **Note:** workspace-level `pnpm --filter @x-security/cli build` currently fails
+  due to a pre-existing missing `Timeout` re-export in `@x-security/schema`
   referenced by `src/generators/bunkerweb/settings.ts`. Out of scope for this
   task; fix is one line in `packages/schema/src/index.ts`.

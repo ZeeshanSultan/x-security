@@ -13,7 +13,7 @@ import { lintAnnotationTool } from './tools/lint-annotation.js';
 import { checkEndpointTool } from './tools/check-endpoint.js';
 
 export const PROTOCOL_VERSION = '2024-11-05';
-export const SERVER_NAME = 'writ';
+export const SERVER_NAME = 'x-security';
 export const SERVER_VERSION = '0.1.0';
 
 // JSON-RPC 2.0 error codes we use.

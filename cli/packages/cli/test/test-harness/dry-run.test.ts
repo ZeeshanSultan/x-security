@@ -16,7 +16,7 @@ test('test --dry-run emits compose YAML and exits 0 without Docker', async () =>
   assert.match(r.composeYaml, /image: kong:3\.4/);
   assert.match(r.composeYaml, /image: mendhak\/http-https-echo:36/);
   assert.match(r.composeYaml, /KONG_DATABASE: "off"/);
-  assert.match(r.composeYaml, /KONG_DECLARATIVE_CONFIG: "\/etc\/writ\/kong\.yml"/);
+  assert.match(r.composeYaml, /KONG_DECLARATIVE_CONFIG: "\/etc\/x-security\/kong\.yml"/);
   assert.match(r.composeYaml, /KONG_ADMIN_LISTEN: "off"/);
   assert.match(r.rendered, /dry-run/);
 });

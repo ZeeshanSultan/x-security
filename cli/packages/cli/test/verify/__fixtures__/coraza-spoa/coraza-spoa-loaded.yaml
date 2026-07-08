@@ -1,4 +1,4 @@
-# Writ-generated coraza-spoa.yaml — DO NOT EDIT BY HAND.
+# x-security-generated coraza-spoa.yaml — DO NOT EDIT BY HAND.
 # Canonical fixture captured from chain-coraza-spoa-vapi (W12-C).
 bind: 0.0.0.0:9000
 log_level: info
@@ -9,7 +9,7 @@ default_application: vapi
 applications:
   - name: vapi
     directives: |
-      Include /shared/writ.conf
+      Include /shared/x-security.conf
     response_check: false
     transaction_ttl_ms: 60000
     log_level: info

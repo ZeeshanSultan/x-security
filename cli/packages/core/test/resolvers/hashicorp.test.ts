@@ -22,12 +22,12 @@ function withMock(fn: (pool: ReturnType<MockAgent['get']>) => Promise<void>) {
 }
 
 test('KV v2 happy path returns the requested key', withMock(async (pool) => {
-  pool.intercept({ path: '/v1/kv/data/writ', method: 'GET' }).reply(200, {
+  pool.intercept({ path: '/v1/kv/data/x-security', method: 'GET' }).reply(200, {
     data: { data: { jwks: 'https://issuer/.well-known/jwks.json' } },
     lease_duration: 0
   });
   const r = new VaultResolver({ address: VAULT_ADDR, token: 'root' });
-  const v = await r.resolve('$vault.kv/writ#jwks');
+  const v = await r.resolve('$vault.kv/x-security#jwks');
   assert.equal(v, 'https://issuer/.well-known/jwks.json');
 }));
 

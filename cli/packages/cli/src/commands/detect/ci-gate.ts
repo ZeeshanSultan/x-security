@@ -32,7 +32,7 @@ const GITHUB_WORKFLOW = [
   '        with:',
   "          node-version: '20'",
   '      - name: Audit cite-coverage',
-  '        run: bash .writ/ci/audit-gate.sh',
+  '        run: bash .x-security/ci/audit-gate.sh',
   '',
 ].join('\n');
 
@@ -41,14 +41,14 @@ const GITLAB_SNIPPET = [
   'x-security-audit:',
   '  image: node:20',
   '  script:',
-  '    - bash .writ/ci/audit-gate.sh',
+  '    - bash .x-security/ci/audit-gate.sh',
   '  rules:',
   '    - if: $CI_PIPELINE_SOURCE == "merge_request_event"',
   '    - if: $CI_COMMIT_BRANCH',
   '',
 ].join('\n');
 
-/** Filename → contents for the .writ/ci/ directory. */
+/** Filename → contents for the .x-security/ci/ directory. */
 export function renderCiGate(): Record<string, string> {
   return {
     'audit-gate.sh': AUDIT_SCRIPT,

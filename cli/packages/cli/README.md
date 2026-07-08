@@ -1,4 +1,4 @@
-# Writ CLI
+# x-security CLI
 
 Compile, validate, test, and report on `x-security` policies in OpenAPI specs — deterministic, no LLM calls, no API keys.
 
