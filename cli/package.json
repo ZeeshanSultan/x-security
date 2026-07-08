@@ -2,7 +2,7 @@
   "name": "x-security-cli",
   "private": true,
   "version": "0.1.2",
-  "description": "Reference CLI for the x-security OpenAPI extension. Source for the published npm package @chain305/x-security (command: xsecurity).",
+  "description": "Reference CLI for the x-security OpenAPI extension. Source for the published npm package @chain305/x-security (command: x-security).",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=20"
@@ -12,7 +12,7 @@
     "build": "pnpm --filter @x-security/cli build",
     "test": "pnpm -r --filter=./packages/* test",
     "typecheck": "pnpm -r typecheck",
-    "bundle": "pnpm --filter @x-security/cli run bundle:npm -- --name @chain305/x-security --bin xsecurity"
+    "bundle": "pnpm --filter @x-security/cli run bundle:npm -- --name @chain305/x-security --bin x-security"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

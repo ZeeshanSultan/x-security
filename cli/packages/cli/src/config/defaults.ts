@@ -66,13 +66,22 @@ function firstExisting(candidates: string[]): string | undefined {
 }
 
 export function loadConfig(cwd: string = process.cwd(), home: string = os.homedir()): WritConfig {
+  // New `x-security` paths take precedence; legacy `xsecurity` paths are kept
+  // as fallback so configs written before the CLI rename still load.
   const homeFile = firstExisting([
+    path.join(home, '.config', 'x-security', 'config.yaml'),
+    path.join(home, '.config', 'x-security', 'config.yml'),
+    path.join(home, '.config', 'x-security', 'config.json'),
     path.join(home, '.config', 'xsecurity', 'config.yaml'),
     path.join(home, '.config', 'xsecurity', 'config.yml'),
     path.join(home, '.config', 'xsecurity', 'config.json'),
   ]);
 
   const projectFile = firstExisting([
+    path.join(cwd, '.x-securityrc.yaml'),
+    path.join(cwd, '.x-securityrc.yml'),
+    path.join(cwd, '.x-securityrc.json'),
+    path.join(cwd, '.x-securityrc'),
     path.join(cwd, '.xsecurityrc.yaml'),
     path.join(cwd, '.xsecurityrc.yml'),
     path.join(cwd, '.xsecurityrc.json'),

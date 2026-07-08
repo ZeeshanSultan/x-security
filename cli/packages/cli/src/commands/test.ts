@@ -117,7 +117,7 @@ export async function runTest(specPath: string, opts: TestOptions): Promise<Test
         endpoint: '(gateway)',
         rule: 'load-coverage',
         verdict: 'FAIL',
-        message: 'x-security-emitted artifacts are not loaded by the gateway (xsecurity verify reported <90%). Aborting traffic phase — the results would be unattributable.',
+        message: 'x-security-emitted artifacts are not loaded by the gateway (x-security verify reported <90%). Aborting traffic phase — the results would be unattributable.',
         durationMs: 0
       });
     } else {

@@ -50,9 +50,9 @@ have, versions in git, and diffs like code.
    plugin that reads your code and drafts the policy for you.
 2. **Validate** — lint the annotated spec against the JSON Schema + Spectral
    ruleset in CI, so a malformed policy never merges.
-3. **Compile** — `xsecurity generate` turns the spec into native config for your
+3. **Compile** — `x-security generate` turns the spec into native config for your
    gateway. One spec, any supported target.
-4. **Enforce & catch drift** — deploy the config, then run `xsecurity validate`
+4. **Enforce & catch drift** — deploy the config, then run `x-security validate`
    so CI fails the moment the gateway and the spec disagree.
 
 ## Quickstart
@@ -63,9 +63,9 @@ npx @stoplight/spectral-cli lint --ruleset spectral-ruleset.yaml your-openapi.ya
 
 # Compile it to the gateway you run
 npm i -g @chain305/x-security
-xsecurity generate your-openapi.yaml --target kong > kong.yaml
-xsecurity report   your-openapi.yaml            # OWASP API Top 10 coverage
-xsecurity validate your-openapi.yaml --target kong --gateway http://localhost:8001
+x-security generate your-openapi.yaml --target kong > kong.yaml
+x-security report   your-openapi.yaml            # OWASP API Top 10 coverage
+x-security validate your-openapi.yaml --target kong --gateway http://localhost:8001
 ```
 
 Full CLI walkthrough — install, `init`, `test`, `verify`, drift gating — in
@@ -76,7 +76,7 @@ Full CLI walkthrough — install, `init`, `test`, `verify`, drift gating — in
 
 ### Compile & deploy targets
 
-`xsecurity generate --target <name>` compiles one annotated spec to any of these. Two are hosted deploys; the rest are self-hosted bundles you drop into your gateway.
+`x-security generate --target <name>` compiles one annotated spec to any of these. Two are hosted deploys; the rest are self-hosted bundles you drop into your gateway.
 
 | Target (`--target`) | What it is | Delivery | Status |
 | --- | --- | --- | --- |
@@ -121,7 +121,7 @@ Cloudflare, AWS API GW and BunkerWeb are independently measured, and **Kong is n
 | [`docs/v0.8-reference.md`](docs/v0.8-reference.md) | Field-level reference for the current schema version |
 | [`examples/`](examples/) | Annotated OpenAPI specs that validate against the schema |
 | [`policy-builder.html`](policy-builder.html) | Visual builder — build `x-security` policies from an OpenAPI spec (or by hand) and export an annotated spec. Also hosted at [usewaf.com/policy-builder.html](https://usewaf.com/policy-builder.html) |
-| [`cli/`](cli/) | Reference CLI (`xsecurity`) — compiles annotated specs into gateway config. Published as [`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security) |
+| [`cli/`](cli/) | Reference CLI (`x-security`) — compiles annotated specs into gateway config. Published as [`@chain305/x-security`](https://www.npmjs.com/package/@chain305/x-security) |
 
 ## Versioning
 

@@ -18,8 +18,8 @@ deterministic CLI compiles it to whichever gateway you run.
 ## Install
 
 ```
-npm i -g @chain305/x-security     # installs the `xsecurity` command
-xsecurity --help
+npm i -g @chain305/x-security     # installs the `x-security` command
+x-security --help
 ```
 
 Or run it without installing:
@@ -28,28 +28,28 @@ Or run it without installing:
 npx @chain305/x-security --help
 ```
 
-Requires Node 20+. Docker is needed only for `xsecurity test`.
+Requires Node 20+. Docker is needed only for `x-security test`.
 
 ## How it works
 
 ```
    your OpenAPI spec                          your gateway
-  ┌──────────────────┐   xsecurity generate  ┌──────────────┐
+  ┌──────────────────┐   x-security generate  ┌──────────────┐
   │  paths:          │  ───────────────────► │ Kong / Coraza│
   │    /users/{id}:  │                       │ Envoy / WAF  │
   │      x-security: │  ◄─────────────────── │  …enforced   │
-  │        …         │   xsecurity validate  └──────────────┘
+  │        …         │   x-security validate  └──────────────┘
   └──────────────────┘     (drift gate)
 ```
 
 1. **Annotate** — attach an `x-security` block to each route. Write it by hand,
    with the [visual builder](https://usewaf.com/policy-builder.html), or with
    the free AI plugin that reads your code and drafts the policy for you.
-2. **Compile** — `xsecurity generate` turns the annotated spec into native
+2. **Compile** — `x-security generate` turns the annotated spec into native
    config for your gateway. One spec, any supported target.
-3. **Test** — `xsecurity test` spins the gateway up in Docker, sends real
+3. **Test** — `x-security test` spins the gateway up in Docker, sends real
    traffic, and asserts the policy actually blocks what it should.
-4. **Enforce & catch drift** — deploy the config, then run `xsecurity validate`
+4. **Enforce & catch drift** — deploy the config, then run `x-security validate`
    in CI so the pipeline fails the moment the gateway and the spec disagree.
 
 ## Quickstart
@@ -58,42 +58,42 @@ Requires Node 20+. Docker is needed only for `xsecurity test`.
 npm i -g @chain305/x-security
 
 # 1. scaffold empty x-security blocks on every route that lacks one
-xsecurity init api.yaml
+x-security init api.yaml
 
 # 2. fill them in — by hand, the visual builder, or the plugin —
 #    then check your OWASP API Top 10 coverage
-xsecurity report api.yaml
+x-security report api.yaml
 
 # 3. compile to the gateway you run
-xsecurity generate api.yaml --target kong > kong.yaml
+x-security generate api.yaml --target kong > kong.yaml
 
 # 4. prove it blocks the exploit and allows legit traffic (needs Docker)
-xsecurity test api.yaml --target kong
+x-security test api.yaml --target kong
 
 # 5. gate CI on drift between the spec and the deployed gateway
-xsecurity validate api.yaml --target kong --gateway http://localhost:8001
+x-security validate api.yaml --target kong --gateway http://localhost:8001
 ```
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `xsecurity init <spec>` | Add empty `x-security` blocks to operations missing them |
-| `xsecurity report <spec>` | OWASP API Top 10 coverage and annotation reports |
-| `xsecurity generate <spec> --target <t>` | Compile an annotated OpenAPI spec into gateway config (`kong`, `coraza`, `bunkerweb`, `openappsec`, `firewall`, `envoy`) |
-| `xsecurity test <spec> --target <t>` | Closed-loop test: generate config, spin up Docker, send traffic, assert |
-| `xsecurity validate <spec> --target kong --gateway <url\|file>` | Detect drift between the spec and a running/exported gateway config |
-| `xsecurity verify <spec> --target <t> --gateway <addr>` | Read-only post-deploy check that the gateway loaded the emitted artifacts |
-| `xsecurity diff <old> <new> --target <t>` | Diff the generated config for two spec versions |
-| `xsecurity migrate <spec> --from 0.4 --to 0.5` | Rewrite a spec between schema versions |
+| `x-security init <spec>` | Add empty `x-security` blocks to operations missing them |
+| `x-security report <spec>` | OWASP API Top 10 coverage and annotation reports |
+| `x-security generate <spec> --target <t>` | Compile an annotated OpenAPI spec into gateway config (`kong`, `coraza`, `bunkerweb`, `openappsec`, `firewall`, `envoy`) |
+| `x-security test <spec> --target <t>` | Closed-loop test: generate config, spin up Docker, send traffic, assert |
+| `x-security validate <spec> --target kong --gateway <url\|file>` | Detect drift between the spec and a running/exported gateway config |
+| `x-security verify <spec> --target <t> --gateway <addr>` | Read-only post-deploy check that the gateway loaded the emitted artifacts |
+| `x-security diff <old> <new> --target <t>` | Diff the generated config for two spec versions |
+| `x-security migrate <spec> --from 0.4 --to 0.5` | Rewrite a spec between schema versions |
 
-Run `xsecurity <command> --help` for full flags.
+Run `x-security <command> --help` for full flags.
 
 ## Support matrix
 
 ### Compile & deploy targets
 
-`xsecurity generate --target <name>` compiles one annotated spec to any of these. Two are hosted deploys; the rest are self-hosted bundles you drop into your gateway.
+`x-security generate --target <name>` compiles one annotated spec to any of these. Two are hosted deploys; the rest are self-hosted bundles you drop into your gateway.
 
 | Target (`--target`) | What it is | Delivery | Status |
 | --- | --- | --- | --- |

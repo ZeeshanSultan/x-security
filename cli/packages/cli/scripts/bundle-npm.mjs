@@ -132,7 +132,7 @@ async function main() {
   const name = nameFlag !== -1 ? process.argv[nameFlag + 1] : manifest.name;
   // The published command defaults to the unscoped package name (e.g.
   // @foo/x-security → x-security), but --bin overrides it when the command
-  // should differ from the package name (e.g. --bin xsecurity).
+  // should differ from the package name (e.g. --bin x-security).
   const binFlag = process.argv.indexOf('--bin');
   const cmd = binFlag !== -1 ? process.argv[binFlag + 1] : name.replace(/^@[^/]+\//, '');
 

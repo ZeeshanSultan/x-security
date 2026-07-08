@@ -3,26 +3,26 @@ import assert from 'node:assert/strict';
 import { generateCompletion } from '../../src/bin/completion.js';
 
 test('generateCompletion: bash contains binName, subcommands, and bash tokens', () => {
-  const script = generateCompletion('bash', 'xsecurity', ['generate', 'validate']);
+  const script = generateCompletion('bash', 'x-security', ['generate', 'validate']);
   assert.ok(script.length > 0);
-  assert.match(script, /xsecurity/);
+  assert.match(script, /x-security/);
   assert.match(script, /generate/);
   assert.match(script, /validate/);
   assert.match(script, /complete|compgen/);
 });
 
 test('generateCompletion: zsh contains #compdef and subcommands', () => {
-  const script = generateCompletion('zsh', 'xsecurity', ['generate', 'validate']);
+  const script = generateCompletion('zsh', 'x-security', ['generate', 'validate']);
   assert.ok(script.length > 0);
-  assert.match(script, /#compdef xsecurity/);
+  assert.match(script, /#compdef x-security/);
   assert.match(script, /generate/);
   assert.match(script, /validate/);
 });
 
 test('generateCompletion: fish contains complete -c and subcommands', () => {
-  const script = generateCompletion('fish', 'xsecurity', ['generate', 'validate']);
+  const script = generateCompletion('fish', 'x-security', ['generate', 'validate']);
   assert.ok(script.length > 0);
-  assert.match(script, /complete -c xsecurity/);
+  assert.match(script, /complete -c x-security/);
   assert.match(script, /generate/);
   assert.match(script, /validate/);
 });

@@ -10,11 +10,11 @@ function tmp(): string {
   return mkdtempSync(path.join(os.tmpdir(), 'x-security-cfg-'));
 }
 
-test('loadConfig reads a project .xsecurityrc.yaml', () => {
+test('loadConfig reads a project .x-securityrc.yaml', () => {
   const cwd = tmp();
   const home = tmp();
   try {
-    writeFileSync(path.join(cwd, '.xsecurityrc.yaml'), 'format: json\ntimeout: 1500\n');
+    writeFileSync(path.join(cwd, '.x-securityrc.yaml'), 'format: json\ntimeout: 1500\n');
     const cfg = loadConfig(cwd, home);
     assert.deepEqual(cfg, { format: 'json', timeout: 1500 });
   } finally {
@@ -27,10 +27,10 @@ test('project config overrides home config for the same key', () => {
   const cwd = tmp();
   const home = tmp();
   try {
-    const homeDir = path.join(home, '.config', 'xsecurity');
+    const homeDir = path.join(home, '.config', 'x-security');
     mkdirSync(homeDir, { recursive: true });
     writeFileSync(path.join(homeDir, 'config.yaml'), 'format: table\nout: home-out\n');
-    writeFileSync(path.join(cwd, '.xsecurityrc.yaml'), 'format: sarif\n');
+    writeFileSync(path.join(cwd, '.x-securityrc.yaml'), 'format: sarif\n');
 
     const cfg = loadConfig(cwd, home);
     // format from project wins; out only present in home is preserved.
@@ -47,7 +47,7 @@ test('a malformed config file does not throw', () => {
   const home = tmp();
   try {
     // Unclosed bracket -> yaml parse error; must be swallowed.
-    writeFileSync(path.join(cwd, '.xsecurityrc.yaml'), 'format: [unclosed\n  : : :');
+    writeFileSync(path.join(cwd, '.x-securityrc.yaml'), 'format: [unclosed\n  : : :');
     const cfg = loadConfig(cwd, home);
     assert.deepEqual(cfg, {});
   } finally {
@@ -62,7 +62,7 @@ test('XSECURITY_CONFIG path overrides project and home config', () => {
   const envDir = tmp();
   const prev = process.env.XSECURITY_CONFIG;
   try {
-    writeFileSync(path.join(cwd, '.xsecurityrc.yaml'), 'format: table\n');
+    writeFileSync(path.join(cwd, '.x-securityrc.yaml'), 'format: table\n');
     const envFile = path.join(envDir, 'override.json');
     writeFileSync(envFile, '{"format":"csv","timeout":900}');
     process.env.XSECURITY_CONFIG = envFile;
