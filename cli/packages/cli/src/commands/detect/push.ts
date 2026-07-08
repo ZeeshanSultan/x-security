@@ -121,7 +121,7 @@ const defaultPoster: Poster = async (url, init) => {
 /** Resolve + validate the API base. Refuses any host not on the allowlist so a
  * poisoned X_SECURITY_API_URL can't redirect the Bearer token (G-4). */
 export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
-  const override = (env.X_SECURITY_API_URL ?? env.X_SECURITY_API_URL)?.trim();
+  const override = (env.X_SECURITY_API_URL)?.trim();
   if (!override) return DEFAULT_API_URL;
 
   let parsed: URL;
@@ -160,7 +160,7 @@ export function resolveApiUrl(env: NodeJS.ProcessEnv): string {
 /** Read the token from env ONLY (G-2). Returns the raw value; the caller never
  * logs it. Absent token is an abort. */
 export function resolveToken(env: NodeJS.ProcessEnv): string {
-  const token = (env.X_SECURITY_API_TOKEN ?? env.X_SECURITY_API_TOKEN)?.trim();
+  const token = (env.X_SECURITY_API_TOKEN)?.trim();
   if (!token) {
     throw new PushError(
       'X_SECURITY_API_TOKEN is not set. Export your x-security API key ' +

@@ -1,8 +1,8 @@
 // Unit tests for `x-security push`. The HTTP layer is injected (Poster) so no
 // real network is touched. Headline assertions mirror the hard rules:
 //   D-1: citeBacked:false aborts before any POST.
-//   G-2: the token is read from WRIT_API_TOKEN env only.
-//   G-4: an arbitrary WRIT_API_URL is refused (token-exfil guard).
+//   G-2: the token is read from X_SECURITY_API_TOKEN env only.
+//   G-4: an arbitrary X_SECURITY_API_URL is refused (token-exfil guard).
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -89,46 +89,37 @@ test('resolveApiUrl: defaults to the fixed production host', () => {
 
 test('resolveApiUrl: REFUSES an arbitrary host (token-exfil guard)', () => {
   assert.throws(
-    () => resolveApiUrl({ WRIT_API_URL: 'https://attacker.com' }),
+    () => resolveApiUrl({ X_SECURITY_API_URL: 'https://attacker.com' }),
     (e: unknown) => e instanceof PushError && /Refusing to send the API token/.test((e as Error).message),
   );
 });
 
 test('resolveApiUrl: accepts an allowlisted chain305 host', () => {
-  assert.equal(resolveApiUrl({ WRIT_API_URL: 'https://lazy.chain305.com/' }), 'https://lazy.chain305.com');
+  assert.equal(resolveApiUrl({ X_SECURITY_API_URL: 'https://lazy.chain305.com/' }), 'https://lazy.chain305.com');
 });
 
 test('resolveApiUrl: accepts localhost for dev', () => {
-  assert.equal(resolveApiUrl({ WRIT_API_URL: 'http://localhost:3004' }), 'http://localhost:3004');
+  assert.equal(resolveApiUrl({ X_SECURITY_API_URL: 'http://localhost:3004' }), 'http://localhost:3004');
 });
 
 test('resolveApiUrl: accepts canonical X_SECURITY_API_URL', () => {
   assert.equal(resolveApiUrl({ X_SECURITY_API_URL: 'https://lazy.chain305.com' }), 'https://lazy.chain305.com');
 });
 
-test('resolveApiUrl: X_SECURITY_API_URL takes precedence over legacy WRIT_API_URL', () => {
-  assert.equal(
-    resolveApiUrl({ X_SECURITY_API_URL: 'https://lazy.chain305.com', WRIT_API_URL: 'http://localhost:3004' }),
-    'https://lazy.chain305.com',
-  );
-});
-
-test('resolveToken: reads canonical then falls back to legacy WRIT_API_TOKEN', () => {
+test('resolveToken: reads canonical X_SECURITY_API_TOKEN', () => {
   assert.equal(resolveToken({ X_SECURITY_API_TOKEN: 'new' }), 'new');
-  assert.equal(resolveToken({ WRIT_API_TOKEN: 'legacy' }), 'legacy');
-  assert.equal(resolveToken({ X_SECURITY_API_TOKEN: 'new', WRIT_API_TOKEN: 'legacy' }), 'new');
 });
 
 test('resolveApiUrl: rejects non-https for a remote host', () => {
   assert.throws(
-    () => resolveApiUrl({ WRIT_API_URL: 'http://lazy.chain305.com' }),
+    () => resolveApiUrl({ X_SECURITY_API_URL: 'http://lazy.chain305.com' }),
     (e: unknown) => e instanceof PushError && /https/.test((e as Error).message),
   );
 });
 
 test('runPush refuses an arbitrary host even on --dry-run', async () => {
   await assert.rejects(
-    runPush(dir, { dryRun: true, env: { WRIT_API_URL: 'https://evil.example' } }),
+    runPush(dir, { dryRun: true, env: { X_SECURITY_API_URL: 'https://evil.example' } }),
     PushError,
   );
 });
@@ -154,7 +145,7 @@ test('runPush ABORTS when the local audit is not cite-backed (D-1)', async () =>
   const { poster, calls } = recordingPoster({ status: 200, body: { importId: 'x', imported: 1, reportUrl: 'u' } });
   try {
     await assert.rejects(
-      runPush(dir, { env: { WRIT_API_TOKEN: 'tok' }, poster }),
+      runPush(dir, { env: { X_SECURITY_API_TOKEN: 'tok' }, poster }),
       (e: unknown) => e instanceof PushError && /citeBacked=false/.test((e as Error).message),
     );
     assert.equal(calls.length, 0, 'never POSTs an unverified bundle');
@@ -181,7 +172,7 @@ test('runPush errors clearly outside a git repo', async () => {
     await persistPolicy(plain, { method: 'POST', path: '/x' }, compiled.policy!, compiled.cites);
 
     await assert.rejects(
-      runPush(plain, { env: { WRIT_API_TOKEN: 'tok' }, poster: recordingPoster({ status: 200, body: {} }).poster }),
+      runPush(plain, { env: { X_SECURITY_API_TOKEN: 'tok' }, poster: recordingPoster({ status: 200, body: {} }).poster }),
       (e: unknown) => e instanceof PushError && /not a git repository/.test((e as Error).message),
     );
   } finally {
@@ -191,10 +182,10 @@ test('runPush errors clearly outside a git repo', async () => {
 
 // ---------------------------------------------------------------- G-2: token from env
 
-test('runPush errors when WRIT_API_TOKEN is unset (G-2: env only)', async () => {
+test('runPush errors when X_SECURITY_API_TOKEN is unset (G-2: env only)', async () => {
   await assert.rejects(
     runPush(dir, { env: {}, poster: recordingPoster({ status: 200, body: {} }).poster }),
-    (e: unknown) => e instanceof PushError && /WRIT_API_TOKEN/.test((e as Error).message),
+    (e: unknown) => e instanceof PushError && /X_SECURITY_API_TOKEN/.test((e as Error).message),
   );
 });
 
@@ -206,7 +197,7 @@ test('runPush sends the correct payload + Bearer token, prints imported result',
     body: { importId: 'imp_123', imported: 1, reportUrl: 'https://usewaf.com/r/imp_123' },
   });
 
-  const r = await runPush(dir, { env: { WRIT_API_TOKEN: 'secret-key' }, poster });
+  const r = await runPush(dir, { env: { X_SECURITY_API_TOKEN: 'secret-key' }, poster });
 
   assert.equal(calls.length, 1);
   const call = calls[0]!;
@@ -250,7 +241,7 @@ test('the bearer token never appears in stdout or stderr (G-2)', async () => {
       status: 200,
       body: { importId: 'imp_x', imported: 1, reportUrl: 'https://usewaf.com/api/web/v1/policies/import/imp_x' },
     });
-    const r = await runPush(dir, { env: { WRIT_API_TOKEN: TOKEN }, poster });
+    const r = await runPush(dir, { env: { X_SECURITY_API_TOKEN: TOKEN }, poster });
     // Mirror what the bin prints so a regression in the print path is covered.
     process.stdout.write(`imported ${r.response!.imported} policies → ${r.response!.reportUrl}\n`);
 
@@ -287,7 +278,7 @@ test('buildPayload aborts when origin is not a github.com repo (UX pre-validatio
 
     const { poster, calls } = recordingPoster({ status: 200, body: { importId: 'x', imported: 1, reportUrl: 'u' } });
     await assert.rejects(
-      runPush(nongh, { env: { WRIT_API_TOKEN: 'tok' }, poster }),
+      runPush(nongh, { env: { X_SECURITY_API_TOKEN: 'tok' }, poster }),
       (e: unknown) => e instanceof PushError && /not an accepted import URL/.test((e as Error).message),
     );
     assert.equal(calls.length, 0, 'never POSTs a non-github origin');
@@ -298,7 +289,7 @@ test('buildPayload aborts when origin is not a github.com repo (UX pre-validatio
 
 test('runPush --dry-run validates without POSTing', async () => {
   const { poster, calls } = recordingPoster({ status: 200, body: {} });
-  const r = await runPush(dir, { dryRun: true, env: { WRIT_API_TOKEN: 'tok' }, poster });
+  const r = await runPush(dir, { dryRun: true, env: { X_SECURITY_API_TOKEN: 'tok' }, poster });
   assert.equal(r.dryRun, true);
   assert.equal(calls.length, 0, 'dry-run never sends');
   assert.equal(r.payload.repoUrl, 'https://github.com/acme/widgets');
@@ -310,7 +301,7 @@ test('runPush --dry-run validates without POSTing', async () => {
 test('runPush surfaces a non-2xx server response verbatim (D-1)', async () => {
   const { poster } = recordingPoster({ status: 400, body: { message: 'citeBacked must be true' } });
   await assert.rejects(
-    runPush(dir, { env: { WRIT_API_TOKEN: 'tok' }, poster }),
+    runPush(dir, { env: { X_SECURITY_API_TOKEN: 'tok' }, poster }),
     (e: unknown) => e instanceof PushError && /HTTP 400/.test((e as Error).message) && /citeBacked must be true/.test((e as Error).message),
   );
 });
@@ -318,7 +309,7 @@ test('runPush surfaces a non-2xx server response verbatim (D-1)', async () => {
 test('runPush rejects a 200 with an unexpected body shape', async () => {
   const { poster } = recordingPoster({ status: 200, body: { nope: true } });
   await assert.rejects(
-    runPush(dir, { env: { WRIT_API_TOKEN: 'tok' }, poster }),
+    runPush(dir, { env: { X_SECURITY_API_TOKEN: 'tok' }, poster }),
     (e: unknown) => e instanceof PushError && /unexpected body shape/.test((e as Error).message),
   );
 });
