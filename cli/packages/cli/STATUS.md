@@ -46,7 +46,7 @@ in-memory `StubVaultResolver` is preserved in `@x-security/core` for tests.
 
 ## Files
 
-- `src/bin/lazy.ts` — commander entrypoint, exit codes, stdout/stderr
+- `src/bin/x-security.ts` — commander entrypoint, exit codes, stdout/stderr
 - `src/registry.ts` — lazy `import()` of each generator; degrades gracefully when missing
 - `src/commands/{generate,validate,test,report,diff,init}.ts` — thin command wrappers
 - `src/drift/{kong-shared,kong-admin,kong-file,coraza,bunkerweb,openappsec,firewall}.ts` — drift detection (per-target)
@@ -146,7 +146,7 @@ force-removed before re-creation as a belt-and-braces guard.
 
 ```bash
 pnpm --filter @x-security/cli build
-node packages/cli/dist/bin/lazy.js report --owasp fixtures/specs/example.yaml
+node packages/cli/dist/bin/x-security.js report --owasp fixtures/specs/example.yaml
 ```
 
 Prints a 10-column OWASP coverage table for the 3 endpoints in the fixture.

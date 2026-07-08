@@ -1,4 +1,4 @@
-// `lazy diff --target <t> <old.yaml> <new.yaml>`
+// `x-security diff --target <t> <old.yaml> <new.yaml>`
 // Generates both configs in-memory and diffs the artifacts as structured
 // objects (YAML/JSON parsed where possible, raw string otherwise).
 

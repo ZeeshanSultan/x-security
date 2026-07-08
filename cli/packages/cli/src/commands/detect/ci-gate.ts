@@ -1,6 +1,6 @@
-// CI gate renderer for `lazy emit --target ci`.
+// CI gate renderer for `x-security emit --target ci`.
 //
-// The gate re-runs `lazy audit` in CI and fails the build when the
+// The gate re-runs `x-security audit` in CI and fails the build when the
 // cite-backed proof does not hold — i.e. when any emitted control lost its
 // byte-matching citation (code drifted under a rule, Rule D-3). It does NOT
 // gate on a security score; the product guarantee is "every emitted rule cites

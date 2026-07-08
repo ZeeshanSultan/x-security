@@ -1,4 +1,4 @@
-// Human report renderer for `lazy emit --target report`.
+// Human report renderer for `x-security emit --target report`.
 //
 // The headline is the audit cite-coverage proof, never a security score. Per
 // the design's marketing-claim discipline: we print "100% of emitted rules

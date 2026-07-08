@@ -1,4 +1,4 @@
-// `lazy migrate <spec> --from 0.4 --to 0.5 [--in-place|--out <path>] [--no-suggestions]`
+// `x-security migrate <spec> --from 0.4 --to 0.5 [--in-place|--out <path>] [--no-suggestions]`
 //
 // Pure spec-rewrite tool. The only auto-migration in v0.5 is
 // `rateLimit.identifier: [a, b]` → `{components: [a, b], combinator: concat}`.

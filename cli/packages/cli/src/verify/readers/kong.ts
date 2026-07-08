@@ -15,7 +15,7 @@
 //
 // We don't try to confirm Kong /jwt-secrets / /hmacauth-credentials /
 // /acls inhabited consumers correctly here — that's a wave-2 concern
-// covered by `lazy validate`. Verify focuses on the load-coverage
+// covered by `x-security validate`. Verify focuses on the load-coverage
 // signal that REPORT-v3 §3 was missing.
 
 import { request } from 'undici';

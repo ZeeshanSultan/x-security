@@ -1,4 +1,4 @@
-// `lazy verify-route`  (stdin JSON → stdout JSON)
+// `x-security verify-route`  (stdin JSON → stdout JSON)
 //
 // The whole-route PRECISION gate. Per-finding `verify-finding` proves each
 // finding is real (cite byte-match + tightness + schema), but it CANNOT see

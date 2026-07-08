@@ -1,4 +1,4 @@
-// Real Docker container lifecycle for x-security's `lazy test`
+// Real Docker container lifecycle for x-security's `x-security test`
 // closed-loop validation command.
 //
 // We drive Docker through the dockerode Node SDK so users don't need

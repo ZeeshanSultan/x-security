@@ -46,9 +46,9 @@ function resolveVersion(): string {
 const program = new Command();
 
 // Name the program after the invoked binary so help/usage matches the install:
-// `lazy` for the dev bin, the published command name for the npm bundle.
+// `x-security` for the dev bin, the published command name for the npm bundle.
 program
-  .name(basename(process.argv[1] ?? 'lazy').replace(/\.(mjs|cjs|js)$/, ''))
+  .name(basename(process.argv[1] ?? 'x-security').replace(/\.(mjs|cjs|js)$/, ''))
   .description('Compile, validate, test, and report on x-security policies in OpenAPI specs.')
   .option('--quiet', 'Suppress warnings/advisories on stderr (results still print)')
   .option('--verbose', 'Print extra progress detail to stderr')
@@ -203,13 +203,13 @@ program
   .addHelpText('after', `
 Examples:
   # Mock upstream (default): brings up mendhak/http-https-echo as the backend
-  $ lazy test --target kong spec.yaml
+  $ x-security test --target kong spec.yaml
 
   # Real upstream: point the gateway at your local app
-  $ lazy test --target kong --upstream-url http://host.docker.internal:8000 spec.yaml
+  $ x-security test --target kong --upstream-url http://host.docker.internal:8000 spec.yaml
 
   # Remote staging
-  $ lazy test --target kong --upstream-url https://staging.example.com spec.yaml
+  $ x-security test --target kong --upstream-url https://staging.example.com spec.yaml
 `)
   .action(async (spec: string, opts: { target: string; upstreamPort?: number; gatewayPort?: number; upstreamUrl?: string; dryRun?: boolean; keep?: boolean; format: string; timeout?: number; vault?: boolean; awsSecrets?: boolean; vaultKvVersion?: 1 | 2 }) => {
     try {

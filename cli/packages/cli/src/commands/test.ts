@@ -1,4 +1,4 @@
-// `lazy test --target kong [--upstream-port N] [--gateway-port N] [--dry-run] [--keep] <spec.yaml>`
+// `x-security test --target kong [--upstream-port N] [--gateway-port N] [--dry-run] [--keep] <spec.yaml>`
 // Closed-loop test: generate config, bring up Docker, send traffic, assert.
 
 import { mkdir, rm, writeFile } from 'node:fs/promises';
@@ -147,7 +147,7 @@ export async function runTest(specPath: string, opts: TestOptions): Promise<Test
 }
 
 /**
- * Run `lazy verify` against the just-booted gateway. Returns:
+ * Run `x-security verify` against the just-booted gateway. Returns:
  *   true  — coverage passed (or target/engine combo not supported by verify yet)
  *   false — coverage below threshold; caller should abort traffic
  * Never throws (verify failure is reported as a structured FAIL case).

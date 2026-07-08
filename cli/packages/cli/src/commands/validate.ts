@@ -1,4 +1,4 @@
-// `lazy validate --target <t> --gateway <url-or-path> [--format <fmt>] <spec.yaml>`
+// `x-security validate --target <t> --gateway <url-or-path> [--format <fmt>] <spec.yaml>`
 //
 // Drift detection. Per-target dispatch:
 //   - kong:        HTTP admin URL or exported kong.yml file

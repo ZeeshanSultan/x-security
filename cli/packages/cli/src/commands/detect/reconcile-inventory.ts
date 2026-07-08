@@ -1,4 +1,4 @@
-// `lazy reconcile-inventory`  (stdin JSON → stdout JSON)
+// `x-security reconcile-inventory`  (stdin JSON → stdout JSON)
 //
 // The inventory GROUNDING gate (P2). A host agent proposes routes; this
 // deterministically (1) reconciles their mount prefix against the machine

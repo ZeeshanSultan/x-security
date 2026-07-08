@@ -1,4 +1,4 @@
-// `lazy push <repoDir>` — Phase 4 SaaS upsell.
+// `x-security push <repoDir>` — Phase 4 SaaS upsell.
 //
 // Bundles the locally-generated, CLI-verified policies under .x-security/ and
 // POSTs them to the x-security SaaS import endpoint. This is the ONLY verb that
@@ -230,7 +230,7 @@ async function loadPolicies(repoDir: string): Promise<PushPolicy[]> {
   } catch {
     throw new PushError(
       `No policies found under ${path.join('.x-security', 'policies')}. ` +
-        'Run the detection flow (lazy compile) before pushing.',
+        'Run the detection flow (x-security compile) before pushing.',
     );
   }
   if (files.length === 0) {
@@ -285,7 +285,7 @@ export async function buildPayload(repoDir: string): Promise<PushPayload> {
     throw new PushError(
       `ABORT: local audit reports citeBacked=false (${why}). ` +
         'push never uploads unverified policies. Fix the cited findings ' +
-        '(lazy audit ' +
+        '(x-security audit ' +
         `${repoDir}) and re-run.`,
     );
   }

@@ -57,7 +57,7 @@ export class UnsupportedDialectError extends WritError {
  *                 enforceable artifacts in the generator output.
  *   S3 (exit 4) — Fidelity: a spec field cannot be enforced by the chosen
  *                 target+engine (e.g. RS256 declared, HS256 actually emitted).
- *   S4 (exit 5) — Loading: reserved for `lazy verify` (workstream C).
+ *   S4 (exit 5) — Loading: reserved for `x-security verify` (workstream C).
  *                 NOT raised here; this constant exists so other gates can't
  *                 accidentally collide with it.
  */

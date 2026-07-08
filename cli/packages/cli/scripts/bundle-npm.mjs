@@ -2,7 +2,7 @@
 // packages/cli/npm-dist/. Mirrors scripts/bundle-runtime.mjs (the plugin
 // runtime bundler) but for the FULL CLI surface:
 //
-//   npm-dist/bin/lazy.mjs   ← esbuild bundle of src/bin/npm-entry.ts
+//   npm-dist/bin/x-security.mjs   ← esbuild bundle of src/bin/npm-entry.ts
 //                             (all @x-security/* workspace deps inlined;
 //                              registry deps left external — they ship as
 //                              real npm dependencies)
@@ -13,7 +13,7 @@
 //   npm-dist/README.md      ← ./README.md
 //   npm-dist/LICENSE        ← repo-root LICENSE
 //
-// The normal dist build (tsc → dist/bin/lazy.js) is untouched; e2e tests and
+// The normal dist build (tsc → dist/bin/x-security.js) is untouched; e2e tests and
 // scripts/build-plugins.sh keep consuming it as-is. Publish flow:
 //
 //   pnpm --filter @x-security/cli build   # workspace deps must be built

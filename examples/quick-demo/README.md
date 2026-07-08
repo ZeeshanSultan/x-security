@@ -63,7 +63,7 @@ indirect (no regressions).
 
 Both the Kong config (`policy/kong.yml`) and the Coraza rules
 (`policy/coraza/`) are compiled from `openapi.yaml` — an OpenAPI spec annotated
-with `x-security` policies — via the `lazy` CLI. To regenerate after editing
+with `x-security` policies — via the `x-security` CLI. To regenerate after editing
 the spec:
 
 ```bash

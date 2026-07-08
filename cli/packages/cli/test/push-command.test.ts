@@ -1,4 +1,4 @@
-// Unit tests for `lazy push`. The HTTP layer is injected (Poster) so no
+// Unit tests for `x-security push`. The HTTP layer is injected (Poster) so no
 // real network is touched. Headline assertions mirror the hard rules:
 //   D-1: citeBacked:false aborts before any POST.
 //   G-2: the token is read from WRIT_API_TOKEN env only.

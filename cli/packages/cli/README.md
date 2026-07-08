@@ -24,7 +24,7 @@ Run `xsecurity <command> --help` for full flags.
 ## Requirements
 
 - Node 20+
-- Docker (only for `lazy test`)
+- Docker (only for `x-security test`)
 
 ## License
 

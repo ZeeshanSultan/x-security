@@ -1,4 +1,4 @@
-// `lazy verify-bundle <tarball> [--public-key <pem-path>]`
+// `x-security verify-bundle <tarball> [--public-key <pem-path>]`
 //
 // Verifies a x-security release bundle:
 //

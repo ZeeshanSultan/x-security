@@ -36,7 +36,7 @@ issue.
 
 # OpenAppSec Generator — Status (wave-7, post-E2E)
 
-PRD requirement: **R2.4** — `lazy generate --target openappsec spec.yaml`
+PRD requirement: **R2.4** — `x-security generate --target openappsec spec.yaml`
 produces a valid open-appsec declarative policy YAML.
 
 ## Wave-7 honest verdict

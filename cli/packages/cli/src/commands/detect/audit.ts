@@ -1,4 +1,4 @@
-// `lazy audit <repoDir>`
+// `x-security audit <repoDir>`
 //
 // The self-check / proof step. Reads every policy under .x-security/policies/,
 // re-validates it against the x-security schema, and byte-matches every cite
