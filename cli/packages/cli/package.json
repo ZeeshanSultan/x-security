@@ -11,7 +11,7 @@
   "type": "module",
   "main": "./dist/index.js",
   "bin": {
-    "lazy": "./dist/bin/lazy.js"
+    "x-security": "./dist/bin/x-security.js"
   },
   "files": [
     "dist"

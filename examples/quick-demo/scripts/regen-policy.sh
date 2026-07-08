@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerates policy/kong.yml + policy/coraza/* from openapi.yaml via the lazy CLI.
+# Regenerates policy/kong.yml + policy/coraza/* from openapi.yaml via the x-security CLI.
 # Run after editing openapi.yaml. Commits nothing — review + commit by hand.
 #
 # Env vars: the four below have canonical fixture defaults (synthetic test
@@ -10,7 +10,7 @@
 # IMPORTANT — coraza confs are a PINNED snapshot, not a live mirror:
 # the committed policy/coraza/x-security-include.conf is the exact ruleset
 # that produced the validated EXPECTED.md ground truth. A fresh
-# `lazy generate --target coraza` from the current generator may emit a
+# `x-security generate --target coraza` from the current generator may emit a
 # DIFFERENT ruleset (the generator evolves) and therefore change what Coraza
 # blocks. So regenerating coraza is a re-baseline, not a refresh: only commit
 # a regenerated conf together with a re-run of scripts/demo.sh and a recapture
@@ -19,14 +19,14 @@
 # Coraza note: the committed policy/coraza/x-security-include.conf is the
 # file the compose mounts at /etc/modsecurity.d/owasp-crs/rules/zzz-x-security.conf
 # and harness/preflight-coraza.sh greps it for the marker rule id:408999.
-# `lazy generate --target coraza` does NOT emit that marker — it was hand-
+# `x-security generate --target coraza` does NOT emit that marker — it was hand-
 # appended during integration. So we regenerate x-security.conf and append the
 # marker block to produce x-security-include.conf.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-LAZY="${LAZY:-../../cli/packages/cli/dist/bin/lazy.js}"
-[ -f "$LAZY" ] || { echo "[regen] lazy CLI not found at $LAZY (build it: cd ../../cli && pnpm --filter @x-security/cli build)" >&2; exit 1; }
+LAZY="${LAZY:-../../cli/packages/cli/dist/bin/x-security.js}"
+[ -f "$LAZY" ] || { echo "[regen] x-security CLI not found at $LAZY (build it: cd ../../cli && pnpm --filter @x-security/cli build)" >&2; exit 1; }
 
 : "${JWKS_URI:=https://idp.example.com/.well-known/jwks.json}"
 : "${JWT_ISSUER:=https://idp.example.com}"

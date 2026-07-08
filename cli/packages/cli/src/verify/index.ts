@@ -1,4 +1,4 @@
-// `lazy verify` — read-only feedback loop. Asks the gateway "which
+// `x-security verify` — read-only feedback loop. Asks the gateway "which
 // of the artifacts I emitted did you actually load?" and produces a
 // per-endpoint coverage report.
 //

@@ -28,7 +28,7 @@ This release is **purely additive**. No existing v0.4 policy needs to change. Th
 There is **no auto-migration**. Recommended steps:
 
 1. `pnpm --filter @x-security/schema build` — picks up the new `$id`.
-2. Re-run `lazy validate --strict` on your existing spec to (a) confirm it still validates and (b) surface any newly-available stricter constraints you'd want to opt into.
+2. Re-run `x-security validate --strict` on your existing spec to (a) confirm it still validates and (b) surface any newly-available stricter constraints you'd want to opt into.
 3. If you author specs by hand, browse the new fields above and opt in where they apply.
 
 ## Per-target field-support matrix

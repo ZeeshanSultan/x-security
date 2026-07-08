@@ -98,4 +98,4 @@ generator emits the full bootstrap.
 | `local_ratelimit` per-route enforcement | `/stats` exposes `http.x_security_hcm.http_local_rate_limit.<stat_prefix>.rate_limited` counters |
 | `cors` preflight | OPTIONS request returns 200 with `Access-Control-Allow-Origin` |
 | Residual Lua | Only loaded when needed; sentinel markers preserved for drift detection |
-| `lazy verify --target envoy` | Reconciles each native filter independently (jwt rules, rbac policies, ratelimit prefixes, cors routes, lua sentinels) |
+| `x-security verify --target envoy` | Reconciles each native filter independently (jwt rules, rbac policies, ratelimit prefixes, cors routes, lua sentinels) |

@@ -1,6 +1,6 @@
-// Registration surface for the FULL bin only (lazy.ts / npm bundle). Bundles the
+// Registration surface for the FULL bin only (x-security.ts / npm bundle). Bundles the
 // BYO correctness verbs with the operator-facing extras (doctor, completion,
-// update-check, config defaults) so lazy.ts stays within its line budget.
+// update-check, config defaults) so x-security.ts stays within its line budget.
 // Deliberately NOT imported by the trimmed `byo` bin: doctor/update-check pull
 // in dockerode/undici, which the BYO bundle intentionally excludes.
 

@@ -9,7 +9,7 @@ export interface PackageMeta {
   version: string;
 }
 
-// Mirrors lazy.ts's resolveVersion: ../package.json in the npm bundle,
+// Mirrors x-security.ts's resolveVersion: ../package.json in the npm bundle,
 // ../../package.json in the dev build.
 export function resolvePackageMeta(): PackageMeta {
   const here = dirname(fileURLToPath(import.meta.url));

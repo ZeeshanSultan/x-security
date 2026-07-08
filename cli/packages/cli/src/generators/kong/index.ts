@@ -97,7 +97,7 @@ export interface KongGeneratorOptions {
 // as the primary key — two plugins with the same config produce the same
 // computed uuid and Kong rejects the second one as a "uniqueness violation".
 // We make the id deterministic from route+plugin+index so the same input
-// always yields the same kong.yml (lazy diff depends on it).
+// always yields the same kong.yml (x-security diff depends on it).
 const X_SECURITY_KONG_NAMESPACE = 'a4f7e8c2-1b3d-4e5f-9a8b-7c6d5e4f3a2b';
 
 function uuidv5(name: string, namespace: string = X_SECURITY_KONG_NAMESPACE): string {

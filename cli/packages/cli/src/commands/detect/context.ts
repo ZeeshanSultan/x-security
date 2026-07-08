@@ -1,4 +1,4 @@
-// `lazy context <repoDir> --route "<METHOD> <path>"`  (stdout JSON)
+// `x-security context <repoDir> --route "<METHOD> <path>"`  (stdout JSON)
 //
 // The D-2 context-resolution layer, per route. Runs detect-core's deterministic
 // pre-pass — the same evidence-pack + auth-context stages the hosted pipeline

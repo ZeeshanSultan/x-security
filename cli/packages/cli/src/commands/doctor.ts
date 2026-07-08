@@ -1,4 +1,4 @@
-// `lazy doctor [--format table|json] [--gateway <url>] [--timeout <ms>]`
+// `x-security doctor [--format table|json] [--gateway <url>] [--timeout <ms>]`
 //
 // Preflight/health-check so a user can diagnose environment problems BEFORE
 // a real command (test/validate/verify) fails partway through. Those commands

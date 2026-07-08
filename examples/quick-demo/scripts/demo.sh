@@ -25,6 +25,20 @@
 # Tool deps: bash 4+, jq, docker, curl (transitively via up.sh / exploit.sh).
 
 set -euo pipefail
+
+# --- host-dep preflight (added for a fresh-machine live demo) ---
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+  echo "[demo] FATAL: bash 4+ required. macOS ships 3.2 — 'brew install bash'." >&2; exit 1
+fi
+_missing=()
+for _c in jq curl openssl basenc; do command -v "$_c" >/dev/null 2>&1 || _missing+=("$_c"); done
+if (( ${#_missing[@]} )); then
+  echo "[demo] FATAL: missing host tools: ${_missing[*]}" >&2
+  case " ${_missing[*]} " in *" basenc "*) echo "[demo]   basenc = GNU coreutils; macOS: 'brew install coreutils'." >&2;; esac
+  exit 1
+fi
+# --- end preflight ---
+
 cd "$(dirname "$0")/.."
 
 if ! docker info >/dev/null 2>&1; then

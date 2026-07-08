@@ -25,7 +25,7 @@ These scripts complete that flow.
 install -m 0755 x-security-resolve.sh /usr/local/sbin/x-security-resolve.sh
 install -m 0755 x-security-refresh.sh /usr/local/sbin/x-security-refresh.sh
 
-# 2. Place the rule templates emitted by `lazy generate`.
+# 2. Place the rule templates emitted by `x-security generate`.
 install -d /etc/x-security
 install -m 0644 iptables.rules  /etc/x-security/rules.template
 install -m 0644 ip6tables.rules /etc/x-security/rules6.template

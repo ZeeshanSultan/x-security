@@ -3,10 +3,10 @@
 // esbuild, so — like byo.ts does for bunkerweb — this entry pre-seeds ALL
 // native generators before handing control to the full CLI. The `await
 // import` (not a static import) guarantees the registrations run before
-// lazy.ts evaluates and parses argv.
+// x-security.ts evaluates and parses argv.
 //
 // This file is only used by scripts/bundle-npm.mjs. The normal dist build
-// (dist/bin/lazy.js) is unaffected.
+// (dist/bin/x-security.js) is unaffected.
 
 import { registerGenerator } from '../registry.js';
 import { kongGenerator } from '../generators/kong/index.js';
@@ -23,4 +23,4 @@ registerGenerator('openappsec', openappsecGenerator);
 registerGenerator('firewall', firewallGenerator);
 registerGenerator('envoy', envoyGenerator);
 
-await import('./lazy.js');
+await import('./x-security.js');

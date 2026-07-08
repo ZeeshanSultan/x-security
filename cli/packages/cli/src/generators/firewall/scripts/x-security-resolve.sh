@@ -2,7 +2,7 @@
 # x-security-resolve.sh — deploy-time DNS resolver for XSecurity firewall rules.
 #
 # Reads an iptables-save-format ruleset containing @@X_SECURITY_RESOLVE:<fqdn>@@
-# tokens (produced by `lazy generate --target firewall`) and rewrites
+# tokens (produced by `x-security generate --target firewall`) and rewrites
 # each token into one or more concrete `-d <addr>` clauses by resolving the
 # FQDN against the host's system resolver.
 #

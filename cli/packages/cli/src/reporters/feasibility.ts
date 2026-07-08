@@ -1,4 +1,4 @@
-// Feasibility analysis for `lazy report --owasp --feasible <target[,target...]>`.
+// Feasibility analysis for `x-security report --owasp --feasible <target[,target...]>`.
 //
 // Cross-references each endpoint's x-security policy against the capability
 // matrices of one or more target generators to decide whether a *declared*

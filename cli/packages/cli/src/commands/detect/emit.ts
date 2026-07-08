@@ -1,11 +1,11 @@
-// `lazy emit <repoDir> --target waf|report|ci`
+// `x-security emit <repoDir> --target waf|report|ci`
 //
 // Render the compiled .x-security/policies/ into a downstream artifact:
 //   waf    — gateway rules via the existing bunkerweb generator (SpecIR built
 //            from the per-route policies), written under .x-security/waf/.
 //   report — a human report.md headlining the audit cite-coverage proof.
 //   ci     — a CI gate (GitHub Actions + GitLab snippet) that re-runs
-//            `lazy audit` and fails the build if citeBacked is false.
+//            `x-security audit` and fails the build if citeBacked is false.
 //
 // Rule D-3: the report and CI gate are built on the audit result; they never
 // claim coverage the cite byte-match doesn't support. emit reads only what

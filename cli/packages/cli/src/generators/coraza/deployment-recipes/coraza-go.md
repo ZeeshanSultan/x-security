@@ -5,7 +5,7 @@ For Go services embedding `github.com/corazawaf/coraza/v3` directly.
 ## Generate
 
 ```bash
-lazy generate \
+x-security generate \
   --target coraza \
   --coraza-engine coraza-go \
   --out ./out/coraza \

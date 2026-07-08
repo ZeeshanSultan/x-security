@@ -1,4 +1,4 @@
-// `lazy routes <repoDir> [--seed]`
+// `x-security routes <repoDir> [--seed]`
 //
 // Deterministic route inventory. Runs the LLM-free extractor over the repo and
 // emits the canonical {method, path, file, line} list the host agent grounds

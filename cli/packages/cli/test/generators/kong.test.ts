@@ -484,7 +484,7 @@ test('kong C-4d: api-key endpoint emits keyauth_credentials with stable per-role
   const gen = createKongGenerator({ withConsumers: true });
   const [a1] = gen.generate(spec);
   const [a2] = gen.generate(spec);
-  // Determinism: same spec → byte-identical output (lazy diff depends on it).
+  // Determinism: same spec → byte-identical output (x-security diff depends on it).
   assert.equal((a1 as any).content, (a2 as any).content);
 
   const parsed = yamlLoad((a1 as any).content) as {

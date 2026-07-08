@@ -6,7 +6,7 @@ ModSecurity directives) plus a `x-security-include.conf` snippet.
 ## Generate
 
 ```bash
-lazy generate \
+x-security generate \
   --target coraza \
   --coraza-engine modsec-nginx \
   --out ./out/coraza \

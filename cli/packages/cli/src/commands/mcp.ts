@@ -1,4 +1,4 @@
-// `lazy mcp` — boot the Cursor MCP server in-process.
+// `x-security mcp` — boot the Cursor MCP server in-process.
 //
 // Cursor's mcp.json points `command: npx`, `args: [-y, @x-security/cli, mcp]`,
 // so this subcommand has to take over stdin/stdout and speak the MCP NDJSON

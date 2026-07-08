@@ -1,4 +1,4 @@
-// `lazy verify`  (stdin JSON → stdout JSON)
+// `x-security verify`  (stdin JSON → stdout JSON)
 //
 // The zero-hallucination gate, per single finding. The host agent proposes a
 // finding {route, controlHint, cite}; this runs the deterministic checks that

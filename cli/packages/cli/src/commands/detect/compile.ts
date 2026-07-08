@@ -1,4 +1,4 @@
-// `lazy compile`  (stdin JSON → stdout JSON)
+// `x-security compile`  (stdin JSON → stdout JSON)
 //
 // Compile a route's VERIFIED findings into a single x-security policy. Each
 // finding's controlHint becomes an enforced control via the deterministic

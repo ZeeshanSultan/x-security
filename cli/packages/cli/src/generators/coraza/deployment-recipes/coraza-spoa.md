@@ -17,7 +17,7 @@ client → HAProxy:80 ─┐
 ## Generate
 
 ```bash
-lazy generate \
+x-security generate \
   --target coraza \
   --coraza-engine coraza-spoa \
   --out ./out/coraza \

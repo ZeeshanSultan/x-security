@@ -1,4 +1,4 @@
-// `lazy generate --target <t> [--out <dir>] [--dry-run] <spec.yaml>`
+// `x-security generate --target <t> [--out <dir>] [--dry-run] <spec.yaml>`
 // Loads the spec, looks up the registered generator, writes artifacts.
 
 import { mkdir, writeFile } from 'node:fs/promises';

@@ -235,7 +235,7 @@ Still unsupported:
   `route_name|plugin_name|index`. This is **required** by Kong 3.x — two
   plugins with identical config on different routes otherwise compute the
   same primary key and Kong rejects the second with "uniqueness violation".
-  The UUID is deterministic so `lazy diff` stays stable across runs.
+  The UUID is deterministic so `x-security diff` stays stable across runs.
 - Tag values are sanitized (`:` `/` `,` → `_`). Kong 3.4 rejects raw
   `jwks=https://...` tags as "invalid tag ... expected printable ascii".
 
@@ -252,7 +252,7 @@ Still unsupported:
    emits one `Consumer` per unique `authorization.rbac.roles[]` value plus
    matching `jwt_secrets`, `keyauth_credentials`, `hmacauth_credentials`,
    and `acls` entries. Secrets are deterministic (sha1 of role + spec title)
-   so `lazy diff` stays stable. **Downgrade:** `jwt_secrets.algorithm`
+   so `x-security diff` stays stable. **Downgrade:** `jwt_secrets.algorithm`
    is hardcoded to `HS256` because OSS Kong cannot validate RS256 without
    JWKS — see the bearer-jwt entry above for the rationale and warning.
    `authentication.custom-token` has no Kong plugin and emits a warning only.

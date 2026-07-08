@@ -1,5 +1,5 @@
 // Shared stdin/diagnostics helpers for CLI entrypoints. Kept separate from
-// lazy.ts so command wiring and I/O plumbing can be edited independently.
+// x-security.ts so command wiring and I/O plumbing can be edited independently.
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';

@@ -105,7 +105,7 @@ For production deployments of bearer-jwt / oauth2 endpoints, place one of:
   with rule-ID attribution. This is the recommended path for x-security
   deployments needing real JWT enforcement (see wave-5 report).
 
-The DEPLOYMENT.md emitted by `lazy generate --target bunkerweb` reminds
+The DEPLOYMENT.md emitted by `x-security generate --target bunkerweb` reminds
 the operator of these options.
 
 ## Capabilities
@@ -181,7 +181,7 @@ pnpm --filter @x-security/cli test    # all bunkerweb tests pass (24/24 in v6)
 ### Generator output on `e2e/fixtures/chain-vapi/openapi.yaml`
 ```
 JWKS_URI=... JWT_ISSUER=... TURNSTILE_SECRET=... UPSTREAM_HMAC_SECRET=... \
-  lazy generate --target bunkerweb --out /tmp/out e2e/fixtures/chain-vapi/openapi.yaml
+  x-security generate --target bunkerweb --out /tmp/out e2e/fixtures/chain-vapi/openapi.yaml
 
 # Output tree:
 #   /tmp/out/configs/modsec/x-security.conf

@@ -1,4 +1,4 @@
-// Embedded Ed25519 public key used by `lazy verify-bundle` when the
+// Embedded Ed25519 public key used by `x-security verify-bundle` when the
 // caller does not pass `--public-key <path>`.
 //
 // TODO(release): Production builds MUST replace this placeholder via

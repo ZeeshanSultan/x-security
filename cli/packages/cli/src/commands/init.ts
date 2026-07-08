@@ -1,4 +1,4 @@
-// `lazy init <spec.yaml> [--defaults] [--target kong]`
+// `x-security init <spec.yaml> [--defaults] [--target kong]`
 // Adds an empty `x-security: {}` block to every operation that lacks one.
 // With --defaults, populates a conservative baseline policy.
 

@@ -1,4 +1,4 @@
-// `lazy verify --target <kong|coraza> --gateway <addr> [--engine <e>] [--format <f>] <spec>`
+// `x-security verify --target <kong|coraza> --gateway <addr> [--engine <e>] [--format <f>] <spec>`
 //
 // Thin wrapper around src/verify/index.ts. The bin layer parses args,
 // this layer validates them and dispatches.

@@ -1,4 +1,4 @@
-// `lazy report --owasp|--coverage [--format <fmt>] <spec.yaml>`
+// `x-security report --owasp|--coverage [--format <fmt>] <spec.yaml>`
 
 import { loadSpec, buildResolverChain, StrictnessViolation } from '@x-security/core';
 import { buildOwaspReport, buildAnnotationCoverage } from '../reporters/owasp-analyze.js';
