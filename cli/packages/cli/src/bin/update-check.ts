@@ -80,8 +80,8 @@ export function registerUpdateCheck(program: Command): void {
   // Passive nudge: opt-in only (positioning constraint — no phone-home by default),
   // and always overridable via the standard NO_UPDATE_NOTIFIER convention or our own flag.
   program.hook('postAction', async () => {
-    if (!truthyEnv(process.env.XSECURITY_UPDATE_CHECK)) return;
-    if (truthyEnv(process.env.NO_UPDATE_NOTIFIER) || truthyEnv(process.env.XSECURITY_NO_UPDATE_CHECK)) return;
+    if (!truthyEnv(process.env.X_SECURITY_UPDATE_CHECK)) return;
+    if (truthyEnv(process.env.NO_UPDATE_NOTIFIER) || truthyEnv(process.env.X_SECURITY_NO_UPDATE_CHECK)) return;
 
     try {
       const { name, version } = resolvePackageMeta();

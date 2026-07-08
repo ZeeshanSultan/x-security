@@ -56,23 +56,23 @@ test('a malformed config file does not throw', () => {
   }
 });
 
-test('XSECURITY_CONFIG path overrides project and home config', () => {
+test('X_SECURITY_CONFIG path overrides project and home config', () => {
   const cwd = tmp();
   const home = tmp();
   const envDir = tmp();
-  const prev = process.env.XSECURITY_CONFIG;
+  const prev = process.env.X_SECURITY_CONFIG;
   try {
     writeFileSync(path.join(cwd, '.x-securityrc.yaml'), 'format: table\n');
     const envFile = path.join(envDir, 'override.json');
     writeFileSync(envFile, '{"format":"csv","timeout":900}');
-    process.env.XSECURITY_CONFIG = envFile;
+    process.env.X_SECURITY_CONFIG = envFile;
 
     const cfg = loadConfig(cwd, home);
     assert.equal(cfg.format, 'csv');
     assert.equal(cfg.timeout, 900);
   } finally {
-    if (prev === undefined) delete process.env.XSECURITY_CONFIG;
-    else process.env.XSECURITY_CONFIG = prev;
+    if (prev === undefined) delete process.env.X_SECURITY_CONFIG;
+    else process.env.X_SECURITY_CONFIG = prev;
     rmSync(cwd, { recursive: true, force: true });
     rmSync(home, { recursive: true, force: true });
     rmSync(envDir, { recursive: true, force: true });
@@ -94,11 +94,11 @@ function buildProgram(seen: { format?: string }): Command {
 
 test('applyConfigDefaults fills option from config when user did not pass it', async () => {
   const envDir = tmp();
-  const prev = process.env.XSECURITY_CONFIG;
+  const prev = process.env.X_SECURITY_CONFIG;
   try {
     const envFile = path.join(envDir, 'cfg.json');
     writeFileSync(envFile, '{"format":"json"}');
-    process.env.XSECURITY_CONFIG = envFile;
+    process.env.X_SECURITY_CONFIG = envFile;
 
     const seen: { format?: string } = {};
     const program = buildProgram(seen);
@@ -107,19 +107,19 @@ test('applyConfigDefaults fills option from config when user did not pass it', a
     await program.parseAsync(['scan', '--target', 'x'], { from: 'user' });
     assert.equal(seen.format, 'json');
   } finally {
-    if (prev === undefined) delete process.env.XSECURITY_CONFIG;
-    else process.env.XSECURITY_CONFIG = prev;
+    if (prev === undefined) delete process.env.X_SECURITY_CONFIG;
+    else process.env.X_SECURITY_CONFIG = prev;
     rmSync(envDir, { recursive: true, force: true });
   }
 });
 
 test('applyConfigDefaults does not override an explicit CLI flag', async () => {
   const envDir = tmp();
-  const prev = process.env.XSECURITY_CONFIG;
+  const prev = process.env.X_SECURITY_CONFIG;
   try {
     const envFile = path.join(envDir, 'cfg.json');
     writeFileSync(envFile, '{"format":"json"}');
-    process.env.XSECURITY_CONFIG = envFile;
+    process.env.X_SECURITY_CONFIG = envFile;
 
     const seen: { format?: string } = {};
     const program = buildProgram(seen);
@@ -128,8 +128,8 @@ test('applyConfigDefaults does not override an explicit CLI flag', async () => {
     await program.parseAsync(['scan', '--target', 'x', '--format', 'csv'], { from: 'user' });
     assert.equal(seen.format, 'csv');
   } finally {
-    if (prev === undefined) delete process.env.XSECURITY_CONFIG;
-    else process.env.XSECURITY_CONFIG = prev;
+    if (prev === undefined) delete process.env.X_SECURITY_CONFIG;
+    else process.env.X_SECURITY_CONFIG = prev;
     rmSync(envDir, { recursive: true, force: true });
   }
 });

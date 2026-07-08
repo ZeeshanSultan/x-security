@@ -1,17 +1,17 @@
-export class WritError extends Error {
+export class XSecurityError extends Error {
   constructor(message: string, public readonly code: string, public readonly details?: unknown) {
     super(message);
-    this.name = 'WritError';
+    this.name = 'XSecurityError';
   }
 }
 
-export class SchemaValidationError extends WritError {
+export class SchemaValidationError extends XSecurityError {
   constructor(message: string, details?: unknown) {
     super(message, 'SCHEMA_VALIDATION', details);
   }
 }
 
-export class UnresolvedVariableError extends WritError {
+export class UnresolvedVariableError extends XSecurityError {
   constructor(
     public readonly variables: string[],
     public readonly paths: Record<string, string[]> = {}
@@ -40,7 +40,7 @@ export class UnresolvedVariableError extends WritError {
   }
 }
 
-export class UnsupportedDialectError extends WritError {
+export class UnsupportedDialectError extends XSecurityError {
   constructor(version: string) {
     super(`Unsupported OpenAPI version: ${version}`, 'UNSUPPORTED_DIALECT');
   }
@@ -69,7 +69,7 @@ export const STRICT_EXIT_CODES: Record<StrictGate, number> = {
   S4: 5
 };
 
-export class StrictnessViolation extends WritError {
+export class StrictnessViolation extends XSecurityError {
   constructor(
     public readonly gate: StrictGate,
     message: string,

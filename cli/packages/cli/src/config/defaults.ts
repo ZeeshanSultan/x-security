@@ -4,7 +4,7 @@ import path from 'node:path';
 import yaml from 'js-yaml';
 import type { Command } from 'commander';
 
-export interface WritConfig {
+export interface XSecurityConfig {
   format?: string;
   timeout?: number;
   out?: string;
@@ -17,13 +17,13 @@ export interface WritConfig {
 const KNOWN_KEYS = ['format', 'timeout', 'out'] as const;
 
 // Attribute-name mapping: long flag -> commander option attribute name.
-const OPTION_ATTRS: Record<keyof WritConfig, string> = {
+const OPTION_ATTRS: Record<keyof XSecurityConfig, string> = {
   format: 'format',
   timeout: 'timeout',
   out: 'out',
 };
 
-const LONG_FLAGS: Record<keyof WritConfig, string> = {
+const LONG_FLAGS: Record<keyof XSecurityConfig, string> = {
   format: '--format',
   timeout: '--timeout',
   out: '--out',
@@ -31,7 +31,7 @@ const LONG_FLAGS: Record<keyof WritConfig, string> = {
 
 // Parse one file best-effort. A malformed/unreadable file must never throw —
 // a bad config in one location shouldn't sink the whole run; we just skip it.
-function readConfigFile(file: string): WritConfig {
+function readConfigFile(file: string): XSecurityConfig {
   try {
     if (!existsSync(file)) return {};
     const raw = readFileSync(file, 'utf8');
@@ -44,10 +44,10 @@ function readConfigFile(file: string): WritConfig {
 
 // Extract only the known keys from an arbitrary parsed doc, coercing types.
 // Unknown keys are ignored; anything malformed is dropped rather than trusted.
-function pickKnown(doc: unknown): WritConfig {
+function pickKnown(doc: unknown): XSecurityConfig {
   if (doc === null || typeof doc !== 'object') return {};
   const src = doc as Record<string, unknown>;
-  const out: WritConfig = {};
+  const out: XSecurityConfig = {};
 
   if (typeof src.format === 'string') out.format = src.format;
   if (typeof src.out === 'string') out.out = src.out;
@@ -65,16 +65,11 @@ function firstExisting(candidates: string[]): string | undefined {
   return candidates.find((c) => existsSync(c));
 }
 
-export function loadConfig(cwd: string = process.cwd(), home: string = os.homedir()): WritConfig {
-  // New `x-security` paths take precedence; legacy `xsecurity` paths are kept
-  // as fallback so configs written before the CLI rename still load.
+export function loadConfig(cwd: string = process.cwd(), home: string = os.homedir()): XSecurityConfig {
   const homeFile = firstExisting([
     path.join(home, '.config', 'x-security', 'config.yaml'),
     path.join(home, '.config', 'x-security', 'config.yml'),
     path.join(home, '.config', 'x-security', 'config.json'),
-    path.join(home, '.config', 'xsecurity', 'config.yaml'),
-    path.join(home, '.config', 'xsecurity', 'config.yml'),
-    path.join(home, '.config', 'xsecurity', 'config.json'),
   ]);
 
   const projectFile = firstExisting([
@@ -82,18 +77,14 @@ export function loadConfig(cwd: string = process.cwd(), home: string = os.homedi
     path.join(cwd, '.x-securityrc.yml'),
     path.join(cwd, '.x-securityrc.json'),
     path.join(cwd, '.x-securityrc'),
-    path.join(cwd, '.xsecurityrc.yaml'),
-    path.join(cwd, '.xsecurityrc.yml'),
-    path.join(cwd, '.xsecurityrc.json'),
-    path.join(cwd, '.xsecurityrc'),
   ]);
 
-  // Precedence low -> high: home config < project config < XSECURITY_CONFIG.
-  let merged: WritConfig = {};
+  // Precedence low -> high: home config < project config < X_SECURITY_CONFIG.
+  let merged: XSecurityConfig = {};
   if (homeFile) merged = { ...merged, ...readConfigFile(homeFile) };
   if (projectFile) merged = { ...merged, ...readConfigFile(projectFile) };
 
-  const envPath = process.env.XSECURITY_CONFIG;
+  const envPath = process.env.X_SECURITY_CONFIG;
   if (envPath) merged = { ...merged, ...readConfigFile(envPath) };
 
   return merged;

@@ -4,13 +4,13 @@
 import { z } from "zod";
 
 // ===== Error envelope =====
-export class WritError extends Error {
+export class XSecurityError extends Error {
   public readonly code: string;
   public readonly status: number;
   public readonly cause?: unknown;
   constructor(code: string, message: string, status = 500, cause?: unknown) {
     super(message);
-    this.name = "WritError";
+    this.name = "XSecurityError";
     this.code = code;
     this.status = status;
     if (cause !== undefined) this.cause = cause;
